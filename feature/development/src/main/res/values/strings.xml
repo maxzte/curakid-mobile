@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="measurement_options">Що Ви бажаєте додати?</string>
+    <string name="weight_height"><![CDATA[Вага & Зріст]]></string>
+    <string name="head_circumference">Окружність голови</string>
+    <string name="growth_tracking">Відстеження зростання</string>
+    <string name="height_and_weight_trends">Тренд зрісту та ваги %1$s </string>
+    <string name="measurement_history">ІСТОРІЯ ЗАМІРІВ</string>
+    <string name="no_data_yet">Даних ще немає</string>
+    <string name="weight">ВАГА</string>
+    <string name="height">ЗРІСТ</string>
+    <string name="child_weight">Яка вага у %1$s?</string>
+    <string name="child_height">Який зріст у %1$s?</string>
+    <string name="add_measurement">Додати заміри</string>
+    <string name="child_head_circ">Яка окружність голови у %1$s?</string>
+    <string name="previous_measurement">Попередній замір: %1$s</string>
+    <string name="done">Завершити</string>
+    <string name="development">Розвиток</string>
+    <string name="observe_development">Стежте за розвитком</string>
+
+</resources>

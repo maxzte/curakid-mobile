@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="add">ДОДАТИ</string>
+    <string name="head">ГОЛОВА</string>
+    <string name="add_measurement">Додати заміри</string>
+    <string name="next_vaccination">Наступна Вакцинація</string>
+</resources>
