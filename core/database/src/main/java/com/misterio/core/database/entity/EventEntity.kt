@@ -14,5 +14,6 @@ data class EventEntity(
     val date: LocalDateTime,
     val location: String?,
     val description: String?,
+    val status: String,
     val isSynced: Boolean
 )

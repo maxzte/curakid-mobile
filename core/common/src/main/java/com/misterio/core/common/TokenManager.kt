@@ -1,6 +1,7 @@
 package com.misterio.core.common
 
 import android.content.Context
+import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
@@ -25,6 +26,7 @@ class TokenManager @Inject constructor(
     val refreshToken: Flow<String?> = context.dataStore.data.map { it[refreshTokenKey] }
 
     suspend fun saveTokens(accessToken: String, refreshToken: String) {
+        Log.i(TAG, "saving tokens: $accessToken\n$refreshToken")
         context.dataStore.edit { prefs ->
             prefs[accessTokenKey] = accessToken
             prefs[refreshTokenKey] = refreshToken
@@ -32,9 +34,14 @@ class TokenManager @Inject constructor(
     }
 
     suspend fun clearTokens() {
+        Log.i(TAG, "clearing tokens")
         context.dataStore.edit { prefs ->
             prefs.remove(accessTokenKey)
             prefs.remove(refreshTokenKey)
         }
+    }
+
+    private companion object {
+        private const val TAG = "TokenManager"
     }
 }

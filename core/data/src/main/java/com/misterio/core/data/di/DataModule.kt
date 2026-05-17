@@ -4,6 +4,8 @@ import com.misterio.core.data.repository.AiRepositoryImpl
 import com.misterio.core.data.repository.AssessmentRepositoryImpl
 import com.misterio.core.data.repository.AuthRepositoryImpl
 import com.misterio.core.data.repository.ChildRepositoryImpl
+import com.misterio.core.data.repository.ConnectivityRepositoryImpl
+import com.misterio.core.data.repository.DevelopmentRepositoryImpl
 import com.misterio.core.data.repository.EventRepositoryImpl
 import com.misterio.core.data.repository.MeasurementRepositoryImpl
 import com.misterio.core.data.repository.VaccineRepositoryImpl
@@ -11,6 +13,8 @@ import com.misterio.core.domain.repository.AiRepository
 import com.misterio.core.domain.repository.AssessmentRepository
 import com.misterio.core.domain.repository.AuthRepository
 import com.misterio.core.domain.repository.ChildRepository
+import com.misterio.core.domain.repository.ConnectivityRepository
+import com.misterio.core.domain.repository.DevelopmentRepository
 import com.misterio.core.domain.repository.EventRepository
 import com.misterio.core.domain.repository.MeasurementRepository
 import com.misterio.core.domain.repository.VaccineRepository
@@ -50,6 +54,12 @@ abstract class DataModule {
 
     @Binds
     @Singleton
+    abstract fun bindDevelopmentRepository(
+        developmentRepositoryImpl: DevelopmentRepositoryImpl
+    ): DevelopmentRepository
+
+    @Binds
+    @Singleton
     abstract fun bindAssessmentRepository(
         assessmentRepositoryImpl: AssessmentRepositoryImpl
     ): AssessmentRepository
@@ -65,4 +75,10 @@ abstract class DataModule {
     abstract fun bindEventRepository(
         eventRepositoryImpl: EventRepositoryImpl
     ): EventRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindConnectivityRepository(
+        connectivityRepositoryImpl: ConnectivityRepositoryImpl
+    ): ConnectivityRepository
 }

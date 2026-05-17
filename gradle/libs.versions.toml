@@ -25,6 +25,8 @@ vico = "3.1.0"
 splashscreen = "1.2.0"
 kizitonwoseCalendar = "2.10.1"
 work = "2.11.2"
+uiToolingPreview = "1.11.1"
+uiTooling = "1.11.1"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -77,6 +79,8 @@ javax-inject = { group = "javax.inject", name = "javax.inject", version = "1" }
 vico-compose = { group = "com.patrykandpatrick.vico", name = "compose", version.ref = "vico" }
 vico-compose-m3 = { group = "com.patrykandpatrick.vico", name = "compose-m3", version.ref = "vico" }
 androidx-work-runtime-ktx = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work" }
+androidx-ui-tooling-preview = { group = "androidx.compose.ui", name = "ui-tooling-preview", version.ref = "uiToolingPreview" }
+androidx-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling", version.ref = "uiTooling" }
 
 
 [plugins]

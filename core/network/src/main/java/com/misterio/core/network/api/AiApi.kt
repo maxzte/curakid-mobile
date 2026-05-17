@@ -1,14 +1,18 @@
 package com.misterio.core.network.api
 
+import com.misterio.core.network.dto.ReportResponse
 import retrofit2.Response
-import retrofit2.http.POST
+import retrofit2.http.GET
 import retrofit2.http.Path
 
 interface AiApi {
-    @POST("api/children/{childId}/reports")
-    suspend fun requestAnalysis(@Path("childId") childId: String): Response<AiReportResponse>
-}
 
-data class AiReportResponse(
-    val report: String
-)
+    @GET("/api/children/{childId}/reports")
+    suspend fun getChildReports(
+        @Path("childId") childId: String
+    ): Response<List<ReportResponse>>
+
+    @GET("/reports/{reportId}/status")
+    suspend fun getReportStatus(@Path ("reportId") reportId: String): Response<Boolean>
+
+}

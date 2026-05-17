@@ -16,15 +16,13 @@ class AuthInterceptor @Inject constructor(
         val token = runBlocking {
             tokenManager.accessToken.firstOrNull()
         }
-        val rtoken = runBlocking {
-            tokenManager.refreshToken.firstOrNull()
-        }
         val request = chain.request().newBuilder()
         if (token != null) {
-            println("TOKEN: $token")
-            println("rTOKEN: $rtoken")
             request.header("Authorization", "Bearer $token")
         }
         return chain.proceed(request.build())
+    }
+
+    private companion object {
     }
 }

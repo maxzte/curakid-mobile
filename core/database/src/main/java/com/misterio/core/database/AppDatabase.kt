@@ -7,28 +7,38 @@ import com.misterio.core.database.converter.DateConverters
 import com.misterio.core.database.converter.ListConverter
 import com.misterio.core.database.dao.AssessmentDao
 import com.misterio.core.database.dao.ChildDao
+import com.misterio.core.database.dao.ChildReportDao
 import com.misterio.core.database.dao.EventDao
+import com.misterio.core.database.dao.LifePeriodDao
 import com.misterio.core.database.dao.MeasurementDao
 import com.misterio.core.database.dao.VaccineDao
 import com.misterio.core.database.entity.AssessmentEntity
+import com.misterio.core.database.entity.ChildSkillAssessmentEntity
 import com.misterio.core.database.entity.ChildEntity
+import com.misterio.core.database.entity.ChildReportEntity
 import com.misterio.core.database.entity.EventEntity
+import com.misterio.core.database.entity.LifePeriodEntity
 import com.misterio.core.database.entity.MeasurementEntity
-import com.misterio.core.database.entity.VaccineEntity
+import com.misterio.core.database.entity.VaccineEventEntity
 
 @Database(
     entities = [
-        VaccineEntity::class,
+        VaccineEventEntity::class,
         ChildEntity::class,
         MeasurementEntity::class,
         AssessmentEntity::class,
-        EventEntity::class
+        EventEntity::class,
+        LifePeriodEntity::class,
+        ChildSkillAssessmentEntity::class,
+        ChildReportEntity::class
     ],
     version = 1,
     exportSchema = false
 )
 @TypeConverters(DateConverters::class, ListConverter::class)
 abstract class AppDatabase : RoomDatabase() {
+
+    abstract fun lifePeriodDao() : LifePeriodDao
 
     abstract fun childDao(): ChildDao
 
@@ -39,5 +49,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun vaccineDao(): VaccineDao
 
     abstract fun eventDao(): EventDao
+
+    abstract fun childReportDao(): ChildReportDao
 
 }

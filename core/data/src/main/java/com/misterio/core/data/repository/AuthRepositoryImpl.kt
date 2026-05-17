@@ -1,14 +1,18 @@
 package com.misterio.core.data.repository
 
+import android.util.Log
 import com.misterio.core.common.SettingsManager
 import com.misterio.core.common.TokenManager
 import com.misterio.core.database.AppDatabase
 import com.misterio.core.domain.repository.AuthRepository
 import com.misterio.core.network.api.AuthApi
 import com.misterio.core.network.dto.LoginRequest
+import com.misterio.core.network.dto.RefreshRequest
 import com.misterio.core.network.dto.RegisterRequest
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -51,21 +55,31 @@ class AuthRepositoryImpl @Inject constructor(
     }
 
     override suspend fun logout(): Result<Unit> = withContext(Dispatchers.IO) {
+        Log.i(TAG, "LOGOUT")
         try {
-            authApi.logout()
+            val rToken = tokenManager.refreshToken.firstOrNull()
+            tokenManager.clearTokens()
             database.clearAllTables()
             settingsManager.clear()
-            tokenManager.clearTokens()
+            
+            rToken?.let { 
+                authApi.logout(RefreshRequest(it))
+            }
+
             Result.success(Unit)
         } catch (e: Exception) {
-            database.clearAllTables() // Still clear local data
+            database.clearAllTables()
+            tokenManager.clearTokens()
             settingsManager.clear()
-            tokenManager.clearTokens() // Still clear tokens locally
             Result.failure(e)
         }
     }
 
     override fun isLoggedIn(): Flow<Boolean> {
         return tokenManager.accessToken.map { it != null }
+    }
+
+    private companion object {
+        private const val TAG = "AuthRepo"
     }
 }

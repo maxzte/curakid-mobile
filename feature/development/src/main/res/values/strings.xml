@@ -5,7 +5,7 @@
     <string name="head_circumference">Окружність голови</string>
     <string name="growth_tracking">Відстеження зростання</string>
     <string name="height_and_weight_trends">Тренд зрісту та ваги %1$s </string>
-    <string name="measurement_history">ІСТОРІЯ ЗАМІРІВ</string>
+    <string name="measurement_history">Історія замірів</string>
     <string name="no_data_yet">Даних ще немає</string>
     <string name="weight">ВАГА</string>
     <string name="height">ЗРІСТ</string>

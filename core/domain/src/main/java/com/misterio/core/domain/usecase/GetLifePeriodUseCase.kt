@@ -1,13 +1,14 @@
 package com.misterio.core.domain.usecase
 
 import com.misterio.core.domain.model.LifePeriod
-import com.misterio.core.domain.repository.AssessmentRepository
+import com.misterio.core.domain.repository.DevelopmentRepository
+import kotlinx.coroutines.flow.Flow
 import javax.inject.Inject
 
 class GetLifePeriodUseCase @Inject constructor(
-    private val repository: AssessmentRepository
+    private val repository: DevelopmentRepository
 ) {
-    suspend operator fun invoke(code: String): Result<LifePeriod> {
+    operator fun invoke(code: String): Flow<LifePeriod?> {
         return repository.getLifePeriod(code)
     }
 }

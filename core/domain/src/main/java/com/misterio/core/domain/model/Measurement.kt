@@ -11,6 +11,8 @@ data class Measurement(
     val wfaZscore: Double?,
     val hfaZscore: Double?,
     val bmiZscore: Double?,
+    val hcfaZscore: Double?,
     val date: LocalDateTime,
-    val isSynced: Boolean = true
+    val isSynced: Boolean = true,
+    val aiReportId: String?
 )

@@ -28,6 +28,8 @@ data class MeasurementEntity(
     val wfaZscore: Double? = null,
     val hfaZscore: Double? = null,
     val bmiZscore: Double? = null,
+    val hcfaZscore: Double? = null,
     val measurementDate: LocalDateTime,
     val isSynced: Boolean = true,
+    val aiReportId: String?
 )

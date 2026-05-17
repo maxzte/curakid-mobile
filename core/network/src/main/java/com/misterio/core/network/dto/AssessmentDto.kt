@@ -2,43 +2,30 @@ package com.misterio.core.network.dto
 
 import com.google.gson.annotations.SerializedName
 
-data class LifePeriodDto(
-    @SerializedName("id") val id: String,
-    @SerializedName("code") val code: String,
-    @SerializedName("label") val label: String,
-    @SerializedName("about") val about: String,
-    @SerializedName("minMonths") val minMonths: Int,
-    @SerializedName("maxMonths") val maxMonths: Int,
-    @SerializedName("questions") val questions: List<QuestionDto>,
-)
-
-data class QuestionDto(
-    @SerializedName("id") val id: String,
-    @SerializedName("text") val text: String,
-    @SerializedName("domain") val domain: String,
-    @SerializedName("weight") val weight: Double,
-    @SerializedName("options") val options: List<OptionDto>,
-)
-
-data class OptionDto(
-    @SerializedName("id") val id: String,
-    @SerializedName("text") val text: String,
-    @SerializedName("value") val value: String,
-)
 
 data class AssessmentResponse(
-    @SerializedName("id") val id: String,
+    @SerializedName("assessmentId") val id: String,
     @SerializedName("childId") val childId: String,
-    @SerializedName("domain") val domain: String,
-    @SerializedName("score") val score: Double?,
-    @SerializedName("rawData") val rawData: Map<String, Any>?,
+    @SerializedName("answers") val answers: List<AssessmentAnswerResponse>,
     @SerializedName("assessmentDate") val assessmentDate: String
 )
 
-data class SaveAssessmentRequest(
-    @SerializedName("domain") val domain: String,
-    @SerializedName("rawData") val rawData: Map<String, Any>?,
+data class AssessmentAnswerResponse(
+    @SerializedName("assessmentAnswerId") val id: String,
+    @SerializedName("question") var question: QuestionResponse?,
+    @SerializedName("selectedOption") var selectedOption: OptionResponse?,
+    @SerializedName("answeredAt") var answeredAt: String,
+)
+
+data class SaveAnswersRequest(
+    @SerializedName("answers") val answers: List<AnswerRequest>,
     @SerializedName("assessmentDate") val assessmentDate: String? = null
+)
+
+data class AnswerRequest(
+    @SerializedName("questionId") val questionId: String,
+    @SerializedName("selectedOptionId") val selectedOptionId: String,
+    @SerializedName("answeredAt") val answeredAt: String? = null,
 )
 
 data class CompletePeriodAssessmentRequest(
@@ -51,12 +38,6 @@ data class CompletePeriodAssessmentResponse(
     @SerializedName("completionPercent") val completionPercent: Int,
     @SerializedName("requiredPercent") val requiredPercent: Int,
     @SerializedName("completedAt") val completedAt: String?,
-    @SerializedName("assessments") val assessments: List<AssessmentResponse>
-)
-
-data class CompletionErrorDto(
-    @SerializedName("message") val message: String,
-    @SerializedName("completionPercent") val completionPercent: Int?,
-    @SerializedName("requiredPercent") val requiredPercent: Int?,
-    @SerializedName("reason") val reason: String?
+    @SerializedName("assessments") val assessments: List<AssessmentResponse>,
+    @SerializedName("reportId") val reportId: String? = null,
 )

@@ -2,6 +2,12 @@ package com.misterio.core.domain.model
 
 import java.time.LocalDateTime
 
+enum class EventStatus {
+    PLANNED,
+    DONE,
+    SKIPPED,
+}
+
 enum class EventType {
     VACCINE,
     DOCTOR,
@@ -15,5 +21,6 @@ data class Event(
     val date: LocalDateTime,
     val location: String? = null,
     val description: String? = null,
+    val status: EventStatus,
     val isSynced: Boolean = false
 )

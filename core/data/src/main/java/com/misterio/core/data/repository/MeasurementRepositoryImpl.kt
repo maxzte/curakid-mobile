@@ -8,7 +8,7 @@ import com.misterio.core.domain.model.Measurement
 import com.misterio.core.domain.repository.MeasurementRepository
 import com.misterio.core.network.api.MeasurementApi
 import com.misterio.core.network.dto.AddMeasurementRequest
-import com.misterio.core.network.dto.MeasurementDto
+import com.misterio.core.network.dto.MeasurementResponse
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import java.time.LocalDateTime
@@ -61,15 +61,15 @@ class MeasurementRepositoryImpl @Inject constructor(
         height: Double?,
         headCirc: Double?,
     ): Result<Unit> {
-        println(headCirc)
-        val localId = UUID.randomUUID().toString()
+        val tempId = UUID.randomUUID().toString()
         val tempEntity = MeasurementEntity(
-            id = localId,
+            id = tempId,
             childId = childId,
             weightKg = weight,
             heightCm = height,
             headCircCm = headCirc,
             measurementDate = LocalDateTime.now(),
+            aiReportId = null,
             isSynced = false,
         )
 
@@ -83,14 +83,13 @@ class MeasurementRepositoryImpl @Inject constructor(
                 headCircCm = tempEntity.headCircCm,
                 measurementDate = tempEntity.measurementDate.toString()
             )
-            println(dto)
 
             // 2. Network request
             val response = measurementApi.addMeasurement(childId, dto)
             if (response.isSuccessful && response.body() != null) {
                 val savedDto = response.body()!!
                 // 3. Replace local temp with real data from server
-                measurementDao.deleteByLocalId(localId)
+                measurementDao.deleteByLocalId(tempId)
                 measurementDao.insertMeasurement(savedDto.toEntity())
                 Result.success(Unit)
             } else {
@@ -112,11 +111,13 @@ class MeasurementRepositoryImpl @Inject constructor(
         wfaZscore = wfaZscore,
         hfaZscore = hfaZscore,
         bmiZscore = bmiZscore,
+        hcfaZscore = hcfaZscore,
         date = measurementDate,
-        isSynced = isSynced
+        isSynced = isSynced,
+        aiReportId = aiReportId,
     )
 
-    private fun MeasurementDto.toEntity() = MeasurementEntity(
+    private fun MeasurementResponse.toEntity() = MeasurementEntity(
         id = id,
         childId = childId,
         weightKg = weightKg,
@@ -125,7 +126,13 @@ class MeasurementRepositoryImpl @Inject constructor(
         wfaZscore = wfaZscore,
         hfaZscore = hfaZscore,
         bmiZscore = bmiZscore,
+        hcfaZscore = hcfaZscore,
         measurementDate = LocalDateTime.parse(measurementDate),
-        isSynced = true
+        isSynced = true,
+        aiReportId = aiReportId,
     )
+
+    private companion object {
+        private const val TAG = "MeasurementRepository"
+    }
 }

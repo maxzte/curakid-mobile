@@ -1,3 +1,5 @@
+@file:OptIn(ExperimentalMaterial3Api::class)
+
 package com.misterio.curakid
 
 import android.os.Build
@@ -7,6 +9,10 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
@@ -21,24 +27,36 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.calculateEndPadding
+import androidx.compose.foundation.layout.calculateStartPadding
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.Surface
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,25 +68,36 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLayoutDirection
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
+import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
 import com.misterio.core.ui.BOT_BAR_H
+import com.misterio.core.ui.LocalScaffoldController
+import com.misterio.core.ui.ScaffoldController
+import com.misterio.core.ui.TopBarConfiguration
 import com.misterio.core.ui.theme.CurakidTheme
-import com.misterio.feature.calendar.CalendarScreen
+import com.misterio.curakid.feature.calendar.CalendarScreen
 import com.misterio.feature.dashboard.AiReportScreen
-import com.misterio.feature.development.ChildDetailsScreen
-import com.misterio.feature.development.DevelopmentScreen
-import com.misterio.feature.home.HomeScreen
-import com.misterio.feature.profile.AddChildScreen
-import com.misterio.feature.profile.ProfileScreen
-import com.misterio.feature.signup.LoginScreen
-import com.misterio.feature.signup.SignUpScreen
+import com.misterio.curakid.feature.development.ChildDetailsScreen
+import com.misterio.curakid.feature.development.DevelopmentScreen
+import com.misterio.curakid.feature.home.HomeScreen
+import com.misterio.curakid.feature.profile.AddChildScreen
+import com.misterio.curakid.feature.profile.ProfileScreen
+import com.misterio.curakid.feature.profile.SettingsScreen
+import com.misterio.curakid.feature.signup.LoginScreen
+import com.misterio.curakid.feature.signup.SignUpScreen
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -90,7 +119,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         val viewModel: MainViewModel by viewModels()
-
         splashScreen.setKeepOnScreenCondition {
             viewModel.startDestination.value == null
         }
@@ -115,151 +143,401 @@ fun MainNavigation(
     viewModel: MainViewModel,
     onExit: () -> Unit = {}
 ) {
-    val startDestination by viewModel.startDestination.collectAsState()
+    val startDestination by viewModel.startDestination.collectAsStateWithLifecycle()
+    val isConnected by viewModel.isConnected.collectAsStateWithLifecycle(initialValue = true)
+    val scaffoldController = remember { ScaffoldController() }
 
-    if (startDestination is Route.Login || startDestination is Route.RegisterChild) {
-        val authStack = rememberNavBackStack(startDestination!!)
+    CompositionLocalProvider(LocalScaffoldController provides scaffoldController) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            AnimatedContent(
+                modifier = Modifier.fillMaxSize(),
+                targetState = startDestination,
+                transitionSpec = { fadeIn() togetherWith fadeOut() }
+            ) { targetRoute ->
+                when (targetRoute) {
+                    is Route.Login -> {
+                        val authStack = rememberNavBackStack(Route.Login)
 
-        NavDisplay(
-            backStack = authStack, entryProvider = entryProvider {
-                entry<Route.Login> {
-                    LoginScreen(
-                        onNavigateToSignUp = { authStack.add(Route.SignUp) }
-                    )
-                }
-                entry<Route.SignUp> {
-                    SignUpScreen(
-                        onNavigateToLogIn = { authStack.removeAt(authStack.lastIndex) }
-                    )
-                }
-                entry<Route.RegisterChild> {
-                    AddChildScreen(
-                        onBack = {},
-                        showBack = false
-                    )
-                }
-            }
-        )
-    } else if (startDestination != null) {
-        var activeTab by rememberSaveable { mutableStateOf(BottomTab.HOME) }
-
-        val homeStack = rememberNavBackStack(Route.HomeRoot)
-        val calendarStack = rememberNavBackStack(Route.CalendarRoot)
-        val growthStack = rememberNavBackStack(Route.GrowthRoot)
-        val profileStack = rememberNavBackStack(Route.ProfileRoot)
-
-        val currentStack = when (activeTab) {
-            BottomTab.HOME -> homeStack
-            BottomTab.CALENDAR -> calendarStack
-            BottomTab.GROWTH -> growthStack
-            BottomTab.PROFILE -> profileStack
-        }
-
-        LaunchedEffect(Unit) {
-            activeTab = BottomTab.HOME
-        }
-
-        val entryProvider = remember {
-            entryProvider<NavKey> {
-                // Tabs
-                entry<Route.HomeRoot> { HomeScreen() }
-                entry<Route.CalendarRoot> { CalendarScreen() }
-                entry<Route.GrowthRoot> {
-                    DevelopmentScreen()
-                }
-                entry<Route.ProfileRoot> {
-                    ProfileScreen(
-                        onAddChild = { profileStack.add(Route.AddChild) },
-                        onSettingsOpen = { profileStack.add(Route.Settings) }
-                    )
-                }
-
-                entry<Route.Settings> {
-                    com.misterio.feature.profile.SettingsScreen(
-                        onBack = { profileStack.removeAt(profileStack.lastIndex) }
-                    )
-                }
-
-                entry<Route.AddChild> {
-                    AddChildScreen(
-                        onBack = { profileStack.removeAt(profileStack.lastIndex) },
-                    )
-                }
-                entry<Route.ChildDetails> { entry ->
-                    ChildDetailsScreen(
-                        onBack = { growthStack.removeAt(growthStack.lastIndex) },
-                        onViewAiReport = { growthStack.add(Route.AiReport(entry.childId)) }
-                    )
-                }
-                entry<Route.AiReport> { entry ->
-                    AiReportScreen(
-                        childId = entry.childId,
-                        onBack = { growthStack.removeAt(growthStack.lastIndex) }
-                    )
-                }
-            }
-        }
-
-        Surface(
-            modifier = Modifier.fillMaxSize()
-        ) {
-            Box(
-                modifier = Modifier.fillMaxSize()
-            ) {
-                NavDisplay(
-                    modifier = Modifier.fillMaxSize(),
-                    backStack = currentStack,
-                    entryProvider = entryProvider,
-                    transitionSpec = {
-                        val initialTab =
-                            BottomTab.entries.find { it.root.toString() == initialState.key.toString() }
-                        val targetTab =
-                            BottomTab.entries.find { it.root.toString() == targetState.key.toString() }
-
-                        if (initialTab != null && targetTab != null && initialTab != targetTab) {
-                            val direction =
-                                if (targetTab.ordinal > initialTab.ordinal) 1 else -1
-                            (slideInHorizontally { width -> direction * width } + fadeIn()).togetherWith(
-                                slideOutHorizontally { width -> -direction * width } + fadeOut()
-                            )
-                        } else {
-                            (slideInHorizontally { width -> width } + fadeIn()).togetherWith(
-                                slideOutHorizontally { width -> -width } + fadeOut()
-                            )
-                        }
-                    },
-                    popTransitionSpec = {
-                        (slideInHorizontally { width -> -width } + fadeIn()).togetherWith(
-                            slideOutHorizontally { width -> width } + fadeOut()
+                        NavDisplay(
+                            backStack = authStack, entryProvider = entryProvider {
+                                entry<Route.Login> {
+                                    LoginScreen(
+                                        onNavigateToSignUp = { authStack.add(Route.SignUp) },
+                                    )
+                                }
+                                entry<Route.SignUp> {
+                                    SignUpScreen(
+                                        onNavigateToLogIn = { authStack.removeAt(authStack.lastIndex) },
+                                    )
+                                }
+                            }
                         )
-                    },
-                    onBack = {
-                        if (currentStack.size > 1) {
-                            currentStack.removeAt(currentStack.lastIndex)
-                        } else if (activeTab != BottomTab.HOME) {
-                            activeTab = BottomTab.HOME
-                        } else {
-                            onExit()
+                    }
+
+                    is Route.RegisterChild -> {
+                        AddChildScreen(
+                            showBack = false,
+                            onBack = {},
+                        )
+                    }
+
+                    is Route.HomeRoot -> {
+                        var activeTab by rememberSaveable { mutableStateOf(BottomTab.HOME) }
+
+                        val homeStack = rememberNavBackStack(Route.HomeRoot)
+                        val calendarStack = rememberNavBackStack(Route.CalendarRoot())
+                        val growthStack = rememberNavBackStack(Route.GrowthRoot)
+                        val profileStack = rememberNavBackStack(Route.ProfileRoot)
+
+                        val currentStack = when (activeTab) {
+                            BottomTab.HOME -> homeStack
+                            BottomTab.CALENDAR -> calendarStack
+                            BottomTab.GROWTH -> growthStack
+                            BottomTab.PROFILE -> profileStack
+                        }
+
+                        val entryProvider = remember {
+                            entryProvider<NavKey> {
+                                // Tabs
+                                entry<Route.HomeRoot> {
+                                    HomeScreen(
+                                        onEventClick = { eventId ->
+                                            homeStack.add(Route.CalendarRoot(eventId = eventId))
+                                        }
+                                    )
+                                }
+                                entry<Route.CalendarRoot> { key ->
+                                    CalendarScreen(eventId = key.eventId)
+                                }
+                                entry<Route.GrowthRoot> {
+                                    DevelopmentScreen(
+                                        onAddMeasurements = { growthStack.add(Route.ChildDetails) }
+                                    )
+                                }
+                                entry<Route.ProfileRoot> {
+                                    ProfileScreen(
+                                        onAddChild = { profileStack.add(Route.AddChild) },
+                                        onSettingsOpen = { profileStack.add(Route.Settings) }
+                                    )
+                                }
+
+                                entry<Route.Settings> {
+                                    SettingsScreen(
+                                        onBack = { profileStack.removeAt(profileStack.lastIndex) }
+                                    )
+                                }
+
+                                entry<Route.AddChild> {
+                                    AddChildScreen(
+                                        onBack = {
+                                            if (profileStack.size > 1) {
+                                                profileStack.removeAt(profileStack.lastIndex)
+                                            }
+                                        },
+                                    )
+                                }
+                                entry<Route.ChildDetails> {
+                                    ChildDetailsScreen(
+                                        onBack = { growthStack.removeAt(growthStack.lastIndex) },
+                                        onViewAiReport = { growthStack.add(Route.AiReport) }
+                                    )
+                                }
+                                entry<Route.AiReport> { entry ->
+                                    AiReportScreen(
+                                        onBack = { growthStack.removeAt(growthStack.lastIndex) }
+                                    )
+                                }
+                            }
+                        }
+//                val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+                        val density = LocalDensity.current
+
+//                LaunchedEffect(density) {
+//                    scrollBehavior.state.heightOffsetLimit = with(density) {
+//                        -(110.dp - 56.dp).toPx()
+//                    }
+//                }
+
+                        val currentEntry = currentStack.lastOrNull()
+
+                        val showBottomBar = currentEntry !is Route.AddChild
+                                && currentEntry !is Route.RegisterChild
+
+                        LaunchedEffect(currentEntry, activeTab) {
+//                    scaffoldController.updateTopBar(
+//                        TopBarConfiguration(
+//                            showBack = currentStack.size > 1,
+//                            onBack = { if (currentStack.size > 1) currentStack.removeAt(currentStack.size - 1) }
+//                        )
+//                    )
+                            // Скидаємо скрол при зміні екрана
+//                    scrollBehavior.state.contentOffset = 0f
+                        }
+
+
+                        Scaffold(
+                            topBar = {
+                                if (scaffoldController.topBarConfig.show) {
+                                    AppTopBar(scaffoldController.topBarConfig)
+                                }
+                            },
+                            floatingActionButton = {
+                                val config = scaffoldController.fabConfig
+
+                                if (config.show) {
+                                    FloatingActionButton(onClick = config.onClick) {
+                                        Icon(
+                                            imageVector = config.icon!!,
+                                            contentDescription = null
+                                        )
+                                    }
+                                }
+                            },
+                            modifier = Modifier
+                                .fillMaxSize()
+//                            .nestedScroll(scrollBehavior.nestedScrollConnection)
+                            ,
+                            contentWindowInsets = ScaffoldDefaults.contentWindowInsets.only(
+                                WindowInsetsSides.Horizontal
+                            ),
+                            bottomBar = {
+                                AnimatedVisibility(showBottomBar) {
+                                    AppBottomBar(activeTab) { tab ->
+                                        if (activeTab == tab) {
+                                            while (currentStack.size > 1) currentStack.removeAt(
+                                                currentStack.size - 1
+                                            )
+                                        } else {
+//                                            if (tab == BottomTab.CALENDAR) {
+//                                                while (calendarStack.size > 0) calendarStack.removeAt(calendarStack.lastIndex)
+//                                                calendarStack.add(Route.CalendarRoot(eventId = null))
+//                                            }
+                                            activeTab = tab
+                                        }
+                                    }
+                                }
+                            }
+                        ) { innerPadding ->
+                            Box(
+                                modifier = Modifier
+                                    .padding(
+                                        start = innerPadding.calculateStartPadding(
+                                            LocalLayoutDirection.current
+                                        ),
+                                        end = innerPadding.calculateEndPadding(LocalLayoutDirection.current)
+                                    )
+                                    .fillMaxSize()
+                            ) {
+                                NavDisplay(
+                                    modifier = Modifier.fillMaxSize(),
+                                    backStack = currentStack,
+                                    entryProvider = entryProvider,
+                                    entryDecorators = listOf(
+                                        rememberSaveableStateHolderNavEntryDecorator(),
+                                        rememberViewModelStoreNavEntryDecorator(),
+                                    ),
+                                    transitionSpec = {
+                                        val initialTab =
+                                            BottomTab.entries.find { it.root.toString() == initialState.key.toString() }
+                                        val targetTab =
+                                            BottomTab.entries.find { it.root.toString() == targetState.key.toString() }
+
+                                        if (initialTab != null && targetTab != null && initialTab != targetTab) {
+                                            val direction =
+                                                if (targetTab.ordinal > initialTab.ordinal) 1 else -1
+                                            (slideInHorizontally { width -> direction * width } + fadeIn()).togetherWith(
+                                                slideOutHorizontally { width -> -direction * width } + fadeOut()
+                                            )
+                                        } else {
+                                            (slideInHorizontally { width -> width } + fadeIn()).togetherWith(
+                                                slideOutHorizontally { width -> -width } + fadeOut()
+                                            )
+                                        }
+                                    },
+                                    popTransitionSpec = {
+                                        (slideInHorizontally { width -> -width } + fadeIn()).togetherWith(
+                                            slideOutHorizontally { width -> width } + fadeOut()
+                                        )
+                                    },
+                                    onBack = {
+                                        if (currentStack.size > 1) {
+                                            currentStack.removeAt(currentStack.size - 1)
+                                        } else if (activeTab != BottomTab.HOME) {
+                                            activeTab = BottomTab.HOME
+                                        } else {
+                                            onExit()
+                                        }
+                                    }
+                                )
+                            }
                         }
                     }
-                )
 
-                if (currentStack.lastOrNull() !is Route.AddChild) {
-                    AppBottomBar(activeTab) { tab ->
-                        if (activeTab == tab) {
-                            while (currentStack.size > 1) currentStack.removeAt(currentStack.lastIndex)
-                        } else {
-                            activeTab = tab
-                        }
+                    else -> Unit
+                }
+            }
+
+            OfflineIndicator(isConnected = isConnected)
+        }
+    }
+}
+
+@Composable
+private fun OfflineIndicator(isConnected: Boolean) {
+    AnimatedVisibility(
+        visible = !isConnected,
+        enter = expandVertically() + fadeIn(),
+        exit = shrinkVertically() + fadeOut(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .statusBarsPadding()
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Color.Red.copy(alpha = 0.8f))
+                .padding(vertical = 4.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "No Internet Connection",
+                color = Color.White,
+                style = CurakidTheme.typography.labelSmall
+            )
+        }
+    }
+}
+
+@Composable
+private fun AppTopBar(
+    config: TopBarConfiguration,
+) {
+    val backgroundColor = CurakidTheme.colors.surface
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .wrapContentHeight()
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(
+                        backgroundColor,
+                        Color.Transparent
+                    )
+                )
+            )
+            .statusBarsPadding()
+            .padding(vertical = CurakidTheme.paddings.small)
+    ) {
+        Text(
+            text = config.title,
+            style = CurakidTheme.typography.titleMedium,
+            color = CurakidTheme.colors.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            modifier = Modifier.align(Alignment.Center),
+            textAlign = TextAlign.Center
+        )
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .wrapContentHeight()
+                .align(Alignment.Center)
+                .padding(horizontal = CurakidTheme.paddings.medium),
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            if (config.showBack) {
+                PillButton(
+                    onClick = config.onBack,
+                )
+            } else {
+                Spacer(modifier = Modifier.width(80.dp))
+            }
+
+            if (config.actions.isNotEmpty()) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    config.actions.forEach { action ->
+                        IconPillButton(
+                            icon = action.icon,
+                            onClick = action.onClick,
+                            contentDescription = action.contentDescription
+                        )
                     }
                 }
+            } else {
+                Spacer(modifier = Modifier.width(80.dp))
             }
         }
     }
 }
 
 @Composable
-private fun BoxScope.AppBottomBar(
+private fun PillButton(
+    onClick: () -> Unit,
+) {
+    val pillColor = CurakidTheme.colors.onSurface.copy(alpha = 0.10f)
+    val borderColor = CurakidTheme.colors.onSurface.copy(alpha = 0.18f)
+
+    Row(
+        modifier = Modifier
+            .clip(CircleShape)
+            .background(pillColor)
+            .border(width = Dp.Hairline, color = borderColor, shape = CircleShape)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onClick() }
+            .padding(
+                horizontal = CurakidTheme.paddings.small,
+                vertical = CurakidTheme.paddings.small
+            ),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(5.dp)
+    ) {
+        Icon(
+            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+            contentDescription = null,
+            tint = CurakidTheme.colors.onSurface.copy(alpha = 0.92f)
+        )
+    }
+}
+
+@Composable
+private fun IconPillButton(
+    icon: ImageVector,
+    onClick: () -> Unit,
+    contentDescription: String?
+) {
+    val pillColor = CurakidTheme.colors.onSurface.copy(alpha = 0.10f)
+    val borderColor = CurakidTheme.colors.onSurface.copy(alpha = 0.18f)
+
+    Box(
+        modifier = Modifier
+            .size(36.dp)
+            .clip(CircleShape)
+            .background(pillColor)
+            .border(width = Dp.Hairline, color = borderColor, shape = CircleShape)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null
+            ) { onClick() },
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = contentDescription,
+            modifier = Modifier.size(18.dp),
+            tint = CurakidTheme.colors.onSurface.copy(alpha = 0.90f)
+        )
+    }
+}
+
+@Composable
+private fun AppBottomBar(
     activeTab: BottomTab,
     onTabSelected: (BottomTab) -> Unit
 ) {
@@ -267,7 +545,6 @@ private fun BoxScope.AppBottomBar(
 
     Box(
         modifier = Modifier
-            .align(Alignment.BottomCenter)
             .fillMaxWidth()
             .background(
                 brush = Brush.verticalGradient(

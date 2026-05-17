@@ -17,8 +17,7 @@ fun SectionHeader(
     onAction: () -> Unit
 ) {
     ListItem(
-        modifier = Modifier
-            .fillMaxWidth(),
+        modifier = Modifier.fillMaxWidth(),
         headlineContent = {
             Text(
                 text = title,
@@ -40,8 +39,6 @@ fun SectionHeader(
                 )
             }
         },
-        // Видаляємо стандартні фони та відступи, якщо потрібно,
-        // щоб він виглядав саме як заголовок секції
         colors = ListItemDefaults.colors(
             containerColor = Color.Transparent
         )

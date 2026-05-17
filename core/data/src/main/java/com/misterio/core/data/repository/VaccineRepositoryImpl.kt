@@ -1,37 +1,36 @@
 package com.misterio.core.data.repository
 
+import android.util.Log
 import com.misterio.core.database.dao.VaccineDao
-import com.misterio.core.database.entity.VaccineEntity
-import com.misterio.core.domain.model.Vaccine
-import com.misterio.core.domain.model.VaccineStatus
+import com.misterio.core.database.entity.VaccineEventEntity
+import com.misterio.core.domain.model.EventStatus
+import com.misterio.core.domain.model.VaccineEvent
 import com.misterio.core.domain.model.VaccineType
 import com.misterio.core.domain.repository.VaccineRepository
-import com.misterio.core.network.api.VaccineApi
-import com.misterio.core.network.dto.VaccineDto
+import com.misterio.core.network.api.EventApi
+import com.misterio.core.network.dto.VaccineEventResponse
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
-import java.time.LocalDate
+import java.time.LocalDateTime
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class VaccineRepositoryImpl @Inject constructor(
-    private val vaccineApi: VaccineApi,
+    private val eventApi: EventApi,
     private val vaccineDao: VaccineDao,
 ) : VaccineRepository {
 
-    override fun getVaccines(childId: String): Flow<List<Vaccine>> = vaccineDao
-        .getAllVaccines()
+    override fun getVaccines(childId: String): Flow<List<VaccineEvent>> = vaccineDao
+        .getVaccinesByChild(childId)
         .map { entities -> entities.map { it.toDomain() } }
 
     override suspend fun syncVaccines(childId: String): Result<Unit> {
         return try {
-            val response = vaccineApi.getVaccines(childId)
+            val response = eventApi.getVaccineEventsFor(childId)
             if (response.isSuccessful && response.body() != null) {
                 vaccineDao.insertVaccines(response.body()!!.map { it.toEntity() })
+                Log.i(TAG, "remoteVaccines ${response.body()}")
                 Result.success(Unit)
             } else {
                 Result.failure(Exception("Failed to fetch vaccines: ${response.code()}"))
@@ -41,35 +40,36 @@ class VaccineRepositoryImpl @Inject constructor(
         }
     }
 
-    private fun VaccineEntity.toDomain() = Vaccine(
+    private fun VaccineEventEntity.toDomain() = VaccineEvent(
         id = id,
         name = name,
+        date = date,
         disease = disease,
         doseNumber = doseNumber,
         totalDoses = totalDoses,
         type = VaccineType.valueOf(type),
         scheduledAgeMonths = scheduledAgeMonths,
         scheduledAgeDays = scheduledAgeDays,
-        administeredDate = administeredDate,
-        batchNumber = batchNumber,
-        administeredBy = administeredBy,
         notes = notes,
-        status = VaccineStatus.valueOf(status),
+        status = EventStatus.valueOf(status),
     )
 
-    private fun VaccineDto.toEntity() = VaccineEntity(
+    private fun VaccineEventResponse.toEntity() = VaccineEventEntity(
         id = id,
+        childId = childId,
         name = name,
+        date = LocalDateTime.parse(date),
         disease = disease,
         doseNumber = doseNumber,
         totalDoses = totalDoses,
-        type = type,
+        type = vaccineType.name,
         scheduledAgeMonths = scheduledAgeMonths,
         scheduledAgeDays = scheduledAgeDays,
-        administeredDate = administeredDate?.let { LocalDate.parse(it) },
-        batchNumber = batchNumber,
-        administeredBy = administeredBy,
         notes = notes,
-        status = status
+        status = status.name,
     )
+
+    private companion object {
+        private const val TAG = "VaccineRepository"
+    }
 }

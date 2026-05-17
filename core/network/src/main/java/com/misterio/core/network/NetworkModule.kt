@@ -7,7 +7,6 @@ import com.misterio.core.network.api.ChildApi
 import com.misterio.core.network.api.EventApi
 import com.misterio.core.network.api.MeasurementApi
 import com.misterio.core.network.api.DevelopmentApi
-import com.misterio.core.network.api.VaccineApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -90,12 +89,6 @@ object NetworkModule {
     @Singleton
     fun provideQuizApi(retrofit: Retrofit): DevelopmentApi {
         return retrofit.create(DevelopmentApi::class.java)
-    }
-
-    @Provides
-    @Singleton
-    fun provideVaccineApi(retrofit: Retrofit): VaccineApi {
-        return retrofit.create(VaccineApi::class.java)
     }
 
     @Provides

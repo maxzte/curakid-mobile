@@ -1,12 +1,23 @@
 package com.misterio.core.domain.model
 
+import com.misterio.core.domain.util.LocalDateTimeSerializer
+import kotlinx.serialization.Serializable
+import java.time.LocalDateTime
+
+@Serializable
 data class ChildAssessment(
     val id: String,
     val childId: String,
-    val domain: String,
-    val score: Double?,
-    val rawData: Map<String, Any>,
+    val answers: List<AssessmentAnswer>,
     val assessmentDate: String
+)
+
+@Serializable
+data class AssessmentAnswer(
+    val id: String,
+    val question: Question?,
+    val selectedOption: Option?,
+    val answeredAt: @Serializable(with = LocalDateTimeSerializer::class) LocalDateTime,
 )
 
 data class CompletePeriodResult(
@@ -14,5 +25,11 @@ data class CompletePeriodResult(
     val completionPercent: Int,
     val requiredPercent: Int,
     val completedAt: String?,
-    val assessments: List<ChildAssessment>
+    val assessments: List<ChildAssessment>,
+    val reportId: String?,
+)
+
+data class Answer(
+    val questionId: String,
+    val selectedOptionId: String,
 )

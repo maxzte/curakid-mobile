@@ -12,6 +12,9 @@ interface ChildDao {
     @Query("SELECT * FROM children WHERE id = :childId")
     suspend fun getChildById(childId: String): ChildEntity?
 
+    @Query("SELECT * FROM children WHERE id = :childId")
+    fun getChildByIdFlow(childId: String): Flow<ChildEntity?>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertChild(child: ChildEntity)
 

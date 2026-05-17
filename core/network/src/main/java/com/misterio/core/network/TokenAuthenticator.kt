@@ -25,37 +25,56 @@ class TokenAuthenticator @Inject constructor(
             return null
         }
 
-        val refreshToken = runBlocking {
-            tokenManager.refreshToken.firstOrNull()
-        } ?: return null
+        synchronized(this) {
+            val currentAccessToken = runBlocking {
+                tokenManager.accessToken.firstOrNull()
+            }
+            val requestAccessToken = response.request.header("Authorization")?.removePrefix("Bearer ")
 
-        val authApi = authApiLazy.get()
+            // 1. Check if token was already refreshed while this request was waiting for the lock
+            if (currentAccessToken != null && currentAccessToken != requestAccessToken) {
+                return response.request.newBuilder()
+                    .header("Authorization", "Bearer $currentAccessToken")
+                    .build()
+            }
 
-        val newTokens = runBlocking {
-            try {
-                val refreshResponse = authApi.refresh(RefreshRequest(refreshToken))
-                if (refreshResponse.isSuccessful) {
-                    refreshResponse.body()
+            // 2. Perform refresh
+            val refreshToken = runBlocking {
+                tokenManager.refreshToken.firstOrNull()
+            } ?: return null
+
+            val authApi = authApiLazy.get()
+
+            val refreshResponse = runBlocking {
+                try {
+                    authApi.refresh(RefreshRequest(refreshToken))
+                } catch (e: Exception) {
+                    null
+                }
+            }
+
+            return if (refreshResponse != null && refreshResponse.isSuccessful) {
+                val newTokens = refreshResponse.body()
+                if (newTokens != null) {
+                    runBlocking {
+                        tokenManager.saveTokens(newTokens.accessToken, newTokens.refreshToken)
+                    }
+                    response.request.newBuilder()
+                        .header("Authorization", "Bearer ${newTokens.accessToken}")
+                        .build()
                 } else {
                     null
                 }
-            } catch (e: Exception) {
+            } else {
+                // Only clear tokens if the refresh response indicates an invalid or expired refresh token
+                // (e.g., 400 Bad Request, 401 Unauthorized, 403 Forbidden)
+                if (refreshResponse != null && refreshResponse.code() in listOf(400, 401, 403)) {
+                    runBlocking {
+                        tokenManager.clearTokens()
+                    }
+                }
                 null
             }
-        }
-
-        return if (newTokens != null) {
-            runBlocking {
-                tokenManager.saveTokens(newTokens.accessToken, newTokens.refreshToken)
-            }
-            response.request.newBuilder()
-                .header("Authorization", "Bearer ${newTokens.accessToken}")
-                .build()
-        } else {
-            runBlocking {
-                tokenManager.clearTokens()
-            }
-            null
         }
     }
 

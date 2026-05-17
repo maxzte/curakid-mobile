@@ -2,11 +2,14 @@ package com.misterio.core.domain.usecase
 
 import com.misterio.core.domain.model.Gender
 import com.misterio.core.domain.repository.ChildRepository
+import java.time.Instant
+import java.time.ZoneId
 import javax.inject.Inject
 
 class AddChildUseCase @Inject constructor(
     private val repository: ChildRepository,
-    private val scheduleVaccineEventsUseCase: ScheduleVaccineEventsUseCase
+    private val scheduleVaccineEventsUseCase: ScheduleVaccineEventsUseCase,
+    private val scheduleDoctorVisitsUseCase: ScheduleDoctorVisitsUseCase,
 ) {
     suspend operator fun invoke(
         name: String,
@@ -31,7 +34,14 @@ class AddChildUseCase @Inject constructor(
             pastDiseases,
             specialFeatures
         ).onSuccess { childId ->
-            scheduleVaccineEventsUseCase(childId)
+            repository.setSelectedChildId(childId)
+            scheduleVaccineEventsUseCase(
+                childId,
+                childBirthDate = Instant.ofEpochMilli(birthDate)
+                    .atZone(ZoneId.systemDefault())
+                    .toLocalDate()
+            )
+            scheduleDoctorVisitsUseCase(childId)
         }.map { Unit }
     }
 }

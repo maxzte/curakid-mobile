@@ -1,36 +1,36 @@
 package com.misterio.core.network.api
 
+import com.misterio.core.network.dto.AnswerRequest
 import com.misterio.core.network.dto.AssessmentResponse
 import com.misterio.core.network.dto.CompletePeriodAssessmentRequest
 import com.misterio.core.network.dto.CompletePeriodAssessmentResponse
-import com.misterio.core.network.dto.SaveAssessmentRequest
+import com.misterio.core.network.dto.SaveAnswersRequest
 import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.PATCH
 import retrofit2.http.POST
 import retrofit2.http.Path
-import retrofit2.http.Query
 
 interface AssessmentApi {
 
     @GET("api/children/{childId}/assessments")
     suspend fun getAssessments(
         @Path("childId") childId: String,
-        @Query("domain") domain: String? = null
     ): Response<List<AssessmentResponse>>
 
-    @POST("api/children/{childId}/assessments")
-    suspend fun saveAssessment(
+    @POST("api/children/{childId}/assessments/{periodId}")
+    suspend fun saveAssessmentAnswers(
         @Path("childId") childId: String,
-        @Body request: SaveAssessmentRequest
-    ): Response<AssessmentResponse>
+        @Path("periodId") periodId: String,
+        @Body request: SaveAnswersRequest
+    ): Response<List<AssessmentResponse>>
 
     @PATCH("api/children/{childId}/assessments/{assessmentId}")
-    suspend fun updateAssessment(
+    suspend fun updateAssessmentAnswers(
         @Path("childId") childId: String,
         @Path("assessmentId") assessmentId: String,
-        @Body request: SaveAssessmentRequest
+        @Body request: AnswerRequest
     ): Response<AssessmentResponse>
 
     @POST("api/children/{childId}/assessments/complete")

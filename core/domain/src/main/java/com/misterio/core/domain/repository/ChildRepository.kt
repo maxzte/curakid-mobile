@@ -8,7 +8,7 @@ interface ChildRepository {
 
     fun getChildren(): Flow<List<Child>>
 
-    suspend fun getChild(childId: String): Child?
+    fun getChild(childId: String): Flow<Child?>
 
     suspend fun syncChildren(): Result<Unit>
 

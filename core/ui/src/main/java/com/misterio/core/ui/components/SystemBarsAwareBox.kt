@@ -23,6 +23,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import com.misterio.core.ui.BOT_BAR_H
+import com.misterio.core.ui.LocalScaffoldController
+import com.misterio.core.ui.TOP_BAR_H
 import com.misterio.core.ui.theme.CurakidTheme
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -60,12 +62,15 @@ fun SystemBarsAwareBox(
 
 @Composable
 fun rememberListContentPadding(): PaddingValues {
+    val scaffoldController = LocalScaffoldController.current
     val insets = WindowInsets.systemBars
         .only(WindowInsetsSides.Vertical)
         .asPaddingValues()
+    val top = if (scaffoldController.topBarConfig.show) TOP_BAR_H
+    else insets.calculateTopPadding() + CurakidTheme.paddings.medium
 
     return PaddingValues(
-        top = insets.calculateTopPadding() + CurakidTheme.paddings.medium,
+        top = top,
         bottom = insets.calculateBottomPadding() + BOT_BAR_H + CurakidTheme.paddings.medium
     )
 }

@@ -4,7 +4,9 @@ import android.content.Context
 import androidx.room.Room
 import com.misterio.core.database.dao.AssessmentDao
 import com.misterio.core.database.dao.ChildDao
+import com.misterio.core.database.dao.ChildReportDao
 import com.misterio.core.database.dao.EventDao
+import com.misterio.core.database.dao.LifePeriodDao
 import com.misterio.core.database.dao.MeasurementDao
 import com.misterio.core.database.dao.VaccineDao
 import dagger.Module
@@ -35,6 +37,9 @@ object DatabaseModule {
     fun provideMeasurementDao(db: AppDatabase): MeasurementDao = db.measurementDao()
 
     @Provides
+    fun provideLifePeriodDao(db: AppDatabase): LifePeriodDao = db.lifePeriodDao()
+
+    @Provides
     fun provideAssessmentDao(db: AppDatabase): AssessmentDao = db.assessmentDao()
 
     @Provides
@@ -42,5 +47,8 @@ object DatabaseModule {
 
     @Provides
     fun provideEventDao(db: AppDatabase): EventDao = db.eventDao()
+
+    @Provides
+    fun provideChildReportDao(db: AppDatabase): ChildReportDao = db.childReportDao()
 
 }

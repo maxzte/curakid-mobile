@@ -1,22 +1,23 @@
 package com.misterio.core.domain.usecase
 
+import com.misterio.core.domain.model.Answer
 import com.misterio.core.domain.model.ChildAssessment
 import com.misterio.core.domain.repository.AssessmentRepository
 import javax.inject.Inject
 
 class SaveAssessmentDraftUseCase @Inject constructor(
-    private val repository: AssessmentRepository
+    private val repository: AssessmentRepository,
 ) {
     suspend operator fun invoke(
+        periodId: String,
         childId: String,
-        domain: String,
-        rawData: Map<String, Any>,
-        existingAssessmentId: String?
+        skillAssessmentId: String?,
+        answer: Answer,
     ): Result<ChildAssessment> {
-        return if (existingAssessmentId == null) {
-            repository.saveChildAssessment(childId, domain, rawData)
+        return if (skillAssessmentId == null) {
+            repository.saveAnswerForChild(periodId, childId, answer)
         } else {
-            repository.updateChildAssessment(childId, existingAssessmentId, domain, rawData)
+            repository.updateAnswerForChild(childId, skillAssessmentId, answer)
         }
     }
 }
