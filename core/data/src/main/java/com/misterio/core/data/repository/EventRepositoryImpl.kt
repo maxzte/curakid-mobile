@@ -6,6 +6,7 @@ import com.misterio.core.database.entity.EventEntity
 import com.misterio.core.domain.model.Event
 import com.misterio.core.domain.model.EventStatus
 import com.misterio.core.domain.model.EventType
+import com.misterio.core.domain.model.VaccineType
 import com.misterio.core.domain.repository.EventRepository
 import com.misterio.core.domain.util.EventNotificationScheduler
 import com.misterio.core.network.api.EventApi
@@ -29,6 +30,9 @@ class EventRepositoryImpl @Inject constructor(
     override fun getEvents(childId: String): Flow<List<Event>> =
         eventDao.getEvents(childId).map { entities -> entities.map { it.toDomain() } }
 
+    override fun getEventById(eventId: String): Flow<Event?> =
+        eventDao.getEventById(eventId).map { it?.toDomain() }
+
     override fun getEventsByDate(childId: String, date: LocalDateTime): Flow<List<Event>> =
         eventDao.getEventsByDate(childId, date)
             .map { entities -> entities.map { it.toDomain() } }
@@ -36,6 +40,7 @@ class EventRepositoryImpl @Inject constructor(
     override suspend fun addEvent(childId: String, event: Event): Result<Unit> = runCatching {
         // 1. Зберігаємо локально
         eventDao.insertEvent(event.toEntity(childId))
+
 
         // 2. Плануємо сповіщення
         notificationScheduler.schedule(listOf(event))
@@ -75,40 +80,49 @@ class EventRepositoryImpl @Inject constructor(
             if (!response.isSuccessful && response.code() != 404) {
                 // If failed (not 404), we could potentially mark it for background sync
                 // but for now, we just log the failure.
-                Log.e("EventRepository", "Failed to delete event $eventId on server: ${response.code()}")
+                Log.e(
+                    "EventRepository",
+                    "Failed to delete event $eventId on server: ${response.code()}"
+                )
             }
         } catch (e: Exception) {
             Log.e("EventRepository", "Error deleting event $eventId on server", e)
         }
-        
+
         Result.success(Unit)
     }
 
     override suspend fun syncEvents(childId: String): Result<Unit> = runCatching {
-        // 1. Тягнемо події з бекенду
-        val response = eventApi.getEvents(UUID.fromString(childId))
-        if (response.isSuccessful) {
-            val remoteEvents = response.body() ?: emptyList()
-            val entities = remoteEvents.map { it.toDomain().toEntity(childId) }
-            
-            // Отримуємо ID подій, які будуть видалені, щоб скасувати нотифікації
-            val remainingIds = entities.map { it.id }
-            val deletedIds = eventDao.getDeletedEventIds(childId, remainingIds)
-            
-            // Скасовуємо нотифікації для видалених подій
-            deletedIds.forEach { eventId ->
-                notificationScheduler.cancel(eventId)
-            }
+        // 1. Pull events from backend (General and Vaccines)
+        val generalResponse = eventApi.getEvents(UUID.fromString(childId))
+        val vaccineResponse = eventApi.getVaccineEventsFor(childId)
 
-            // Синхронізуємо локальну БД з сервером (видаляємо старі, додаємо нові)
-            eventDao.syncWithServer(childId, entities)
-
-            // Переплановуємо сповіщення для всіх актуальних подій з сервера
-            // (WorkManager замінить існуючі за тегами)
-            notificationScheduler.schedule(remoteEvents.map { it.toDomain() })
+        val remoteEvents = mutableListOf<Event>()
+        if (generalResponse.isSuccessful) {
+            remoteEvents.addAll(generalResponse.body()?.map { it.toDomain() } ?: emptyList())
+        }
+        if (vaccineResponse.isSuccessful) {
+            remoteEvents.addAll(vaccineResponse.body()?.map { it.toDomain() } ?: emptyList())
         }
 
-        // 2. Відправляємо несинхронізовані локальні події
+        val entities = remoteEvents.map { it.toEntity(childId) }
+
+        // Get IDs of events to be deleted to cancel notifications
+        val remainingIds = entities.map { it.id }
+        val deletedIds = eventDao.getDeletedEventIds(childId, remainingIds)
+
+        // Cancel notifications for deleted events
+        deletedIds.forEach { eventId ->
+            notificationScheduler.cancel(eventId)
+        }
+
+        // Sync local DB with server
+        eventDao.syncWithServer(childId, entities)
+
+        // Reschedule notifications for all active events from server
+        notificationScheduler.schedule(remoteEvents)
+
+        // 2. Send unsynced local events
         val unsynced = eventDao.getUnsyncedEvents(childId)
         if (unsynced.isNotEmpty()) {
             Log.d("EventRepository", "Syncing ${unsynced.size} unsynced events for child $childId")
@@ -120,7 +134,9 @@ class EventRepositoryImpl @Inject constructor(
         try {
             if (events.isEmpty()) return
 
-            val response = eventApi.createEvents(events.map { it.toRequest(childId) })
+            val response = eventApi.createEvents(
+                UUID.fromString(childId),
+                events.map { it.toRequest(childId) })
             if (response.isSuccessful) {
                 eventDao.markAsSynced(events.map { it.id })
             }
@@ -135,11 +151,12 @@ class EventRepositoryImpl @Inject constructor(
                 title = event.title,
                 type = event.type,
                 date = event.date.toString(),
-                location = event.location,
+                location = if (event is Event.General) event.location else null,
                 description = event.description,
                 status = event.status
             )
-            val response = eventApi.updateEvent(UUID.fromString(event.id), request)
+            val response =
+                eventApi.updateEvent(UUID.fromString(childId), UUID.fromString(event.id), request)
             if (response.isSuccessful) {
                 eventDao.markAsSynced(event.id)
             }
@@ -149,25 +166,65 @@ class EventRepositoryImpl @Inject constructor(
     }
 }
 
-fun EventEntity.toDomain() = Event(
-    id = id,
-    title = title,
-    type = EventType.valueOf(type),
-    date = date,
-    location = location,
-    description = description,
-    status = EventStatus.valueOf(status),
-    isSynced = isSynced
-)
+fun EventEntity.toDomain(): Event {
+    val type = EventType.valueOf(type)
+    return if (type == EventType.VACCINE) {
+        Event.Vaccine(
+            id = id,
+            title = title,
+            date = date,
+            description = description,
+            status = EventStatus.valueOf(status),
+            isSynced = isSynced,
+            disease = disease,
+            doseNumber = doseNumber,
+            totalDoses = totalDoses,
+            vaccineType = vaccineType?.let { VaccineType.valueOf(it) } ?: VaccineType.VACCINATION,
+            scheduledAgeMonths = scheduledAgeMonths,
+            scheduledAgeDays = scheduledAgeDays,
+            notes = notes
+        )
+    } else {
+        Event.General(
+            id = id,
+            title = title,
+            type = type,
+            date = date,
+            description = description,
+            status = EventStatus.valueOf(status),
+            isSynced = isSynced,
+            location = location
+        )
+    }
+}
 
-fun Event.toEntity(childId: String) = EventEntity(
-    id = id,
-    childId = childId,
-    title = title,
-    type = type.name,
-    date = date,
-    location = location,
-    description = description,
-    status = status.name,
-    isSynced = isSynced
-)
+fun Event.toEntity(childId: String) = when (this) {
+    is Event.General -> EventEntity(
+        id = id,
+        childId = childId,
+        title = title,
+        type = type.name,
+        date = date,
+        description = description,
+        status = status.name,
+        isSynced = isSynced,
+        location = location
+    )
+    is Event.Vaccine -> EventEntity(
+        id = id,
+        childId = childId,
+        title = title,
+        type = type.name,
+        date = date,
+        description = description,
+        status = status.name,
+        isSynced = isSynced,
+        disease = disease,
+        doseNumber = doseNumber,
+        totalDoses = totalDoses,
+        vaccineType = vaccineType.name,
+        scheduledAgeMonths = scheduledAgeMonths,
+        scheduledAgeDays = scheduledAgeDays,
+        notes = notes
+    )
+}

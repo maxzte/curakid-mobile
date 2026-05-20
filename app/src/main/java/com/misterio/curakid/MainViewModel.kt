@@ -5,79 +5,55 @@ package com.misterio.curakid
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.misterio.core.domain.repository.ChildRepository
+import com.misterio.core.common.AppDataStore
+import com.misterio.core.common.TokenManager
+import com.misterio.core.common.TokenState
 import com.misterio.core.domain.repository.ConnectivityRepository
-import com.misterio.core.domain.usecase.IsLoggedInUseCase
+import com.misterio.core.domain.usecase.RefreshTokenUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    private val isLoggedInUseCase: IsLoggedInUseCase,
-    private val childRepository: ChildRepository,
-    private val connectivityRepository: ConnectivityRepository,
+    private val refreshTokenUseCase: RefreshTokenUseCase,
+    appDataStore: AppDataStore,
+    tokenManager: TokenManager,
+    connectivityRepository: ConnectivityRepository,
 ) : ViewModel() {
-    private val _startDestination = MutableStateFlow<Route?>(null)
-    val startDestination = _startDestination.asStateFlow()
 
     val isConnected = connectivityRepository.isConnected
 
+    val startDestination: StateFlow<Route?> =
+        combine(
+            tokenManager.tokenState,
+            appDataStore.onboardingCompleted
+        ) { tokenState, onboardingCompleted ->
+            when (tokenState) {
+                is TokenState.Loading -> null
+                is TokenState.Empty -> Route.Login
+                is TokenState.Available -> if (onboardingCompleted) Route.HomeRoot else Route.RegisterChild
+            }
+        }
+            .onStart { refreshTokenUseCase() }
+            .distinctUntilChanged()
+            .stateIn(
+                scope = viewModelScope,
+                started = SharingStarted.WhileSubscribed(5_000),
+                initialValue = null
+            )
+
     init {
-        Log.i(TAG, "INIT: Starting reactive navigation")
-
-        // 1. Reactive Start Destination
-        isLoggedInUseCase()
-            .flatMapLatest { loggedIn ->
-                if (!loggedIn) {
-                    flowOf(Route.Login)
-                } else {
-                    childRepository.getChildren().map { kids ->
-                        if (kids.isEmpty()) Route.RegisterChild else Route.HomeRoot
-                    }
-                }
-            }
-            .distinctUntilChanged()
-            .onEach { route ->
-                Log.i(TAG, "Start destination updated: $route")
-                _startDestination.value = route
-            }
-            .launchIn(viewModelScope)
-
-        // 2. Initial Sync Side-Effect (Triggered on Login)
-        isLoggedInUseCase()
-            .distinctUntilChanged()
-            .onEach { loggedIn ->
-                if (loggedIn) {
-                    Log.i(TAG, "Sync trigger: User is logged in, performing sync")
-                    viewModelScope.launch {
-                        try {
-                            withTimeout(5000) {
-                                childRepository.syncChildren()
-                            }
-                            Log.i(TAG, "Sync trigger: Finished")
-                        } catch (e: Exception) {
-                            Log.e(TAG, "Sync trigger: Failed or Timed out", e)
-                        }
-                    }
-                }
-            }
-            .launchIn(viewModelScope)
+        Log.d(TAG, "INIT")
     }
-
 
     private companion object {
         private const val TAG = "MainVM"
     }
-
 }

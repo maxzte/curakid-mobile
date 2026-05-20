@@ -11,5 +11,6 @@ data class ChildSkillAssessmentEntity(
     val childId: String,
     val answers: List<AssessmentAnswer>,
     val assessmentDate: String,
+    val completedAt: String? = null,
     val isSynced: Boolean = true
 )

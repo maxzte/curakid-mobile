@@ -21,11 +21,9 @@ private val Context.settingsDataStore: DataStore<Preferences> by preferencesData
 class SettingsManager @Inject constructor(
     @param:ApplicationContext private val context: Context
 ) {
-    private val selectedChildIdKey = stringPreferencesKey("selected_child_id")
     private val isAppEnabledKey = booleanPreferencesKey("is_app_enabled")
     private val isNotificationsEnabledKey = booleanPreferencesKey("is_notifications_enabled")
 
-    val selectedChildId: Flow<String?> = context.settingsDataStore.data.map { it[selectedChildIdKey] }
     val isAppEnabled: Flow<Boolean> = context.settingsDataStore.data.map { it[isAppEnabledKey] ?: true }
     val isNotificationsEnabled: Flow<Boolean> = context.settingsDataStore.data.map { it[isNotificationsEnabledKey] ?: true }
 
@@ -35,16 +33,6 @@ class SettingsManager @Inject constructor(
 
     suspend fun saveAppEnabled(enabled: Boolean) {
         context.settingsDataStore.edit { it[isAppEnabledKey] = enabled }
-    }
-
-    suspend fun saveSelectedChildId(id: String?) {
-        context.settingsDataStore.edit { prefs ->
-            if (id != null) {
-                prefs[selectedChildIdKey] = id
-            } else {
-                prefs.remove(selectedChildIdKey)
-            }
-        }
     }
 
     suspend fun clear() {
@@ -60,4 +48,5 @@ class SettingsManager @Inject constructor(
         val key = longPreferencesKey("last_sync_time_$childId")
         return context.settingsDataStore.data.map { it[key] ?: 0L }.first()
     }
+
 }

@@ -1,5 +1,6 @@
 package com.misterio.core.network.api
 
+import com.misterio.core.domain.model.ChartNormPoint
 import com.misterio.core.network.dto.AddMeasurementRequest
 import com.misterio.core.network.dto.MeasurementResponse
 import retrofit2.Response
@@ -18,5 +19,11 @@ interface MeasurementApi {
         @Path("childId") childId: String,
         @Body measurement: AddMeasurementRequest
     ): Response<MeasurementResponse>
+
+    @GET("api/measurements/norms/{type}/{gender}")
+    suspend fun getMeasurementNorms(
+        @Path("type") type: String,
+        @Path("gender") gender: String,
+    ): Response<List<ChartNormPoint>>
 
 }

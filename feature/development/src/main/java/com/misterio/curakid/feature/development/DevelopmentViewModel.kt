@@ -7,6 +7,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.misterio.core.domain.model.Answer
 import com.misterio.core.domain.model.Child
+import com.misterio.core.domain.model.ChildAssessment
 import com.misterio.core.domain.model.CompletePeriodResult
 import com.misterio.core.domain.model.LifePeriod
 import com.misterio.core.domain.model.LifePeriodAiReport
@@ -34,6 +35,8 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -42,9 +45,10 @@ import java.time.Period
 import javax.inject.Inject
 
 data class AnswerUI(
-    val assessmentId: String,
+    val assessmentId: String?,
     val questionId: String,
-    val optionId: Option
+    val optionId: Option?,
+    val originalOptionId: String? = null
 )
 
 data class DevelopmentUiState(
@@ -52,6 +56,8 @@ data class DevelopmentUiState(
     val currentAiReport: LifePeriodAiReport? = null,
     val answers: List<AnswerUI> = emptyList(),
     val isLoading: Boolean = false,
+    val isPollingReport: Boolean = false,
+    val isCompleted: Boolean = false,
     val error: String? = null,
     val isSaving: Boolean = false,
     val completionResult: CompletePeriodResult? = null,
@@ -95,41 +101,44 @@ class DevelopmentViewModel @Inject constructor(
 
     private fun observeData() {
         viewModelScope.launch {
-            selectedChild.collectLatest { child ->
-                if (child == null) {
-                    Log.d(TAG, "observeData: No child selected")
-                    return@collectLatest
-                }
+            Log.d(TAG, "observeData: Starting flow")
+            selectedChild
+                .flatMapLatest { child ->
+                    if (child == null) {
+                        Log.d(TAG, "observeData: Child is null")
+                        flowOf(null)
+                    } else {
+                        Log.d(TAG, "observeData: Child selected ${child.id}, triggering sync")
+                        // Trigger sync in background
+                        launch {
+                            try {
+                                syncLifePeriodsUseCase()
+                                syncChildAssessmentsUseCase(childId = child.id)
+                                syncChildAiReportsUseCase(childId = child.id)
+                            } catch (e: Exception) {
+                                Log.e(TAG, "observeData: Sync error", e)
+                            }
+                        }
 
-                Log.d(TAG, "observeData: Starting for child ${child.id}")
-                _uiState.update { it.copy(isLoading = true) }
-
-                // Start sync in background
-                launch {
-                    try {
-                        Log.d(TAG, "observeData: Triggering sync...")
-                        syncLifePeriodsUseCase()
-                        syncChildAssessmentsUseCase(childId = child.id)
-                        syncChildAiReportsUseCase(childId = child.id)
-                        Log.d(TAG, "observeData: Sync finished")
-                    } catch (e: Exception) {
-                        Log.e(TAG, "observeData: Sync error", e)
+                        combine(
+                            getLifePeriodsUseCase(),
+                            getChildAssessmentsUseCase(childId = child.id),
+                            getChildAiReportsUseCase(childId = child.id),
+                        ) { periods, assessments, reports ->
+                            DataSnapshot(periods, assessments, reports, child)
+                        }
                     }
                 }
+                .collectLatest { snapshot ->
+                    if (snapshot == null) return@collectLatest
 
-                // Combine periods and assessments for a single update
-                combine(
-                    getLifePeriodsUseCase(),
-                    getChildAssessmentsUseCase(childId = child.id),
-                    getChildAiReportsUseCase(childId = child.id),
-                ) { periods, assessments, reports ->
                     Log.d(
                         TAG,
-                        "observeData: Flow emitted ${periods.size} periods and ${assessments.size} assessments"
+                        "observeData: New snapshot - Periods: ${snapshot.periods.size}, Assessments: ${snapshot.assessments.size}, Reports: ${snapshot.reports.size}"
                     )
-                    val initialAnswersMap = mutableListOf<AnswerUI>()
 
-                    assessments.forEach { assessment ->
+                    val initialAnswersMap = mutableListOf<AnswerUI>()
+                    snapshot.assessments.forEach { assessment: ChildAssessment ->
                         assessment.answers.forEach { ans ->
                             val qId = ans.question?.id ?: return@forEach
                             val opt = ans.selectedOption ?: return@forEach
@@ -137,7 +146,8 @@ class DevelopmentViewModel @Inject constructor(
                                 AnswerUI(
                                     assessmentId = assessment.id,
                                     questionId = qId,
-                                    optionId = opt
+                                    optionId = opt,
+                                    originalOptionId = opt.id
                                 )
                             )
                         }
@@ -145,28 +155,47 @@ class DevelopmentViewModel @Inject constructor(
 
                     _uiState.update { state ->
                         val currentPeriod = state.currentPeriod ?: run {
-                            val ageInMonths = Period.between(child.birthDate, LocalDate.now())
-                                .toTotalMonths()
-                                .toInt()
+                            val ageInMonths =
+                                Period.between(snapshot.child.birthDate, LocalDate.now())
+                                    .toTotalMonths()
+                                    .toInt()
 
-                            periods.find { ageInMonths >= it.minMonths && ageInMonths <= it.maxMonths }
-                                ?: periods.firstOrNull()
+                            snapshot.periods.find { ageInMonths >= it.minMonths && ageInMonths <= it.maxMonths }
+                                ?: snapshot.periods.firstOrNull()
                         }
-                        val currentAiReport = reports.find { it.lifePeriodId == currentPeriod?.id }
+
+                        val currentAiReport =
+                            snapshot.reports.find { it.lifePeriodId == currentPeriod?.id }
+
+                        Log.d(TAG, "observeData: Mapping for period ${currentPeriod?.id}")
+                        Log.d(TAG, "observeData: found report=${currentAiReport?.id}")
+                        if (currentAiReport == null && snapshot.reports.isNotEmpty()) {
+                            Log.d(
+                                TAG,
+                                "observeData: Available reports: ${snapshot.reports.map { "id=${it.id}, periodId=${it.lifePeriodId}" }}"
+                            )
+                        }
 
                         state.copy(
-                            lifePeriods = periods,
-                            aiReports = reports,
+                            lifePeriods = snapshot.periods,
+                            aiReports = snapshot.reports,
                             currentPeriod = currentPeriod,
                             currentAiReport = currentAiReport,
                             answers = initialAnswersMap,
-                            isLoading = periods.isEmpty() && state.lifePeriods.isEmpty()
+                            isLoading = false,
+                            isCompleted = currentAiReport != null
                         )
                     }
-                }.collectLatest { }
-            }
+                }
         }
     }
+
+    private data class DataSnapshot(
+        val periods: List<LifePeriod>,
+        val assessments: List<ChildAssessment>,
+        val reports: List<LifePeriodAiReport>,
+        val child: Child
+    )
 
     private fun observeAutoSave() {
         viewModelScope.launch {
@@ -210,7 +239,7 @@ class DevelopmentViewModel @Inject constructor(
         val currentState = _uiState.value
         val existingAnswer = currentState.answers.find { it.questionId == questionId }
 
-        if (existingAnswer == null || existingAnswer.optionId.id == optionId) {
+        if (existingAnswer?.optionId?.id == optionId) {
             return
         }
 
@@ -218,11 +247,22 @@ class DevelopmentViewModel @Inject constructor(
         val question = period.questions.find { it.id == questionId } ?: return
         val option = question.options.find { it.id == optionId } ?: return
 
+        if (existingAnswer?.originalOptionId == optionId) {
+            _uiState.update { state ->
+                val newAnswerUI = existingAnswer.copy(optionId = option)
+                val newAnswers =
+                    state.answers.filterNot { it.questionId == questionId } + newAnswerUI
+                state.copy(answers = newAnswers)
+            }
+            return
+        }
+
         _uiState.update { state ->
             val newAnswerUI = AnswerUI(
-                assessmentId = existingAnswer.assessmentId,
+                assessmentId = existingAnswer?.assessmentId,
                 questionId = questionId,
-                optionId = option
+                optionId = option,
+                originalOptionId = existingAnswer?.originalOptionId
             )
             val newAnswers = state.answers.filterNot { it.questionId == questionId } + newAnswerUI
             state.copy(
@@ -234,16 +274,12 @@ class DevelopmentViewModel @Inject constructor(
     }
 
     fun onAnswerCleared(questionId: String) {
-        val currentState = _uiState.value
-        if (currentState.answers.none { it.questionId == questionId }) {
-            return
-        }
         _uiState.update { state ->
-            val newAnswers = state.answers.filterNot { it.questionId == questionId }
+            val newAnswers = state.answers.map {
+                if (it.questionId == questionId) it.copy(optionId = null) else it
+            }
             state.copy(answers = newAnswers)
         }
-        // Since backend doesn't support clearing, we don't trigger save here
-        // or we might need a different approach if clearing is required.
     }
 
     fun completePeriod(allowEarlyTransition: Boolean = false) {
@@ -276,6 +312,7 @@ class DevelopmentViewModel @Inject constructor(
                 _uiState.update {
                     it.copy(
                         isLoading = false,
+                        isCompleted = true,
                         completionResult = result.getOrThrow()
                     )
                 }
@@ -301,16 +338,15 @@ class DevelopmentViewModel @Inject constructor(
 
     private fun waitForReport(reportId: String, childId: String) {
         viewModelScope.launch {
+            _uiState.update { it.copy(isPollingReport = true) }
             pollReportStatusUseCase(reportId).collect { result ->
                 result.onSuccess { isReady ->
                     if (isReady) {
-                        _uiState.update { it.copy(isLoading = false) }
                         syncChildAiReportsUseCase(childId = childId)
-                    } else {
-                        _uiState.update { it.copy(isLoading = true) }
+                        _uiState.update { it.copy(isPollingReport = false) }
                     }
                 }.onFailure { error ->
-                    _uiState.update { it.copy(isLoading = false, error = error.message) }
+                    _uiState.update { it.copy(isPollingReport = false, error = error.message) }
                 }
             }
         }

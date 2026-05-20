@@ -17,14 +17,12 @@ fun AiReportCard(
     title: String,
     reportText: String,
     recommendations: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    isLoading: Boolean = false
 ) {
-    ElevatedCard(
+    OutlinedCard(
         modifier = modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.elevatedCardColors(
-            containerColor = CurakidTheme.colors.surfaceContainerLow
-        )
+        shape = RoundedCornerShape(CurakidTheme.paddings.medium),
     ) {
         Column(
             modifier = Modifier.padding(16.dp),
@@ -38,12 +36,21 @@ fun AiReportCard(
                 Icon(
                     imageVector = Icons.Rounded.AutoAwesome,
                     contentDescription = "AI Report",
-                    tint = CurakidTheme.colors.primary
+                    tint = if (isLoading) CurakidTheme.colors.outlineVariant else CurakidTheme.colors.primary
                 )
-                Text(
-                    text = title,
-                    fontWeight = FontWeight.Bold
-                )
+                if (isLoading) {
+                    Box(
+                        modifier = Modifier
+                            .width(150.dp)
+                            .height(20.dp)
+                            .shimmerEffect()
+                    )
+                } else {
+                    Text(
+                        text = title,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
 
             HorizontalDivider(color = CurakidTheme.colors.outlineVariant.copy(alpha = 0.5f))
@@ -51,15 +58,23 @@ fun AiReportCard(
             // Тіло: Звіт
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = "Звіт:",
+                    text = "Аналіз:",
                     fontWeight = FontWeight.Bold,
-                    color = CurakidTheme.colors.primary
+                    color = if (isLoading) CurakidTheme.colors.outlineVariant else CurakidTheme.colors.primary
                 )
-                Text(
-                    text = reportText,
-                    style = CurakidTheme.typography.bodyMedium,
-                    color = CurakidTheme.colors.onSurfaceVariant
-                )
+                if (isLoading) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Box(modifier = Modifier.fillMaxWidth().height(14.dp).shimmerEffect())
+                        Box(modifier = Modifier.fillMaxWidth(0.9f).height(14.dp).shimmerEffect())
+                        Box(modifier = Modifier.fillMaxWidth(0.95f).height(14.dp).shimmerEffect())
+                    }
+                } else {
+                    Text(
+                        text = reportText,
+                        style = CurakidTheme.typography.bodyMedium,
+                        color = CurakidTheme.colors.onSurfaceVariant
+                    )
+                }
             }
 
             // Тіло: Рекомендації
@@ -68,13 +83,20 @@ fun AiReportCard(
                     text = "Рекомендації:",
                     style = CurakidTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
-                    color = CurakidTheme.colors.primary
+                    color = if (isLoading) CurakidTheme.colors.outlineVariant else CurakidTheme.colors.primary
                 )
-                Text(
-                    text = recommendations,
-                    style = CurakidTheme.typography.bodyMedium,
-                    color = CurakidTheme.colors.onSurfaceVariant
-                )
+                if (isLoading) {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Box(modifier = Modifier.fillMaxWidth().height(14.dp).shimmerEffect())
+                        Box(modifier = Modifier.fillMaxWidth(0.85f).height(14.dp).shimmerEffect())
+                    }
+                } else {
+                    Text(
+                        text = recommendations,
+                        style = CurakidTheme.typography.bodyMedium,
+                        color = CurakidTheme.colors.onSurfaceVariant
+                    )
+                }
             }
         }
     }

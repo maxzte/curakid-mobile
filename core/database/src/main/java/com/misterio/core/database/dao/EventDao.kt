@@ -10,6 +10,9 @@ interface EventDao {
     @Query("SELECT * FROM events WHERE childId = :childId")
     fun getEvents(childId: String): Flow<List<EventEntity>>
 
+    @Query("SELECT * FROM events WHERE id = :id")
+    fun getEventById(id: String): Flow<EventEntity?>
+
     @Query("SELECT * FROM events WHERE childId = :childId AND date = :date")
     fun getEventsByDate(childId: String, date: LocalDateTime): Flow<List<EventEntity>>
 

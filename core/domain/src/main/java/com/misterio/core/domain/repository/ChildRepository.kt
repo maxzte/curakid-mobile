@@ -10,7 +10,7 @@ interface ChildRepository {
 
     fun getChild(childId: String): Flow<Child?>
 
-    suspend fun syncChildren(): Result<Unit>
+    suspend fun syncChildren(force: Boolean): Result<Unit>
 
     suspend fun addChild(
         name: String,
@@ -25,7 +25,7 @@ interface ChildRepository {
 
     suspend fun updateChild(child: Child): Result<Unit>
 
-    fun getSelectedChildId(): Flow<String?>
+    fun getSelectedChild(): Flow<Child?>
 
     suspend fun setSelectedChildId(id: String?)
 

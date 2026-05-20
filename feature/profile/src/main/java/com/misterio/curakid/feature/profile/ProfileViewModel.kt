@@ -11,21 +11,29 @@ import com.misterio.core.domain.model.Gender
 import com.misterio.core.domain.repository.ChildRepository
 import com.misterio.core.domain.usecase.AddChildUseCase
 import com.misterio.core.domain.usecase.GetChildUseCase
+import com.misterio.core.domain.usecase.GetChildrenUseCase
 import com.misterio.core.domain.usecase.LogoutUseCase
+import com.misterio.core.domain.usecase.SelectChildUseCase
+import com.misterio.core.domain.usecase.SyncChildrenUseCase
+import com.misterio.core.domain.usecase.UpdateChildUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
-    private val childRepository: ChildRepository,
+    private val syncChildrenUseCase: SyncChildrenUseCase,
+    getChildrenUseCase: GetChildrenUseCase,
+    private val selectChildUseCase: SelectChildUseCase,
     private val addChildUseCase: AddChildUseCase,
+    private val updateChildUseCase: UpdateChildUseCase,
     getChildUseCase: GetChildUseCase,
     private val logoutUseCase: LogoutUseCase,
 ) : ViewModel() {
@@ -33,14 +41,14 @@ class ProfileViewModel @Inject constructor(
     init {
         Log.i("ProfileVM", "INIT")
         viewModelScope.launch {
-            childRepository.syncChildren()
+            syncChildrenUseCase(false)
         }
     }
 
     private val _uiState = MutableStateFlow<UiState<String>>(UiState.Initial)
     val uiState: StateFlow<UiState<String>> = _uiState.asStateFlow()
 
-    val children: StateFlow<List<Child>> = childRepository.getChildren()
+    val children: StateFlow<List<Child>> = getChildrenUseCase()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -54,9 +62,9 @@ class ProfileViewModel @Inject constructor(
             initialValue = null
         )
 
-    fun onChildSelected(id: String?) {
+    fun onChildSelected(id: String) {
         viewModelScope.launch {
-            childRepository.setSelectedChildId(id)
+            selectChildUseCase(id)
         }
     }
 
@@ -95,7 +103,7 @@ class ProfileViewModel @Inject constructor(
     fun updateChild(child: Child) {
         viewModelScope.launch {
             _uiState.value = UiState.Loading
-            childRepository.updateChild(child)
+            updateChildUseCase(child)
                 .onSuccess {
                     _uiState.value = UiState.Success("Child updated")
                     delay(500)

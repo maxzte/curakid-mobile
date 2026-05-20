@@ -233,7 +233,9 @@ fun QuickPreview(
                         tint = CurakidTheme.colors.primary,
                         modifier = Modifier.size(20.dp)
                     )
+
                     Spacer(modifier = Modifier.width(12.dp))
+
                     Text(
                         text = it,
                         style = CurakidTheme.typography.bodyMedium,
@@ -279,7 +281,8 @@ fun EmptyEventState(
 @Composable
 fun EventCard(
     event: Event,
-    onClick: (Event) -> Unit
+    onClick: () -> Unit,
+    onEditClick: () -> Unit
 ) {
     val isCompleted = event.status == EventStatus.DONE || event.status == EventStatus.SKIPPED
     val contentAlpha = if (isCompleted) 0.5f else 1f
@@ -312,7 +315,7 @@ fun EventCard(
         modifier = Modifier
             .fillMaxWidth()
             .alpha(contentAlpha)
-            .clickable { onClick(event) },
+            .clickable { onClick() },
         shape = CurakidTheme.Radius.lg,
         border = if (isCompleted) BorderStroke(1.dp, CurakidTheme.colors.outlineVariant.copy(alpha = 0.5f)) 
                  else BorderStroke(1.dp, CurakidTheme.colors.outlineVariant)
@@ -365,7 +368,7 @@ fun EventCard(
             Spacer(modifier = Modifier.width(8.dp))
 
             IconButton(
-                onClick = { onClick(event) },
+                onClick = onEditClick,
                 modifier = Modifier.size(32.dp)
             ) {
                 Icon(

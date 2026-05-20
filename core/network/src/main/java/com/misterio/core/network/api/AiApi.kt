@@ -7,12 +7,12 @@ import retrofit2.http.Path
 
 interface AiApi {
 
-    @GET("/api/children/{childId}/reports")
+    @GET("api/children/{childId}/reports")
     suspend fun getChildReports(
         @Path("childId") childId: String
     ): Response<List<ReportResponse>>
 
-    @GET("/reports/{reportId}/status")
+    @GET("reports/{reportId}/status")
     suspend fun getReportStatus(@Path ("reportId") reportId: String): Response<Boolean>
 
 }

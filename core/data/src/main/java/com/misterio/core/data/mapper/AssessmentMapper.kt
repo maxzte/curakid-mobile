@@ -11,7 +11,8 @@ fun AssessmentResponse.toDomain() = ChildAssessment(
     id = id,
     childId = childId,
     answers = answers.map { it.toDomain() },
-    assessmentDate = assessmentDate
+    assessmentDate = assessmentDate,
+    completedAt = null
 )
 
 fun AssessmentResponse.toEntity() = ChildSkillAssessmentEntity(
@@ -19,6 +20,7 @@ fun AssessmentResponse.toEntity() = ChildSkillAssessmentEntity(
     childId = childId,
     answers = answers.map { it.toDomain() },
     assessmentDate = assessmentDate,
+    completedAt = null,
     isSynced = true
 )
 
@@ -26,7 +28,8 @@ fun ChildSkillAssessmentEntity.toDomain() = ChildAssessment(
     id = id,
     childId = childId,
     answers = answers,
-    assessmentDate = assessmentDate
+    assessmentDate = assessmentDate,
+    completedAt = completedAt
 )
 
 fun AssessmentAnswerResponse.toDomain() = AssessmentAnswer(

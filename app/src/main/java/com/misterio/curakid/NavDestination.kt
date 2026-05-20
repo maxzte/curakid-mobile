@@ -27,7 +27,18 @@ sealed interface Route : NavKey {
     data object HomeRoot : Route
 
     @Serializable
-    data class CalendarRoot(val eventId: String? = null) : Route
+    data class CalendarRoot(
+        val eventId: String? = null
+    ) : Route {
+        companion object {
+            val DEFAULT = CalendarRoot()
+        }
+    }
+
+    @Serializable
+    data class CalendarFromHome(
+        val eventId: String? = null
+    ) : Route
 
     @Serializable
     data object GrowthRoot : Route
@@ -38,12 +49,18 @@ sealed interface Route : NavKey {
     @Serializable
     data object Settings : Route
 
+    @Serializable
+    data class VaccinationDetail(val id: String) : Route
+
+    @Serializable
+    data object UpcomingEvents : Route
+
     // Details (Growth Stack)
     @Serializable
     data object AddChild : Route
 
     @Serializable
-    data object ChildDetails : Route
+    data class ChildDetails(val lifePeriods: List<String>) : Route
 
     @Serializable
     data object AiReport : Route
@@ -55,7 +72,7 @@ enum class BottomTab(
     val root: Route,
 ) {
     HOME(Icons.Default.Home, label = "Головна", Route.HomeRoot),
-    CALENDAR(Icons.Default.CalendarMonth, label = "Календар", Route.CalendarRoot()),
+    CALENDAR(Icons.Default.CalendarMonth, label = "Календар", Route.CalendarRoot.DEFAULT),
     GROWTH(Icons.Default.Timeline, label = "Зростання", Route.GrowthRoot),
     PROFILE(Icons.Default.AccountCircle, label = "Профіль", Route.ProfileRoot)
 }

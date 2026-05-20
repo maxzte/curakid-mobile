@@ -2,8 +2,8 @@ package com.misterio.core.network.dto
 
 import com.google.gson.annotations.SerializedName
 
-data class ChildDto(
-    @SerializedName("id") val id: String?,
+data class ChildResponse(
+    @SerializedName("id") val id: String,
     @SerializedName("name") val name: String,
     @SerializedName("birthDate") val birthDate: String,
     @SerializedName("gender") val gender: String,

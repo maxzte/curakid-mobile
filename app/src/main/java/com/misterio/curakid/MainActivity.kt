@@ -9,15 +9,14 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.expandVertically
-import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
@@ -56,20 +55,20 @@ import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -78,6 +77,7 @@ import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
+import androidx.navigation3.runtime.NavEntryDecorator
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
@@ -89,7 +89,6 @@ import com.misterio.core.ui.ScaffoldController
 import com.misterio.core.ui.TopBarConfiguration
 import com.misterio.core.ui.theme.CurakidTheme
 import com.misterio.curakid.feature.calendar.CalendarScreen
-import com.misterio.feature.dashboard.AiReportScreen
 import com.misterio.curakid.feature.development.ChildDetailsScreen
 import com.misterio.curakid.feature.development.DevelopmentScreen
 import com.misterio.curakid.feature.home.HomeScreen
@@ -98,6 +97,13 @@ import com.misterio.curakid.feature.profile.ProfileScreen
 import com.misterio.curakid.feature.profile.SettingsScreen
 import com.misterio.curakid.feature.signup.LoginScreen
 import com.misterio.curakid.feature.signup.SignUpScreen
+import com.misterio.curakid.navigation.Navigator
+import com.misterio.curakid.navigation.calendarEntry
+import com.misterio.curakid.navigation.growthEntry
+import com.misterio.curakid.navigation.homeEntry
+import com.misterio.curakid.navigation.profileEntry
+import com.misterio.curakid.navigation.rememberNavigationState
+import com.misterio.feature.dashboard.AiReportScreen
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -121,6 +127,7 @@ class MainActivity : ComponentActivity() {
         val viewModel: MainViewModel by viewModels()
         splashScreen.setKeepOnScreenCondition {
             viewModel.startDestination.value == null
+//            viewModel.startDestination.value == null
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -147,234 +154,178 @@ fun MainNavigation(
     val isConnected by viewModel.isConnected.collectAsStateWithLifecycle(initialValue = true)
     val scaffoldController = remember { ScaffoldController() }
 
+    // Hoist ALL navigation state to the top level
+    val navigationState = rememberNavigationState(
+        startRoute = BottomTab.HOME.root,
+        topLevelRoutes = setOf(
+            BottomTab.HOME.root,
+            BottomTab.CALENDAR.root,
+            BottomTab.GROWTH.root,
+            BottomTab.PROFILE.root,
+        )
+    )
+    val navigator = remember { Navigator(navigationState) }
+
+    val activeTab by remember {
+        derivedStateOf {
+            when (navigationState.topLevelRoute) {
+                Route.HomeRoot -> BottomTab.HOME
+                is Route.CalendarRoot -> BottomTab.CALENDAR
+                is Route.CalendarFromHome -> BottomTab.HOME
+                Route.GrowthRoot -> BottomTab.GROWTH
+                Route.ProfileRoot -> BottomTab.PROFILE
+                else -> BottomTab.HOME
+            }
+        }
+    }
+
+    val currentStack = navigationState.backStacks[navigationState.topLevelRoute] ?: emptyList()
+    val currentEntry = currentStack.lastOrNull()
+    val showBottomBar = currentEntry !is Route.AddChild
+            && currentEntry !is Route.RegisterChild
+
+    val entryProvider = entryProvider {
+        homeEntry(
+            onEventClick = {
+                navigator.navigate(
+                    Route.CalendarFromHome(
+                        eventId = it
+                    )
+                )
+            },
+            onVaccinationClick = {
+                navigator.navigate(Route.VaccinationDetail(it))
+            },
+            onShowAllUpcoming = {
+                navigator.navigate(Route.UpcomingEvents)
+            },
+            onBack = {
+                navigator.goBack()
+            }
+        )
+        calendarEntry(
+            onVaccinationClick = {
+                navigator.navigate(Route.VaccinationDetail(it))
+            }
+        )
+        growthEntry(
+            onAddMeasurements = {
+                navigator.navigate(Route.ChildDetails(it))
+            },
+            onBack = { navigator.goBack() }
+        )
+        profileEntry(
+            onAddChild = { navigator.navigate(Route.AddChild) },
+            onSettingsOpen = { navigator.navigate(Route.Settings) },
+            onBack = { navigator.goBack() }
+        )
+    }
+
     CompositionLocalProvider(LocalScaffoldController provides scaffoldController) {
         Box(modifier = Modifier.fillMaxSize()) {
-            AnimatedContent(
-                modifier = Modifier.fillMaxSize(),
-                targetState = startDestination,
-                transitionSpec = { fadeIn() togetherWith fadeOut() }
-            ) { targetRoute ->
-                when (targetRoute) {
-                    is Route.Login -> {
-                        val authStack = rememberNavBackStack(Route.Login)
+            when (startDestination) {
+                is Route.Login -> {
+                    val authStack = rememberNavBackStack(Route.Login)
 
-                        NavDisplay(
-                            backStack = authStack, entryProvider = entryProvider {
-                                entry<Route.Login> {
-                                    LoginScreen(
-                                        onNavigateToSignUp = { authStack.add(Route.SignUp) },
-                                    )
-                                }
-                                entry<Route.SignUp> {
-                                    SignUpScreen(
-                                        onNavigateToLogIn = { authStack.removeAt(authStack.lastIndex) },
-                                    )
-                                }
+                    NavDisplay(
+                        backStack = authStack, entryProvider = entryProvider {
+                            entry<Route.Login> {
+                                LoginScreen(
+                                    onNavigateToSignUp = { authStack.add(Route.SignUp) },
+                                )
                             }
-                        )
-                    }
-
-                    is Route.RegisterChild -> {
-                        AddChildScreen(
-                            showBack = false,
-                            onBack = {},
-                        )
-                    }
-
-                    is Route.HomeRoot -> {
-                        var activeTab by rememberSaveable { mutableStateOf(BottomTab.HOME) }
-
-                        val homeStack = rememberNavBackStack(Route.HomeRoot)
-                        val calendarStack = rememberNavBackStack(Route.CalendarRoot())
-                        val growthStack = rememberNavBackStack(Route.GrowthRoot)
-                        val profileStack = rememberNavBackStack(Route.ProfileRoot)
-
-                        val currentStack = when (activeTab) {
-                            BottomTab.HOME -> homeStack
-                            BottomTab.CALENDAR -> calendarStack
-                            BottomTab.GROWTH -> growthStack
-                            BottomTab.PROFILE -> profileStack
-                        }
-
-                        val entryProvider = remember {
-                            entryProvider<NavKey> {
-                                // Tabs
-                                entry<Route.HomeRoot> {
-                                    HomeScreen(
-                                        onEventClick = { eventId ->
-                                            homeStack.add(Route.CalendarRoot(eventId = eventId))
-                                        }
-                                    )
-                                }
-                                entry<Route.CalendarRoot> { key ->
-                                    CalendarScreen(eventId = key.eventId)
-                                }
-                                entry<Route.GrowthRoot> {
-                                    DevelopmentScreen(
-                                        onAddMeasurements = { growthStack.add(Route.ChildDetails) }
-                                    )
-                                }
-                                entry<Route.ProfileRoot> {
-                                    ProfileScreen(
-                                        onAddChild = { profileStack.add(Route.AddChild) },
-                                        onSettingsOpen = { profileStack.add(Route.Settings) }
-                                    )
-                                }
-
-                                entry<Route.Settings> {
-                                    SettingsScreen(
-                                        onBack = { profileStack.removeAt(profileStack.lastIndex) }
-                                    )
-                                }
-
-                                entry<Route.AddChild> {
-                                    AddChildScreen(
-                                        onBack = {
-                                            if (profileStack.size > 1) {
-                                                profileStack.removeAt(profileStack.lastIndex)
-                                            }
-                                        },
-                                    )
-                                }
-                                entry<Route.ChildDetails> {
-                                    ChildDetailsScreen(
-                                        onBack = { growthStack.removeAt(growthStack.lastIndex) },
-                                        onViewAiReport = { growthStack.add(Route.AiReport) }
-                                    )
-                                }
-                                entry<Route.AiReport> { entry ->
-                                    AiReportScreen(
-                                        onBack = { growthStack.removeAt(growthStack.lastIndex) }
-                                    )
-                                }
-                            }
-                        }
-//                val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
-                        val density = LocalDensity.current
-
-//                LaunchedEffect(density) {
-//                    scrollBehavior.state.heightOffsetLimit = with(density) {
-//                        -(110.dp - 56.dp).toPx()
-//                    }
-//                }
-
-                        val currentEntry = currentStack.lastOrNull()
-
-                        val showBottomBar = currentEntry !is Route.AddChild
-                                && currentEntry !is Route.RegisterChild
-
-                        LaunchedEffect(currentEntry, activeTab) {
-//                    scaffoldController.updateTopBar(
-//                        TopBarConfiguration(
-//                            showBack = currentStack.size > 1,
-//                            onBack = { if (currentStack.size > 1) currentStack.removeAt(currentStack.size - 1) }
-//                        )
-//                    )
-                            // Скидаємо скрол при зміні екрана
-//                    scrollBehavior.state.contentOffset = 0f
-                        }
-
-
-                        Scaffold(
-                            topBar = {
-                                if (scaffoldController.topBarConfig.show) {
-                                    AppTopBar(scaffoldController.topBarConfig)
-                                }
-                            },
-                            floatingActionButton = {
-                                val config = scaffoldController.fabConfig
-
-                                if (config.show) {
-                                    FloatingActionButton(onClick = config.onClick) {
-                                        Icon(
-                                            imageVector = config.icon!!,
-                                            contentDescription = null
-                                        )
-                                    }
-                                }
-                            },
-                            modifier = Modifier
-                                .fillMaxSize()
-//                            .nestedScroll(scrollBehavior.nestedScrollConnection)
-                            ,
-                            contentWindowInsets = ScaffoldDefaults.contentWindowInsets.only(
-                                WindowInsetsSides.Horizontal
-                            ),
-                            bottomBar = {
-                                AnimatedVisibility(showBottomBar) {
-                                    AppBottomBar(activeTab) { tab ->
-                                        if (activeTab == tab) {
-                                            while (currentStack.size > 1) currentStack.removeAt(
-                                                currentStack.size - 1
-                                            )
-                                        } else {
-//                                            if (tab == BottomTab.CALENDAR) {
-//                                                while (calendarStack.size > 0) calendarStack.removeAt(calendarStack.lastIndex)
-//                                                calendarStack.add(Route.CalendarRoot(eventId = null))
-//                                            }
-                                            activeTab = tab
-                                        }
-                                    }
-                                }
-                            }
-                        ) { innerPadding ->
-                            Box(
-                                modifier = Modifier
-                                    .padding(
-                                        start = innerPadding.calculateStartPadding(
-                                            LocalLayoutDirection.current
-                                        ),
-                                        end = innerPadding.calculateEndPadding(LocalLayoutDirection.current)
-                                    )
-                                    .fillMaxSize()
-                            ) {
-                                NavDisplay(
-                                    modifier = Modifier.fillMaxSize(),
-                                    backStack = currentStack,
-                                    entryProvider = entryProvider,
-                                    entryDecorators = listOf(
-                                        rememberSaveableStateHolderNavEntryDecorator(),
-                                        rememberViewModelStoreNavEntryDecorator(),
-                                    ),
-                                    transitionSpec = {
-                                        val initialTab =
-                                            BottomTab.entries.find { it.root.toString() == initialState.key.toString() }
-                                        val targetTab =
-                                            BottomTab.entries.find { it.root.toString() == targetState.key.toString() }
-
-                                        if (initialTab != null && targetTab != null && initialTab != targetTab) {
-                                            val direction =
-                                                if (targetTab.ordinal > initialTab.ordinal) 1 else -1
-                                            (slideInHorizontally { width -> direction * width } + fadeIn()).togetherWith(
-                                                slideOutHorizontally { width -> -direction * width } + fadeOut()
-                                            )
-                                        } else {
-                                            (slideInHorizontally { width -> width } + fadeIn()).togetherWith(
-                                                slideOutHorizontally { width -> -width } + fadeOut()
-                                            )
-                                        }
-                                    },
-                                    popTransitionSpec = {
-                                        (slideInHorizontally { width -> -width } + fadeIn()).togetherWith(
-                                            slideOutHorizontally { width -> width } + fadeOut()
-                                        )
-                                    },
-                                    onBack = {
-                                        if (currentStack.size > 1) {
-                                            currentStack.removeAt(currentStack.size - 1)
-                                        } else if (activeTab != BottomTab.HOME) {
-                                            activeTab = BottomTab.HOME
-                                        } else {
-                                            onExit()
-                                        }
-                                    }
+                            entry<Route.SignUp> {
+                                SignUpScreen(
+                                    onNavigateToLogIn = { authStack.removeAt(authStack.lastIndex) },
                                 )
                             }
                         }
-                    }
-
-                    else -> Unit
+                    )
                 }
+
+                is Route.RegisterChild -> {
+                    AddChildScreen(
+                        showBack = false,
+                        onBack = {},
+                    )
+                }
+
+                is Route.HomeRoot -> {
+                    Scaffold(
+                        topBar = {
+                            if (scaffoldController.topBarConfig.show) {
+                                AppTopBar(scaffoldController.topBarConfig)
+                            }
+                        },
+                        floatingActionButton = {
+                            val config = scaffoldController.fabConfig
+                            if (config.show) {
+                                FloatingActionButton(onClick = config.onClick) {
+                                    Icon(imageVector = config.icon!!, contentDescription = null)
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                        contentWindowInsets = ScaffoldDefaults.contentWindowInsets.only(
+                            WindowInsetsSides.Horizontal
+                        ),
+                        bottomBar = {
+                            AnimatedVisibility(showBottomBar) {
+                                AppBottomBar(activeTab) { tab ->
+                                    if (activeTab == tab) {
+                                        val stack = navigationState.backStacks[navigationState.topLevelRoute]
+                                        while ((stack?.size ?: 0) > 1) {
+                                            stack?.removeAt(stack.lastIndex)
+                                        }
+                                    } else {
+                                        navigator.navigate(tab.root)
+                                    }
+                                }
+                            }
+                        }
+                    ) { innerPadding ->
+                        Box(
+                            modifier = Modifier
+                                .padding(
+                                    start = innerPadding.calculateStartPadding(
+                                        LocalLayoutDirection.current
+                                    ),
+                                    end = innerPadding.calculateEndPadding(LocalLayoutDirection.current)
+                                )
+                                .fillMaxSize()
+                        ) {
+                            NavDisplay(
+                                entries = navigationState.toDecoratedEntries(entryProvider),
+                                onBack = { navigator.goBack() },
+                                transitionSpec = {
+                                    val initialTab =
+                                        BottomTab.entries.find { it.root.toString() == initialState.key.toString() }
+                                    val targetTab =
+                                        BottomTab.entries.find { it.root.toString() == targetState.key.toString() }
+
+                                    if (initialTab != null && targetTab != null && initialTab != targetTab) {
+                                        val direction =
+                                            if (targetTab.ordinal > initialTab.ordinal) 1 else -1
+                                        (slideInHorizontally { width -> direction * width } + fadeIn()).togetherWith(
+                                            slideOutHorizontally { width -> -direction * width } + fadeOut()
+                                        )
+                                    } else {
+                                        (slideInHorizontally { width -> width } + fadeIn()).togetherWith(
+                                            slideOutHorizontally { width -> -width } + fadeOut()
+                                        )
+                                    }
+                                },
+                                popTransitionSpec = {
+                                    (slideInHorizontally { width -> -width } + fadeIn()).togetherWith(
+                                        slideOutHorizontally { width -> width } + fadeOut()
+                                    )
+                                },
+                            )
+                        }
+                    }
+                }
+
+                else -> Unit
             }
 
             OfflineIndicator(isConnected = isConnected)

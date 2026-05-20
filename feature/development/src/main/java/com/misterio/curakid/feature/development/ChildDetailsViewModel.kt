@@ -6,6 +6,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.misterio.core.domain.UiState
 import com.misterio.core.domain.asUiState
+import com.misterio.core.domain.model.ChartNormPoint
+import com.misterio.core.domain.model.ChartType
 import com.misterio.core.domain.model.Child
 import com.misterio.core.domain.model.Measurement
 import com.misterio.core.domain.model.MeasurementAiReport
@@ -13,6 +15,7 @@ import com.misterio.core.domain.repository.MeasurementRepository
 import com.misterio.core.domain.usecase.AddMeasurementUseCase
 import com.misterio.core.domain.usecase.GetAiReportByIdUseCase
 import com.misterio.core.domain.usecase.GetChildUseCase
+import com.misterio.core.domain.usecase.GetMeasurementNormsUseCase
 import com.misterio.core.domain.usecase.GetMeasurementsUseCase
 import com.misterio.core.domain.usecase.PollReportStatusUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,10 +24,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.shareIn
@@ -40,21 +44,43 @@ class ChildDetailsViewModel @Inject constructor(
     private val measurementRepository: MeasurementRepository,
     private val pollReportStatusUseCase: PollReportStatusUseCase,
     private val getAiReportByIdUseCase: GetAiReportByIdUseCase,
+    private val getMeasurementNormsUseCase: GetMeasurementNormsUseCase,
 ) : ViewModel() {
 
     private val _reportLoading = MutableStateFlow(false)
     val reportLoading: StateFlow<Boolean> = _reportLoading.asStateFlow()
 
+    private val _selectedChartType = MutableStateFlow(GrowthChartType.WeightForAge)
+    val selectedChartType: StateFlow<GrowthChartType> = _selectedChartType.asStateFlow()
+
     private var polledReportId: String? = null
 
+    private val _norms = MutableStateFlow<List<ChartNormPoint>>(emptyList())
+    val norms = _norms.asStateFlow()
+
     private val childFlow = getChildUseCase()
-        .distinctUntilChanged { old, new -> old?.id == new?.id }
+        .distinctUntilChanged()
         .onEach { child ->
             child?.let {
                 measurementRepository.syncMeasurementsForChild(it.id)
             }
         }
-        .shareIn(viewModelScope, SharingStarted.WhileSubscribed(5000), replay = 1)
+        .shareIn(viewModelScope, SharingStarted.WhileSubscribed(5000))
+
+    val n: StateFlow<List<ChartNormPoint>> = combine(
+        _selectedChartType,
+        childFlow.filterNotNull()
+    ) { type, child ->
+        val res = getMeasurementNormsUseCase(
+            chartType = type.toDomain(),
+            gender = child.gender
+        )
+        if (res.isSuccess) res.getOrThrow() else emptyList()
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = emptyList()
+    )
 
     val selectedChild: StateFlow<UiState<Child?>> = childFlow
         .asUiState()
@@ -100,12 +126,6 @@ class ChildDetailsViewModel @Inject constructor(
         }
     }
 
-    fun syncMeasurements(childId: String) {
-        viewModelScope.launch {
-            measurementRepository.syncMeasurementsForChild(childId)
-        }
-    }
-
     fun addMeasurement(weight: Double?, height: Double?, headCirc: Double?) {
         viewModelScope.launch {
             val currentChildState = selectedChild.value
@@ -115,5 +135,17 @@ class ChildDetailsViewModel @Inject constructor(
                 measurementRepository.syncMeasurementsForChild(child.id)
             }
         }
+    }
+
+    fun onChartTypeChange(type: GrowthChartType) {
+        _selectedChartType.value = type
+    }
+
+    private fun GrowthChartType.toDomain() = when (this) {
+        GrowthChartType.WeightForAge -> ChartType.WFA
+        GrowthChartType.HeightForAge -> ChartType.HFA
+        GrowthChartType.WeightForHeight -> ChartType.WFH
+        GrowthChartType.BMI -> ChartType.BMI
+        GrowthChartType.HeadCircumference -> ChartType.HCFA
     }
 }

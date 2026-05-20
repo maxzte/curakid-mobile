@@ -8,6 +8,8 @@ interface EventRepository {
 
     fun getEvents(childId: String): Flow<List<Event>>
 
+    fun getEventById(eventId: String): Flow<Event?>
+
     fun getEventsByDate(childId: String, date: LocalDateTime): Flow<List<Event>>
 
     suspend fun addEvent(childId: String, event: Event): Result<Unit>

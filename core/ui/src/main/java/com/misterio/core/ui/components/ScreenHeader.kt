@@ -22,7 +22,7 @@ fun ScreenHeader(
     title: String,
     childName: String
 ) {
-    val name = childName.takeIf { it.length >= 2 }?.take(2)?.uppercase().orEmpty()
+    val name = childName.takeIf { it.isNotEmpty() }?.take(1)?.uppercase().orEmpty()
 
     Row(
         modifier = Modifier

@@ -12,13 +12,11 @@ import com.misterio.core.domain.model.Event
 import com.misterio.core.domain.model.EventStatus
 import com.misterio.core.domain.model.EventType
 import com.misterio.core.domain.usecase.AddEventUseCase
-import com.misterio.core.domain.usecase.UpdateEventUseCase
 import com.misterio.core.domain.usecase.DeleteEventUseCase
 import com.misterio.core.domain.usecase.GetChildUseCase
 import com.misterio.core.domain.usecase.GetEventsUseCase
-import com.misterio.core.domain.usecase.GetVaccineEventsUseCase
 import com.misterio.core.domain.usecase.SyncEventsUseCase
-import com.misterio.core.domain.usecase.SyncVaccineEventsUseCase
+import com.misterio.core.domain.usecase.UpdateEventUseCase
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -31,8 +29,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -40,25 +40,17 @@ import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.UUID
-import javax.inject.Inject
 
 @HiltViewModel(assistedFactory = CalendarViewModel.Factory::class)
 class CalendarViewModel @AssistedInject constructor(
-    @Assisted private val eventId: String?,
+    @Assisted("eventId") private val eventId: String?,
     getChildUseCase: GetChildUseCase,
-    private val getVaccineEventsUseCase: GetVaccineEventsUseCase,
     private val syncEventsUseCase: SyncEventsUseCase,
-    private val syncVaccineEventsUseCase: SyncVaccineEventsUseCase,
     private val getEventsUseCase: GetEventsUseCase,
     private val addEventUseCase: AddEventUseCase,
     private val updateEventUseCase: UpdateEventUseCase,
     private val deleteEventUseCase: DeleteEventUseCase,
 ) : ViewModel() {
-
-    @AssistedFactory
-    interface Factory {
-        fun create(eventId: String?): CalendarViewModel
-    }
 
     private val _selectedMonth = MutableStateFlow(LocalDate.now().withDayOfMonth(1))
     private val _selectedDate = MutableStateFlow(LocalDate.now())
@@ -67,152 +59,127 @@ class CalendarViewModel @AssistedInject constructor(
     private val _eventForm = MutableStateFlow(EventFormState())
     private val _toastMessage = MutableSharedFlow<String>()
     val toastMessage = _toastMessage.asSharedFlow()
-
-    private val childFlow = getChildUseCase()
+    private var eventIdHandled = false
+    private val _sheetClosed = MutableSharedFlow<Unit>()
+    val sheetClosed = _sheetClosed.asSharedFlow()
 
     private val selectedChild = getChildUseCase()
+        .distinctUntilChanged { old, new -> old?.id == new?.id }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = null
         )
 
-    init {
-        Log.i(TAG, "INIT: eventId via AssistedInject = $eventId")
-        viewModelScope.launch {
-            getChildUseCase().collectLatest { child ->
-                child?.let {
-                    Log.i(TAG, "child $it")
-                    syncVaccineEventsUseCase(it.id)
-                    syncEventsUseCase(it.id)
+    private val allEvents: StateFlow<List<Event>> = selectedChild
+        .flatMapLatest { child ->
+            if (child == null) {
+                flowOf(emptyList())
+            } else {
+                getEventsUseCase(child.id).map { events ->
+                    events.sortedBy { it.date }
                 }
+            }
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+
+    @AssistedFactory
+    interface Factory {
+        fun create(@Assisted("eventId") eventId: String?): CalendarViewModel
+    }
+
+    init {
+        viewModelScope.launch {
+            selectedChild.collectLatest { child ->
+                if (child == null) {
+                    Log.d(TAG, "INIT: No child selected (yet)")
+                    return@collectLatest
+                }
+                Log.i(TAG, "Syncing events for child ${child.id}")
+                syncEventsUseCase(child.id)
             }
         }
 
         if (eventId != null) {
-            Log.i(TAG, "eventId is not null, calling loadAndEditEvent($eventId)")
             loadAndEditEvent(eventId)
-        } else {
-            Log.i(TAG, "eventId is null, skipping loadAndEditEvent")
         }
     }
 
-    private fun loadAndEditEvent(eventId: String) {
+    fun loadAndEditEvent(eventId: String) {
         viewModelScope.launch {
-            selectedChild.collectLatest { child ->
-                Log.d(TAG, "Child loaded for event search: ${child?.id}")
-                if (child == null) return@collectLatest
-
-                combine(
-                    getEventsUseCase(child.id),
-                    getVaccineEventsUseCase(child.id)
-                ) { userEvents, vaccineList ->
-                    val vaccineEvents = vaccineList.map { vaccine ->
-                        Event(
-                            id = vaccine.id,
-                            title = vaccine.name,
-                            date = vaccine.date,
-                            type = EventType.VACCINE,
-                            status = vaccine.status,
-                        )
-                    }
-                    userEvents + vaccineEvents
-                }.collectLatest { allEvents ->
-                    Log.d(TAG, "Events loaded: ${allEvents.size}")
-                    val event = allEvents.find { it.id == eventId }
-                    if (event != null) {
-                        Log.d(TAG, "Event found, opening sheet: ${event.title}")
-                        onEditEvent(event)
-                    } else {
-                        Log.d(TAG, "Event NOT found in list")
-                    }
-                }
+            allEvents.collectLatest { events ->
+                if (eventIdHandled) return@collectLatest
+                events.find { it.id == eventId }?.let { onEditEvent(it) }
             }
         }
     }
 
-    private data class EventParams(
-        val child: Child?,
-        val isSheetOpen: Boolean,
-        val isExpanded: Boolean,
-        val form: EventFormState
-    )
+    val uiState: StateFlow<UiState<CalendarUiState>> = combine(
+        selectedChild,
+        _selectedMonth,
+        _selectedDate,
+        allEvents,
+        _isEventSheetOpen,
+        _isEventsExpanded,
+        _eventForm
+    ) { args: Array<Any?> ->
+        val child = args[0] as Child?
+        val month = args[1] as LocalDate
+        val date = args[2] as LocalDate
+        val events = @Suppress("UNCHECKED_CAST") (args[3] as List<Event>)
+        val isSheetOpen = args[4] as Boolean
+        val isExpanded = args[5] as Boolean
+        val form = args[6] as EventFormState
 
-    val uiState: StateFlow<UiState<CalendarUiState>> = childFlow.flatMapLatest { child ->
         if (child == null) {
-            flowOf(CalendarUiState())
+            CalendarUiState()
         } else {
-            combine(
-                _selectedMonth,
-                _selectedDate,
-                getVaccineEventsUseCase(child.id),
-                getEventsUseCase(child.id),
-                combine(
-                    selectedChild,
-                    _isEventSheetOpen,
-                    _isEventsExpanded,
-                    _eventForm
-                ) { c, s, e, f ->
-                    EventParams(c, s, e, f)
-                }
-            ) { month, date, vaccineList, userEventList, extra ->
-                val (selectedChildData, isSheetOpen, isExpanded, form) = extra
-                Log.i(TAG, "vaccines $vaccineList")
-                val vaccineEvents = vaccineList.map { vaccine ->
-                    Event(
-                        id = vaccine.id,
-                        title = vaccine.name,
-                        date = vaccine.date,
-                        type = EventType.VACCINE,
-                        status = vaccine.status,
-                    )
-                }
+            val selectedDateEvents = events.filter { it.date.toLocalDate() == date }
+            val vaccineEvents = events.filter { it.type == EventType.VACCINE }
 
-                Log.i(TAG, "${userEventList.filter { it.type == EventType.DOCTOR }}")
-
-                // Filter out vaccines from user events to avoid duplication
-                val filteredUserEvents = userEventList.filter { it.type != EventType.VACCINE }
-                val combinedEvents = (vaccineEvents + filteredUserEvents).sortedBy { it.date }
-
-                val selectedDateEvents = combinedEvents.filter { it.date.toLocalDate() == date }
-
-                val count = selectedDateEvents.size
-                val quickPreview = if (count > 0) {
-                    val firstEvent = selectedDateEvents.first().title
-                    val dateStr = date.format(DateTimeFormatter.ofPattern("d MMMM"))
-                    val eventWord = when {
-                        count % 10 == 1 && count % 100 != 11 -> "подія"
-                        count % 10 in 2..4 && count % 100 !in 12..14 -> "події"
-                        else -> "подій"
-                    }
-                    "$dateStr • $count $eventWord • $firstEvent"
-                } else null
-
-                CalendarUiState(
-                    selectedMonth = month,
-                    selectedDate = date,
-                    childName = selectedChildData?.name ?: "",
-                    vaccinesQuantity = vaccineList.size,
-                    vaccinesDone = vaccineList.filter { it.status == EventStatus.DONE }.size,
-                    filteredEvents = selectedDateEvents,
-                    allEvents = combinedEvents,
-                    isEventSheetOpen = isSheetOpen,
-                    eventForm = if (form.id == null && !isSheetOpen) {
-                        form.copy(date = date.atStartOfDay())
-                    } else {
-                        form
-                    },
-                    isEventsExpanded = isExpanded,
-                    quickPreview = quickPreview
-                )
-            }
+            CalendarUiState(
+                selectedMonth = month,
+                selectedDate = date,
+                childName = child.name,
+                vaccinesQuantity = vaccineEvents.size,
+                vaccinesDone = vaccineEvents.count { it.status == EventStatus.DONE },
+                filteredEvents = selectedDateEvents,
+                allEvents = events,
+                isEventSheetOpen = isSheetOpen,
+                eventForm = if (form.id == null && !isSheetOpen) {
+                    form.copy(date = date.atStartOfDay())
+                } else {
+                    form
+                },
+                isEventsExpanded = isExpanded,
+                quickPreview = getQuickPreview(date, selectedDateEvents)
+            )
         }
     }.asUiState()
+        .distinctUntilChanged()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = UiState.Initial
         )
+
+    private fun getQuickPreview(date: LocalDate, events: List<Event>): String? {
+        if (events.isEmpty()) return null
+
+        val count = events.size
+        val firstEvent = events.first().title
+        val dateStr = date.format(DateTimeFormatter.ofPattern("d MMMM"))
+        val eventWord = when {
+            count % 10 == 1 && count % 100 != 11 -> "подія"
+            count % 10 in 2..4 && count % 100 !in 12..14 -> "події"
+            else -> "подій"
+        }
+        return "$dateStr • $count $eventWord • $firstEvent"
+    }
 
     fun onDateSelected(date: LocalDate) {
         _selectedDate.update { date }
@@ -239,7 +206,7 @@ class CalendarViewModel @AssistedInject constructor(
                 title = event.title,
                 type = event.type,
                 date = event.date,
-                location = event.location,
+                location = if (event is Event.General) event.location else null,
                 description = event.description,
                 status = event.status
             )
@@ -249,6 +216,10 @@ class CalendarViewModel @AssistedInject constructor(
 
     fun onCloseEventSheet() {
         _isEventSheetOpen.update { false }
+        eventIdHandled = true
+        viewModelScope.launch {
+            _sheetClosed.emit(Unit)
+        }
     }
 
     fun onDeleteEvent() {
@@ -274,7 +245,6 @@ class CalendarViewModel @AssistedInject constructor(
         val child = selectedChild.value ?: return
         val form = _eventForm.value
 
-        // Auto-SKIP logic: if date is in the past and status is PLANNED, mark as SKIPPED
         val finalStatus =
             if (form.status == EventStatus.PLANNED && form.date.isBefore(LocalDateTime.now())) {
                 EventStatus.SKIPPED
@@ -282,7 +252,7 @@ class CalendarViewModel @AssistedInject constructor(
                 form.status
             }
 
-        val event = Event(
+        val event = Event.General(
             id = form.id ?: UUID.randomUUID().toString(),
             title = form.title,
             type = form.type,

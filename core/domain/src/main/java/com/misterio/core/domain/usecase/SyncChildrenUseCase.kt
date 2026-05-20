@@ -6,7 +6,7 @@ import javax.inject.Inject
 class SyncChildrenUseCase @Inject constructor(
     private val repository: ChildRepository
 ) {
-    suspend operator fun invoke(): Result<Unit> {
-        return repository.syncChildren()
+    suspend operator fun invoke(force: Boolean): Result<Unit> {
+        return repository.syncChildren(force)
     }
 }

@@ -8,6 +8,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -117,7 +119,7 @@ data class MilestoneSummary(
 
 @Composable
 fun DevelopmentScreen(
-    onAddMeasurements: () -> Unit = {},
+    onAddMeasurements: (List<String>) -> Unit = {},
 ) {
     val viewModel: DevelopmentViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -131,7 +133,7 @@ fun DevelopmentScreen(
         mutableStateOf(summary.completed == summary.totalQuestions && summary.totalQuestions > 0)
     }
 
-    TrackFab(show = true, icon = Icons.Default.Add, onClick = onAddMeasurements)
+    TrackFab(show = true, icon = Icons.Default.Add, onClick = { onAddMeasurements(uiState.lifePeriods.map { it.label }) })
 
     LazyColumn(
         state = listState,
@@ -139,6 +141,18 @@ fun DevelopmentScreen(
         contentPadding = rememberListContentPadding(),
         verticalArrangement = Arrangement.spacedBy(CurakidTheme.paddings.medium)
     ) {
+        if (uiState.isLoading) {
+            item {
+                LinearProgressIndicator(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(2.dp),
+                    color = CurakidTheme.colors.primary,
+                    trackColor = CurakidTheme.colors.surfaceVariant
+                )
+            }
+        }
+
         itemWrapper {
             ScreenHeader(title = "Розвиток", childName = selectedChild?.name ?: "")
         }
@@ -221,40 +235,38 @@ fun DevelopmentScreen(
         }
 
         itemWrapper {
-            AiReportCard(
-                title = "Аналіз розвитку від ШІ",
-                reportText = uiState.aiReports.firstOrNull { it.lifePeriodId == currentPeriod?.id }?.reportText
-                    ?: "",
-                recommendations = uiState.aiReports.firstOrNull { it.lifePeriodId == currentPeriod?.id }?.recommendations
-                    ?: "",
-            )
+            val report = uiState.currentAiReport
+            val reportText = report?.reportText ?: ""
+            val recommendations = report?.recommendations ?: ""
+
+            AnimatedVisibility(
+                visible = uiState.isPollingReport || reportText.isNotBlank() || recommendations.isNotBlank(),
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                AiReportCard(
+                    title = "Аналіз розвитку від ШІ",
+                    reportText = reportText,
+                    recommendations = recommendations,
+                    isLoading = uiState.isPollingReport
+                )
+            }
         }
 
-        itemWrapper {
-            Button(
-                onClick = { viewModel.completePeriod() },
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !uiState.isLoading,
-            ) {
-                Text("Завершити період")
+        if (!uiState.isCompleted) {
+            itemWrapper {
+                Button(
+                    onClick = { viewModel.completePeriod() },
+                    modifier = Modifier.fillMaxWidth(),
+                    enabled = !uiState.isLoading,
+                ) {
+                    Text("Завершити період")
+                }
             }
-//            if (uiState.aiReports.isNotEmpty() && uiState.aiReports.any { it.periodId == currentPeriod?.id }) {
-//                Button(
-//                    onClick = { viewModel.completePeriod() },
-//                    modifier = Modifier.fillMaxWidth(),
-//                    enabled = !uiState.isLoading,
-//                ) {
-//                    Text("regenerate")
-//                }
-//            } else {
-//                Button(
-//                    onClick = { viewModel.completePeriod() },
-//                    modifier = Modifier.fillMaxWidth(),
-//                    enabled = !uiState.isLoading,
-//                ) {
-//                    Text("Завершити період")
-//                }
-//            }
+        }
+
+        item {
+            Spacer(Modifier.height(80.dp))
         }
     }
 
@@ -749,9 +761,9 @@ private val MilestoneCategory.icon
 
 private fun List<Question>.toSummary(answers: List<AnswerUI>) = MilestoneSummary(
     totalQuestions = size,
-    answeredYes = count { q -> answers.any { it.questionId == q.id && (it.optionId.value == "YES" || it.optionId.value == "1.0") } },
-    answeredPartial = count { q -> answers.any { it.questionId == q.id && (it.optionId.value == "PARTIAL" || it.optionId.value == "0.5") } },
-    answeredNo = count { q -> answers.any { it.questionId == q.id && (it.optionId.value == "NO" || it.optionId.value == "0.0") } }
+    answeredYes = count { q -> answers.any { it.questionId == q.id && (it.optionId?.value == "YES" || it.optionId?.value == "1.0") } },
+    answeredPartial = count { q -> answers.any { it.questionId == q.id && (it.optionId?.value == "PARTIAL" || it.optionId?.value == "0.5") } },
+    answeredNo = count { q -> answers.any { it.questionId == q.id && (it.optionId?.value == "NO" || it.optionId?.value == "0.0") } }
 )
 
 private data class Quadruple<A, B, C, D>(val first: A, val second: B, val third: C, val fourth: D)

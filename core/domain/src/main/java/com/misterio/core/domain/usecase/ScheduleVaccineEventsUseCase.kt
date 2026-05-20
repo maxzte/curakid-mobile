@@ -1,23 +1,20 @@
 package com.misterio.core.domain.usecase
 
-import com.misterio.core.domain.model.Event
-import com.misterio.core.domain.model.EventType
 import com.misterio.core.domain.repository.VaccineRepository
+import com.misterio.core.domain.util.EventNotificationScheduler
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.time.LocalDateTime
-import java.util.UUID
 import javax.inject.Inject
 
 class ScheduleVaccineEventsUseCase @Inject constructor(
     private val vaccineRepository: VaccineRepository,
-    private val addEventUseCase: AddEventUseCase,
-    private val syncVaccineEventsUseCase: SyncVaccineEventsUseCase
+    private val notificationScheduler: EventNotificationScheduler,
 ) {
     suspend operator fun invoke(childId: String, childBirthDate: LocalDate): Result<Unit> {
         return try {
             // Sync vaccines first to make sure we have the latest schedule
-            syncVaccineEventsUseCase(childId)
+            vaccineRepository.syncVaccines(childId)
 
             val vaccines = vaccineRepository.getVaccines(childId).first()
             val today = LocalDateTime.now()
@@ -30,15 +27,7 @@ class ScheduleVaccineEventsUseCase @Inject constructor(
                 if (eventDate.isAfter(today) || eventDate.toLocalDate()
                         .isEqual(today.toLocalDate())
                 ) {
-                    val event = Event(
-                        id = UUID.randomUUID().toString(),
-                        title = "Вакцинація: ${vaccine.name}",
-                        type = EventType.VACCINE,
-                        date = eventDate,
-                        description = "Планова вакцинація від ${vaccine.disease}. Доза ${vaccine.doseNumber}/${vaccine.totalDoses}",
-                        status = vaccine.status
-                    )
-                    addEventUseCase(childId, event)
+                    notificationScheduler.schedule(vaccine)
                 }
             }
             Result.success(Unit)

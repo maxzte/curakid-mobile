@@ -46,9 +46,9 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
@@ -88,7 +88,6 @@ import com.misterio.core.ui.TrackFab
 import com.misterio.core.ui.components.LoadingScreen
 import com.misterio.core.ui.components.ScreenHeader
 import com.misterio.core.ui.components.SectionHeader
-import com.misterio.core.ui.components.itemWrapper
 import com.misterio.core.ui.components.rememberListContentPadding
 import com.misterio.core.ui.theme.CurakidTheme
 import com.misterio.feature.calendar.R
@@ -103,8 +102,14 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 
 @Composable
-fun CalendarScreen(eventId: String? = null) {
-    val viewModel: CalendarViewModel = hiltViewModel<CalendarViewModel, CalendarViewModel.Factory> { factory ->
+fun CalendarScreen(
+    eventId: String? = null,
+    onVaccinationClick: (String) -> Unit = {},
+) {
+    val viewModelKey = "$eventId"
+    val viewModel: CalendarViewModel = hiltViewModel<CalendarViewModel, CalendarViewModel.Factory>(
+        key = viewModelKey
+    ) { factory ->
         factory.create(eventId)
     }
     val uiState by viewModel.uiState.collectAsState()
@@ -127,9 +132,15 @@ fun CalendarScreen(eventId: String? = null) {
                 uiState = data,
                 onDateSelected = { viewModel.onDateSelected(it) },
                 onMonthChanged = { viewModel.onMonthChanged(it) },
+                onEventClick = { event ->
+                    if (event.type == EventType.VACCINE) {
+                        onVaccinationClick(event.id)
+                    }
+                },
                 onEditEvent = { viewModel.onEditEvent(it) },
                 onToggleExpand = { viewModel.onToggleExpandEvents() },
-            ) { viewModel.onOpenEventSheet() }
+                onAddEvent = { viewModel.onOpenEventSheet() }
+            )
 
             if (data.isEventSheetOpen) {
                 ModalBottomSheet(
@@ -160,6 +171,7 @@ private fun CalendarScreenContent(
     uiState: CalendarUiState,
     onDateSelected: (LocalDate) -> Unit,
     onMonthChanged: (LocalDate) -> Unit,
+    onEventClick: (Event) -> Unit,
     onEditEvent: (Event) -> Unit,
     onToggleExpand: () -> Unit,
     onAddEvent: () -> Unit
@@ -179,7 +191,11 @@ private fun CalendarScreenContent(
         firstDayOfWeek = daysOfWeek.first()
     )
 
-    TrackFab(show = uiState.selectedDate >= LocalDate.now(), icon = Icons.Default.Add, onClick = onAddEvent)
+    TrackFab(
+        show = uiState.selectedDate >= LocalDate.now(),
+        icon = Icons.Default.Add,
+        onClick = onAddEvent
+    )
 
     LaunchedEffect(state) {
         snapshotFlow { state.firstVisibleMonth }.collect { month ->
@@ -307,7 +323,8 @@ private fun CalendarScreenContent(
                         visibleEvents.forEach { event ->
                             EventCard(
                                 event = event,
-                                onClick = onEditEvent
+                                onClick = { onEventClick(event) },
+                                onEditClick = { onEditEvent(event) }
                             )
                         }
 
@@ -339,12 +356,15 @@ fun EventCreationSheet(
 
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = state.date.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli(),
+            initialSelectedDateMillis = state.date.atZone(ZoneId.systemDefault()).toInstant()
+                .toEpochMilli(),
             selectableDates = object : SelectableDates {
                 override fun isSelectableDate(utcTimeMillis: Long): Boolean {
                     // Якщо ми не редагуємо існуючий евент, забороняємо минулі дати
                     if (!isEditing) {
-                        val todayMillis = LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli()
+                        val todayMillis =
+                            LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant()
+                                .toEpochMilli()
                         return utcTimeMillis >= todayMillis
                     }
                     return true
@@ -354,7 +374,8 @@ fun EventCreationSheet(
         DatePickerDialog(
             onDismissRequest = { showDatePicker = false },
             confirmButton = {
-                TextButton(onClick = {
+                TextButton(
+                    onClick = {
                     datePickerState.selectedDateMillis?.let { millis ->
                         val selectedDate = Instant.ofEpochMilli(millis)
                             .atZone(ZoneId.systemDefault())
@@ -363,7 +384,8 @@ fun EventCreationSheet(
                     }
                     showDatePicker = false
                     showTimePicker = true
-                }) {
+                }
+                ) {
                     Text(stringResource(android.R.string.ok))
                 }
             },
@@ -397,7 +419,9 @@ fun EventCreationSheet(
                         style = CurakidTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold
                     )
+
                     TimePicker(state = timePickerState)
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.End,
@@ -406,11 +430,19 @@ fun EventCreationSheet(
                         TextButton(onClick = { showTimePicker = false }) {
                             Text(stringResource(android.R.string.cancel))
                         }
-                        TextButton(onClick = {
-                            val selectedTime = LocalTime.of(timePickerState.hour, timePickerState.minute)
-                            onStateChange(state.copy(date = state.date.toLocalDate().atTime(selectedTime)))
-                            showTimePicker = false
-                        }) {
+
+                        TextButton(
+                            onClick = {
+                                val selectedTime =
+                                    LocalTime.of(timePickerState.hour, timePickerState.minute)
+                                onStateChange(
+                                    state.copy(
+                                        date = state.date.toLocalDate().atTime(selectedTime)
+                                    )
+                                )
+                                showTimePicker = false
+                            }
+                        ) {
                             Text(stringResource(android.R.string.ok))
                         }
                     }
@@ -422,8 +454,8 @@ fun EventCreationSheet(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(CurakidTheme.paddings.medium)
-            .padding(bottom = 24.dp)
+            .padding(horizontal = CurakidTheme.paddings.medium)
+//            .padding(bottom = 24.dp)
             .verticalScroll(rememberScrollState()),
         verticalArrangement = Arrangement.spacedBy(CurakidTheme.paddings.medium)
     ) {
@@ -444,6 +476,7 @@ fun EventCreationSheet(
                         text = stringResource(R.string.is_done),
                         style = CurakidTheme.typography.bodyMedium
                     )
+
                     Checkbox(
                         checked = state.status == EventStatus.DONE,
                         onCheckedChange = { isChecked ->

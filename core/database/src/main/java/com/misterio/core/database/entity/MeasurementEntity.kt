@@ -22,14 +22,24 @@ import java.time.LocalDateTime
 data class MeasurementEntity(
     @PrimaryKey val id: String,
     val childId: String,
+    val measurementDate: LocalDateTime,
+    val aiReportId: String?,
+
     val weightKg: Double?,
     val heightCm: Double?,
     val headCircCm: Double?,
+
     val wfaZscore: Double? = null,
     val hfaZscore: Double? = null,
+    val wfhZscore: Double? = null,
     val bmiZscore: Double? = null,
     val hcfaZscore: Double? = null,
-    val measurementDate: LocalDateTime,
+
+    val wfaPercentile: Double? = null,
+    val hfaPercentile: Double? = null,
+    val wfhPercentile: Double? = null,
+    val bmiPercentile: Double? = null,
+    val hcfaPercentile: Double? = null,
+
     val isSynced: Boolean = true,
-    val aiReportId: String?
 )

@@ -12,8 +12,19 @@ data class EventEntity(
     val title: String,
     val type: String,
     val date: LocalDateTime,
-    val location: String?,
     val description: String?,
     val status: String,
-    val isSynced: Boolean
+    val isSynced: Boolean,
+    
+    // General event fields
+    val location: String? = null,
+    
+    // Vaccine specific fields
+    val disease: String? = null,
+    val doseNumber: Int? = null,
+    val totalDoses: Int? = null,
+    val vaccineType: String? = null,
+    val scheduledAgeMonths: Int? = null,
+    val scheduledAgeDays: Int? = null,
+    val notes: String? = null
 )

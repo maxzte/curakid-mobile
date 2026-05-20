@@ -31,7 +31,6 @@ data class EventResponse(
     val type: EventType,
     val date: String,
     val status: EventStatus,
-
     val title: String,
     val location: String?,
     val description: String?
@@ -43,7 +42,6 @@ data class VaccineEventResponse(
     val type: EventType,
     val date: String,
     val status: EventStatus,
-
     val name: String,
     val disease: String?,
     val doseNumber: Int?,
@@ -53,24 +51,41 @@ data class VaccineEventResponse(
     val administeredDate: String?,
     val vaccineType: VaccineType,
     val notes: String?,
+    val description: String?,
 )
 
-fun EventResponse.toDomain() = Event(
-    status = status,
+fun EventResponse.toDomain() = Event.General(
     id = id.toString(),
     title = title,
     type = type,
     date = LocalDateTime.parse(date),
     location = location,
     description = description,
+    status = status,
     isSynced = true
+)
+
+fun VaccineEventResponse.toDomain() = Event.Vaccine(
+    id = id,
+    title = name,
+    date = LocalDateTime.parse(date),
+    status = status,
+    description = description,
+    isSynced = true,
+    disease = disease,
+    doseNumber = doseNumber,
+    totalDoses = totalDoses,
+    vaccineType = vaccineType,
+    scheduledAgeMonths = scheduledAgeMonths,
+    scheduledAgeDays = scheduledAgeDays,
+    notes = notes
 )
 
 fun Event.toRequest(childId: String) = EventRequest(
     title = title,
     type = type,
     date = date.toString(),
-    location = location,
+    location = if (this is Event.General) location else null,
     description = description,
     childId = childId
 )

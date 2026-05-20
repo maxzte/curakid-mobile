@@ -9,7 +9,8 @@ data class ChildAssessment(
     val id: String,
     val childId: String,
     val answers: List<AssessmentAnswer>,
-    val assessmentDate: String
+    val assessmentDate: String,
+    val completedAt: String? = null
 )
 
 @Serializable

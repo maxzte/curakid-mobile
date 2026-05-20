@@ -99,6 +99,7 @@ class AssessmentRepositoryImpl @Inject constructor(
             childId = childId,
             answers = tempAnswers,
             assessmentDate = LocalDate.now().toString(),
+            completedAt = existingAssessment?.completedAt,
             isSynced = false
         )
         dao.insertChildAssessment(tempEntity)
@@ -181,7 +182,9 @@ class AssessmentRepositoryImpl @Inject constructor(
                         completionPercent = body.completionPercent,
                         requiredPercent = body.requiredPercent,
                         completedAt = body.completedAt,
-                        assessments = body.assessments.map { it.toDomain() },
+                        assessments = body.assessments.map { 
+                            it.toDomain().copy(completedAt = body.completedAt) 
+                        },
                         reportId = body.reportId,
                     )
                 )

@@ -1,5 +1,6 @@
 package com.misterio.curakid.feature.home
 
+import android.util.Log
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -38,6 +39,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.rememberCoroutineScope
@@ -51,10 +53,10 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import com.misterio.core.domain.UiState
 import com.misterio.core.domain.model.Event
 import com.misterio.core.domain.model.EventType
-import com.misterio.core.domain.model.VaccineEvent
 import com.misterio.core.domain.model.VaccineType
 import com.misterio.core.ui.components.LoadingScreen
 import com.misterio.core.ui.components.ScreenHeader
@@ -120,6 +122,8 @@ fun sampleTips() = listOf(
 @Composable
 fun HomeScreen(
     onEventClick: (eventId: String) -> Unit,
+    onVaccinationClick: (vaccinationId: String) -> Unit,
+    onShowAllUpcoming: () -> Unit,
 ) {
     val viewModel: HomeViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsState()
@@ -135,6 +139,8 @@ fun HomeScreen(
                 nextDoctorVisit = data.doctorEvent,
                 upcomingList = data.upcomingItems,
                 onEventClick = onEventClick,
+                onVaccinationClick = onVaccinationClick,
+                onShowAllUpcoming = onShowAllUpcoming,
             )
         }
 
@@ -147,14 +153,21 @@ fun HomeScreen(
 @Composable
 private fun HomeContent(
     childName: String = "AM",
-    nextVaccination: VaccineEvent? = null,
+    nextVaccination: Event.Vaccine? = null,
     nextDoctorVisit: Event? = null,
     exercises: List<Exercise> = sampleExercises(),
     tips: List<Tip> = sampleTips(),
     upcomingList: List<Event> = emptyList(),
     onItemClick: (Event) -> Unit = {},
     onEventClick: (eventId: String) -> Unit,
+    onVaccinationClick: (String) -> Unit,
+    onShowAllUpcoming: () -> Unit,
 ) {
+    val owner = LocalViewModelStoreOwner.current
+
+    LaunchedEffect(owner) {
+        Log.d("OWNER", owner.toString())
+    }
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(CurakidTheme.paddings.medium),
@@ -168,45 +181,51 @@ private fun HomeContent(
             HeroCardsPager(
                 vaccination = nextVaccination,
                 doctorVisit = nextDoctorVisit,
-                onVaccinationClick = { onEventClick(it) },
+                onVaccinationClick = onVaccinationClick,
                 onDoctorVisitClick = { onEventClick(it) }
             )
         }
 
         if (upcomingList.isNotEmpty()) {
-            itemWrapper {
-                SectionHeader(title = "Майбутні", actionLabel = "Всі", onAction = {})
+            item {
+                SectionHeader(
+                    title = "Майбутні",
+                    actionLabel = "Всі",
+                    onAction = onShowAllUpcoming
+                )
             }
 
             itemWrapper {
                 UpcomingList(
                     items = upcomingList,
-                    onItemClick = onItemClick
+                    onItemClick = { onEventClick(it.id) }
                 )
             }
         }
 
-        itemWrapper {
-            SectionHeader(
-                title = "Вправи на тиждень",
-                actionLabel = "Всі →",
-                onAction = {}
-            )
-        }
+//        itemWrapper {
+//            SectionHeader(
+//                title = "Вправи на тиждень",
+//                actionLabel = "Всі →",
+//                onAction = {}
+//            )
+//        }
+//
+//        item {
+//            ExercisesRow(
+//                exercises = exercises,
+//                onItemClick = {}
+//            )
+//        }
 
-        item {
-            ExercisesRow(
-                exercises = exercises,
-                onItemClick = {}
-            )
-        }
+        if (tips.isNotEmpty()) {
+            item {
+                SectionHeader(title = "Поради для тебе", actionLabel = "", onAction = {})
+            }
 
-        itemWrapper {
-            SectionHeader(title = "Поради для тебе", actionLabel = "", onAction = {})
-        }
-
-        item {
-            TipsRow(tips = tips)
+            item {
+                TipsRow(tips = tips)
+            }
         }
     }
 }
@@ -215,13 +234,24 @@ private fun HomeContent(
 @Composable
 fun HomePreview() {
     CurakidTheme {
-        HomeContent("", null, null, sampleExercises(), sampleTips(), emptyList(), {}, {})
+        HomeContent(
+            "",
+            null,
+            null,
+            sampleExercises(),
+            sampleTips(),
+            emptyList(),
+            {},
+            {},
+            {},
+            {}
+        )
     }
 }
 
 @Composable
 private fun HeroCardsPager(
-    vaccination: VaccineEvent?,
+    vaccination: Event.Vaccine?,
     doctorVisit: Event?,
     onVaccinationClick: (String) -> Unit,
     onDoctorVisitClick: (String) -> Unit
@@ -282,7 +312,7 @@ private fun HeroCardsPager(
 }
 
 @Composable
-private fun VaccinationHeroCard(vaccination: VaccineEvent, onClick: () -> Unit) {
+private fun VaccinationHeroCard(vaccination: Event.Vaccine, onClick: () -> Unit) {
     HeroCard(onClick = onClick) {
         HeroTopRow(
             iconBg = CurakidTheme.colors.primaryContainer,
@@ -296,7 +326,7 @@ private fun VaccinationHeroCard(vaccination: VaccineEvent, onClick: () -> Unit) 
             },
             label = "Наступна вакцинація",
             badgeBg = CurakidTheme.colors.surfaceVariant,
-            badgeText = if (vaccination.type == VaccineType.VACCINATION) {
+            badgeText = if (vaccination.vaccineType == VaccineType.VACCINATION) {
                 "${vaccination.doseNumber}/${vaccination.totalDoses}"
             } else "Ревакцинація",
             badgeTextColor = CurakidTheme.colors.primary
@@ -306,7 +336,7 @@ private fun VaccinationHeroCard(vaccination: VaccineEvent, onClick: () -> Unit) 
             chevronBg = CurakidTheme.colors.primaryContainer,
             chevronTint = CurakidTheme.colors.primary
         ) {
-            Text(vaccination.name, style = CurakidTheme.typography.headlineMedium)
+            Text(vaccination.title, style = CurakidTheme.typography.headlineMedium)
             Spacer(Modifier.height(4.dp))
             Row(
                 verticalAlignment = Alignment.CenterVertically,
@@ -372,7 +402,7 @@ private fun DoctorVisitHeroCard(visit: Event, onClick: () -> Unit) {
                     color = CurakidTheme.colors.secondary
                 )
             }
-            if (visit.location != null) {
+            if (visit is Event.General && visit.location != null) {
                 Text(
                     "${visit.location}",
                     style = CurakidTheme.typography.labelSmall,
@@ -498,7 +528,7 @@ private fun UpcomingListItem(event: Event, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 14.dp),
+            .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
@@ -513,6 +543,7 @@ private fun UpcomingListItem(event: Event, onClick: () -> Unit) {
                 .clip(CircleShape)
                 .background(dotColor)
         )
+
         Column(modifier = Modifier.weight(1f)) {
             Text(text = event.title, style = CurakidTheme.typography.bodyMedium)
 
