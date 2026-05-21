@@ -55,8 +55,8 @@ import androidx.compose.material3.ScaffoldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -75,16 +75,15 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
 import androidx.navigation3.ui.NavDisplay
-import com.misterio.curakid.core.common.PasscodeMode
-import com.misterio.curakid.core.common.SecurityManager
 import com.misterio.core.ui.BOT_BAR_H
 import com.misterio.core.ui.LocalScaffoldController
 import com.misterio.core.ui.ScaffoldController
 import com.misterio.core.ui.TopBarConfiguration
 import com.misterio.core.ui.theme.CurakidTheme
+import com.misterio.curakid.core.common.SecurityManager
 import com.misterio.curakid.feature.profile.AddChildScreen
 import com.misterio.curakid.feature.profile.PasscodeScreen
-import com.misterio.curakid.feature.profile.SettingsScreen
+import com.misterio.curakid.feature.signup.ForgotPasswordScreen
 import com.misterio.curakid.feature.signup.LoginScreen
 import com.misterio.curakid.feature.signup.SignUpScreen
 import com.misterio.curakid.feature.signup.VerifyEmailScreen
@@ -118,7 +117,6 @@ class MainActivity : ComponentActivity() {
         val viewModel: MainViewModel by viewModels()
         splashScreen.setKeepOnScreenCondition {
             viewModel.startDestination.value == null
-//            viewModel.startDestination.value == null
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
@@ -269,6 +267,12 @@ fun MainNavigation(
                             entry<Route.Login> {
                                 LoginScreen(
                                     onNavigateToSignUp = { authStack.add(Route.SignUp) },
+                                    onNavigateToForgotPassword = { authStack.add(Route.ForgotPassword) }
+                                )
+                            }
+                            entry<Route.ForgotPassword> {
+                                ForgotPasswordScreen(
+                                    onBack = { authStack.removeAt(authStack.lastIndex) }
                                 )
                             }
                             entry<Route.SignUp> {

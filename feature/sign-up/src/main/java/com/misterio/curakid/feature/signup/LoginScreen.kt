@@ -29,6 +29,7 @@ import com.misterio.core.ui.components.CuraKidTextField
 @Composable
 fun LoginScreen(
     onNavigateToSignUp: () -> Unit = {},
+    onNavigateToForgotPassword: () -> Unit = {},
     emailError: String? = null,
     passwordError: String? = null
 ) {
@@ -90,6 +91,14 @@ fun LoginScreen(
             ),
             error = passwordError,
             modifier = Modifier.focusRequester(passwordFocus)
+        )
+
+        Spacer(Modifier.height(8.dp))
+
+        AuthSwitchText(
+            text = "",
+            actionText = "Забули пароль?",
+            onClick = onNavigateToForgotPassword,
         )
 
         Spacer(Modifier.height(24.dp))
