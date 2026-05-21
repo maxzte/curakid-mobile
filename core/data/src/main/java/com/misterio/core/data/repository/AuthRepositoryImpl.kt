@@ -1,15 +1,20 @@
 package com.misterio.core.data.repository
 
 import android.util.Log
-import com.misterio.curakid.core.common.AppDataStore
-import com.misterio.curakid.core.common.SettingsManager
-import com.misterio.curakid.core.common.TokenManager
 import com.misterio.core.database.AppDatabase
 import com.misterio.core.domain.repository.AuthRepository
 import com.misterio.core.network.api.AuthApi
-import com.misterio.core.network.dto.*
+import com.misterio.core.network.dto.ForgotPasswordRequest
+import com.misterio.core.network.dto.LoginRequest
+import com.misterio.core.network.dto.OAuthRequest
+import com.misterio.core.network.dto.RefreshTokenRequest
+import com.misterio.core.network.dto.RegisterRequest
+import com.misterio.core.network.dto.ResetPasswordRequest
+import com.misterio.core.network.dto.VerifyEmailRequest
+import com.misterio.curakid.core.common.AppDataStore
+import com.misterio.curakid.core.common.SettingsManager
+import com.misterio.curakid.core.common.TokenManager
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -39,6 +44,22 @@ class AuthRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun oAuthLogin(idToken: String): Result<Unit> {
+        return try {
+            val response = authApi.oAuthLogin(OAuthRequest(idToken))
+            if (response.isSuccessful && response.body() != null) {
+                val tokens = response.body()!!
+                appDataStore.setOnboardingCompleted(tokens.onboardingCompleted)
+                tokenManager.save(tokens.accessToken, tokens.refreshToken)
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("Login failed: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     override suspend fun register(email: String, password: String, name: String): Result<String> {
         return try {
             val response = authApi.register(RegisterRequest(email, password, name))
@@ -54,6 +75,7 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun verifyEmail(email: String, code: String): Result<Unit> {
         return try {
+            authApi
             val response = authApi.verifyEmail(VerifyEmailRequest(email, code))
             if (response.isSuccessful && response.body() != null) {
                 val tokens = response.body()!!
@@ -81,7 +103,11 @@ class AuthRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun resetPassword(email: String, code: String, newPassword: String): Result<String> {
+    override suspend fun resetPassword(
+        email: String,
+        code: String,
+        newPassword: String
+    ): Result<String> {
         return try {
             val response = authApi.resetPassword(ResetPasswordRequest(email, code, newPassword))
             if (response.isSuccessful && response.body() != null) {

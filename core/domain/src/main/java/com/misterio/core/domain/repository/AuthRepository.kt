@@ -4,6 +4,8 @@ interface AuthRepository {
 
     suspend fun login(email: String, password: String): Result<Unit>
 
+    suspend fun oAuthLogin(idToken: String): Result<Unit>
+
     suspend fun register(email: String, password: String, name: String): Result<String>
 
     suspend fun verifyEmail(email: String, code: String): Result<Unit>

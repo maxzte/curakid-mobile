@@ -117,7 +117,7 @@ fun LoginScreen(
         Spacer(Modifier.height(16.dp))
 
         // Google sign-in
-        GoogleButton(onClick = {})
+        GoogleButton(onTokenReceived = viewModel::oAuthLogin)
 
         Spacer(Modifier.height(32.dp))
 

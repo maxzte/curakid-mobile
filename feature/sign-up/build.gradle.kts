@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.library")
     alias(libs.plugins.kotlin.compose)
@@ -9,20 +11,38 @@ android {
     namespace = "com.misterio.feature.signup"
     compileSdk = 37
 
-    defaultConfig {
-        minSdk = 26
-    }
-
     buildFeatures {
         compose = true
+        buildConfig = true
+    }
+
+    defaultConfig {
+        minSdk = 26
+
+        val localProperties = Properties()
+        val localPropertiesFile = project.file("local.properties")
+        if (localPropertiesFile.exists()) {
+            localPropertiesFile.inputStream().use { input ->
+                localProperties.load(input)
+            }
+        }
+        val googleWebClientId = localProperties.getProperty("GOOGLE_WEB_CLIENT_ID") ?: ""
+
+        buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"$googleWebClientId\"")
     }
 }
 
 dependencies {
-    implementation(libs.androidx.ui.tooling.preview)
     implementation(projects.core.domain)
     implementation(projects.core.ui)
-    
+
+    implementation("androidx.credentials:credentials:1.6.0")
+    implementation("androidx.credentials:credentials-play-services-auth:1.6.0")
+
+    implementation("com.google.android.libraries.identity.googleid:googleid:1.2.0")
+
+    implementation(libs.androidx.ui.tooling.preview)
+
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.material.icons.extended)
