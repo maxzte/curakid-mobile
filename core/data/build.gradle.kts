@@ -25,6 +25,9 @@ dependencies {
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     
+    implementation(libs.okhttp)
+    implementation(libs.okhttp.sse)
+
     // Coroutines for repository logic
     implementation(libs.kotlinx.coroutines.core)
 

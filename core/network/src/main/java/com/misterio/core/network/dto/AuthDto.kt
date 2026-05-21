@@ -19,6 +19,29 @@ data class RegisterRequest(
     @SerializedName("name") val name: String
 )
 
-data class RefreshRequest(
+data class RefreshTokenRequest(
     @SerializedName("refreshToken") val refreshToken: String
+)
+
+data class OAuthRequest(
+    @SerializedName("idToken") val idToken: String
+)
+
+data class VerifyEmailRequest(
+    @SerializedName("email") val email: String,
+    @SerializedName("code") val code: String
+)
+
+data class ForgotPasswordRequest(
+    @SerializedName("email") val email: String
+)
+
+data class ResetPasswordRequest(
+    @SerializedName("email") val email: String,
+    @SerializedName("code") val code: String,
+    @SerializedName("newPassword") val newPassword: String
+)
+
+data class MessageResponse(
+    @SerializedName("message") val message: String
 )

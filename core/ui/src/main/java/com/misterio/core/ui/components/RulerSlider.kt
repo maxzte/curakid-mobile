@@ -33,7 +33,9 @@ fun RulerSlider(
     range: ClosedFloatingPointRange<Float>,
     modifier: Modifier = Modifier,
     step: Float = 0.1f,
-    indicatorColor: Color = Color(0xFF6200EE)
+    indicatorColor: Color = Color(0xFF6200EE),
+    normRange: ClosedFloatingPointRange<Float>? = null,
+    normColor: Color = Color(0xFFE8F5E9)
 ) {
     val textMeasurer = rememberTextMeasurer()
     val density = LocalDensity.current
@@ -105,6 +107,25 @@ fun RulerSlider(
         Canvas(modifier = Modifier.fillMaxWidth().height(100.dp)) {
             val center = size.width / 2
             val currentValue = animatableValue.value
+            
+            // Draw norm range band if provided
+            normRange?.let { norm ->
+                val normStartX = center + (norm.start - currentValue) / step * lineSpacing
+                val normEndX = center + (norm.endInclusive - currentValue) / step * lineSpacing
+                
+                // Only draw if visible
+                if (normEndX > 0 && normStartX < size.width) {
+                    drawRect(
+                        color = normColor,
+                        topLeft = Offset(normStartX.coerceAtLeast(0f), size.height / 2 - majorLineHeight / 2),
+                        size = androidx.compose.ui.geometry.Size(
+                            (normEndX - normStartX).coerceAtMost(size.width - normStartX.coerceAtLeast(0f)),
+                            majorLineHeight
+                        )
+                    )
+                }
+            }
+
             val startValue = (currentValue - (center / lineSpacing) * step)
             val endValue = (currentValue + (center / lineSpacing) * step)
             

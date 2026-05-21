@@ -1,7 +1,7 @@
 package com.misterio.core.data.repository
 
 import android.util.Log
-import com.misterio.core.common.AppDataStore
+import com.misterio.curakid.core.common.AppDataStore
 import com.misterio.core.database.dao.ChartNormDao
 import com.misterio.core.database.dao.MeasurementDao
 import com.misterio.core.database.entity.ChartNormEntity

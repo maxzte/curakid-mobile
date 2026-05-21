@@ -56,14 +56,10 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -76,34 +72,29 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.navigation3.rememberViewModelStoreNavEntryDecorator
-import androidx.navigation3.runtime.NavEntryDecorator
-import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
-import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
 import androidx.navigation3.ui.NavDisplay
+import com.misterio.curakid.core.common.PasscodeMode
+import com.misterio.curakid.core.common.SecurityManager
 import com.misterio.core.ui.BOT_BAR_H
 import com.misterio.core.ui.LocalScaffoldController
 import com.misterio.core.ui.ScaffoldController
 import com.misterio.core.ui.TopBarConfiguration
 import com.misterio.core.ui.theme.CurakidTheme
-import com.misterio.curakid.feature.calendar.CalendarScreen
-import com.misterio.curakid.feature.development.ChildDetailsScreen
-import com.misterio.curakid.feature.development.DevelopmentScreen
-import com.misterio.curakid.feature.home.HomeScreen
 import com.misterio.curakid.feature.profile.AddChildScreen
-import com.misterio.curakid.feature.profile.ProfileScreen
+import com.misterio.curakid.feature.profile.PasscodeScreen
 import com.misterio.curakid.feature.profile.SettingsScreen
 import com.misterio.curakid.feature.signup.LoginScreen
 import com.misterio.curakid.feature.signup.SignUpScreen
+import com.misterio.curakid.feature.signup.VerifyEmailScreen
 import com.misterio.curakid.navigation.Navigator
 import com.misterio.curakid.navigation.calendarEntry
+import com.misterio.curakid.navigation.commonEntries
 import com.misterio.curakid.navigation.growthEntry
 import com.misterio.curakid.navigation.homeEntry
 import com.misterio.curakid.navigation.profileEntry
 import com.misterio.curakid.navigation.rememberNavigationState
-import com.misterio.feature.dashboard.AiReportScreen
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -148,6 +139,7 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainNavigation(
     viewModel: MainViewModel,
+    securityManager: SecurityManager = viewModel.securityManager,
     onExit: () -> Unit = {}
 ) {
     val startDestination by viewModel.startDestination.collectAsStateWithLifecycle()
@@ -183,6 +175,7 @@ fun MainNavigation(
     val currentEntry = currentStack.lastOrNull()
     val showBottomBar = currentEntry !is Route.AddChild
             && currentEntry !is Route.RegisterChild
+            && currentEntry !is Route.Chat
 
     val entryProvider = entryProvider {
         homeEntry(
@@ -199,6 +192,12 @@ fun MainNavigation(
             onShowAllUpcoming = {
                 navigator.navigate(Route.UpcomingEvents)
             },
+            onChatClick = {
+                navigator.navigate(Route.Chat)
+            },
+            onAiReportClick = { reportId ->
+                navigator.navigate(Route.AiReport(reportId))
+            },
             onBack = {
                 navigator.goBack()
             }
@@ -206,24 +205,62 @@ fun MainNavigation(
         calendarEntry(
             onVaccinationClick = {
                 navigator.navigate(Route.VaccinationDetail(it))
+            },
+            onChatClick = {
+                navigator.navigate(Route.Chat)
             }
         )
         growthEntry(
             onAddMeasurements = {
                 navigator.navigate(Route.ChildDetails(it))
             },
-            onBack = { navigator.goBack() }
+            onBack = { navigator.goBack() },
+            onChatClick = {
+                navigator.navigate(Route.Chat)
+            }
         )
         profileEntry(
             onAddChild = { navigator.navigate(Route.AddChild) },
             onSettingsOpen = { navigator.navigate(Route.Settings) },
+            onBack = { navigator.goBack() },
+            onChatClick = { navigator.navigate(Route.Chat) },
+            onNavigateToPasscode = { mode ->
+                navigator.navigate(Route.Passcode(mode))
+            }
+        )
+        entry<Route.Passcode> {
+            PasscodeScreen(
+                mode = it.mode,
+                securityManager = securityManager,
+                onSuccess = {
+                    navigator.goBack()
+                },
+                onBack = {
+                    navigator.goBack()
+                }
+            )
+        }
+        commonEntries(
             onBack = { navigator.goBack() }
         )
     }
 
     CompositionLocalProvider(LocalScaffoldController provides scaffoldController) {
         Box(modifier = Modifier.fillMaxSize()) {
-            when (startDestination) {
+            when (val destination = startDestination) {
+                is Route.Passcode -> {
+                    PasscodeScreen(
+                        mode = destination.mode,
+                        securityManager = securityManager,
+                        onSuccess = {
+                            viewModel.onPasscodeSuccess()
+                        },
+                        onForgotPasscode = {
+                            viewModel.resetApp()
+                        }
+                    )
+                }
+
                 is Route.Login -> {
                     val authStack = rememberNavBackStack(Route.Login)
 
@@ -237,6 +274,17 @@ fun MainNavigation(
                             entry<Route.SignUp> {
                                 SignUpScreen(
                                     onNavigateToLogIn = { authStack.removeAt(authStack.lastIndex) },
+                                    onNavigateToVerify = { email -> authStack.add(Route.VerifyEmail(email)) }
+                                )
+                            }
+                            entry<Route.VerifyEmail> {
+                                VerifyEmailScreen(
+                                    email = it.email,
+                                    onVerificationSuccess = {
+                                        while (authStack.size > 1) {
+                                            authStack.removeAt(authStack.lastIndex)
+                                        }
+                                    }
                                 )
                             }
                         }

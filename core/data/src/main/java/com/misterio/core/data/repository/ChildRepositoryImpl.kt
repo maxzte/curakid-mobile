@@ -4,7 +4,7 @@ package com.misterio.core.data.repository
 
 import android.util.Log
 import androidx.room.withTransaction
-import com.misterio.core.common.AppDataStore
+import com.misterio.curakid.core.common.AppDataStore
 import com.misterio.core.database.AppDatabase
 import com.misterio.core.database.dao.ChildDao
 import com.misterio.core.database.entity.ChildEntity
@@ -18,9 +18,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
-import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.take
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId

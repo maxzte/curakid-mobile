@@ -105,6 +105,7 @@ import java.time.format.TextStyle
 fun CalendarScreen(
     eventId: String? = null,
     onVaccinationClick: (String) -> Unit = {},
+    onChatClick: () -> Unit = {},
 ) {
     val viewModelKey = "$eventId"
     val viewModel: CalendarViewModel = hiltViewModel<CalendarViewModel, CalendarViewModel.Factory>(
@@ -139,7 +140,8 @@ fun CalendarScreen(
                 },
                 onEditEvent = { viewModel.onEditEvent(it) },
                 onToggleExpand = { viewModel.onToggleExpandEvents() },
-                onAddEvent = { viewModel.onOpenEventSheet() }
+                onAddEvent = { viewModel.onOpenEventSheet() },
+                onChatClick = onChatClick
             )
 
             if (data.isEventSheetOpen) {
@@ -174,7 +176,8 @@ private fun CalendarScreenContent(
     onEventClick: (Event) -> Unit,
     onEditEvent: (Event) -> Unit,
     onToggleExpand: () -> Unit,
-    onAddEvent: () -> Unit
+    onAddEvent: () -> Unit,
+    onChatClick: () -> Unit = {}
 ) {
     val currentMonth = remember { YearMonth.from(uiState.selectedMonth) }
     val startMonth = remember { currentMonth.minusMonths(100) }
@@ -209,7 +212,7 @@ private fun CalendarScreenContent(
         verticalArrangement = Arrangement.spacedBy(CurakidTheme.paddings.medium),
     ) {
         item {
-            ScreenHeader(title = "Календар", childName = childName)
+            ScreenHeader(title = "Календар", childName = childName, onChatClick = onChatClick)
         }
 
         item {

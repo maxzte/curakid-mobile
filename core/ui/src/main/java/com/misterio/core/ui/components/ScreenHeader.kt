@@ -1,6 +1,7 @@
 package com.misterio.core.ui.components
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -8,6 +9,9 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -20,7 +24,8 @@ import com.misterio.core.ui.theme.CurakidTheme
 @Composable
 fun ScreenHeader(
     title: String,
-    childName: String
+    childName: String,
+    onChatClick: () -> Unit = {}
 ) {
     val name = childName.takeIf { it.isNotEmpty() }?.take(1)?.uppercase().orEmpty()
 
@@ -38,18 +43,39 @@ fun ScreenHeader(
             fontWeight = FontWeight.Medium
         )
 
-        Box(
-            modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(CurakidTheme.colors.surfaceVariant),
-            contentAlignment = Alignment.Center
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Text(
-                text = name,
-                style = CurakidTheme.typography.bodyMedium,
-                color = CurakidTheme.colors.onSurfaceVariant
-            )
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(CurakidTheme.colors.surfaceVariant)
+                    .clickable { onChatClick() },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Chat,
+                    contentDescription = "Chat",
+                    tint = CurakidTheme.colors.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+
+            Box(
+                modifier = Modifier
+                    .size(40.dp)
+                    .clip(CircleShape)
+                    .background(CurakidTheme.colors.surfaceVariant),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = name,
+                    style = CurakidTheme.typography.bodyMedium,
+                    color = CurakidTheme.colors.onSurfaceVariant
+                )
+            }
         }
     }
 }

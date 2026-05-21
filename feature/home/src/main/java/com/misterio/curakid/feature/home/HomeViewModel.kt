@@ -11,8 +11,11 @@ import com.misterio.core.domain.model.Child
 import com.misterio.core.domain.model.Event
 import com.misterio.core.domain.model.EventStatus
 import com.misterio.core.domain.model.EventType
+import com.misterio.core.domain.model.LifePeriodAiReport
+import com.misterio.core.domain.usecase.GetChildAiReportsUseCase
 import com.misterio.core.domain.usecase.GetChildUseCase
 import com.misterio.core.domain.usecase.GetEventsUseCase
+import com.misterio.core.domain.usecase.SyncChildAiReportsUseCase
 import com.misterio.core.domain.usecase.SyncChildrenUseCase
 import com.misterio.core.domain.usecase.SyncEventsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -33,7 +36,8 @@ data class HomeUiState(
     val selectedChild: Child? = null,
     val vaccineEvent: Event.Vaccine? = null,
     val doctorEvent: Event? = null,
-    val upcomingItems: List<Event> = emptyList()
+    val upcomingItems: List<Event> = emptyList(),
+    val aiReports: List<LifePeriodAiReport> = emptyList()
 )
 
 @HiltViewModel
@@ -42,6 +46,8 @@ class HomeViewModel @Inject constructor(
     getChildUseCase: GetChildUseCase,
     private val getEventsUseCase: GetEventsUseCase,
     private val syncEventsUseCase: SyncEventsUseCase,
+    private val getChildAiReportsUseCase: GetChildAiReportsUseCase,
+    private val syncChildAiReportsUseCase: SyncChildAiReportsUseCase,
 ) : ViewModel() {
 
     init {
@@ -69,11 +75,24 @@ class HomeViewModel @Inject constructor(
             }
         }
 
+    private val aiReports = selectedChild
+        .flatMapLatest { child ->
+            if (child != null) {
+                viewModelScope.launch {
+                    syncChildAiReportsUseCase(child.id)
+                }
+                getChildAiReportsUseCase(child.id)
+            } else {
+                flowOf(emptyList())
+            }
+        }
+
     val uiState: StateFlow<UiState<HomeUiState>> = combine(
         selectedChild,
-        events
-    ) { child, eList ->
-        Log.d(TAG, "childId: ${child?.id}, totalEvents: ${eList.size}")
+        events,
+        aiReports
+    ) { child, eList, reports ->
+        Log.d(TAG, "childId: ${child?.id}, totalEvents: ${eList.size}, reports: ${reports.size}")
 
         // Select items for Hero Cards
         val v = eList.filterIsInstance<Event.Vaccine>().firstOrNull { it.status != EventStatus.DONE }
@@ -91,7 +110,8 @@ class HomeViewModel @Inject constructor(
             selectedChild = child,
             vaccineEvent = v,
             doctorEvent = e,
-            upcomingItems = upcomingItems
+            upcomingItems = upcomingItems,
+            aiReports = reports
         )
     }.asUiState()
         .stateIn(

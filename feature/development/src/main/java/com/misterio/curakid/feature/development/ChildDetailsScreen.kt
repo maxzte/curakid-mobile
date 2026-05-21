@@ -2,16 +2,18 @@
 
 package com.misterio.curakid.feature.development
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -29,31 +31,34 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Straighten
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.compose.ui.text.style.TextOverflow
 import com.misterio.core.domain.UiState
 import com.misterio.core.domain.model.ChartNormPoint
 import com.misterio.core.domain.model.Child
@@ -64,6 +69,7 @@ import com.misterio.core.ui.components.AiReportCard
 import com.misterio.core.ui.components.LoadingScreen
 import com.misterio.core.ui.components.ScreenHeader
 import com.misterio.core.ui.components.SectionHeader
+import com.misterio.core.ui.components.itemWrapper
 import com.misterio.core.ui.components.rememberListContentPadding
 import com.misterio.core.ui.theme.CurakidTheme
 import com.misterio.feature.development.R
@@ -74,13 +80,14 @@ import com.patrykandpatrick.vico.compose.cartesian.Zoom
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.compose.cartesian.data.CartesianLayerRangeProvider
 import com.patrykandpatrick.vico.compose.cartesian.data.lineSeries
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
+import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerController
 import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerVisibilityListener
 import com.patrykandpatrick.vico.compose.cartesian.marker.rememberDefaultCartesianMarker
-import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerController
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
 import com.patrykandpatrick.vico.compose.common.DashedShape
@@ -93,15 +100,25 @@ import com.patrykandpatrick.vico.compose.common.component.rememberShapeComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
 import com.patrykandpatrick.vico.compose.common.rememberHorizontalLegend
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.time.format.DateTimeFormatter
 import java.time.temporal.ChronoUnit
 import java.util.Locale
+import kotlin.math.abs
 import kotlin.math.pow
 import kotlin.math.roundToInt
 
 fun Double.roundForChart(): Double = String.format(Locale.US, "%.3f", this).toDouble()
 
+data class ChartComputationResult(
+    val filteredNorms: List<ChartNormPoint>,
+    val filteredChildPoints: List<Pair<Double, Double>>,
+    val minY: Double,
+    val maxY: Double
+)
 
 @Composable
 fun ChildDetailsScreen(
@@ -114,12 +131,24 @@ fun ChildDetailsScreen(
     val childState by viewModel.selectedChild.collectAsState()
     val measurementsState by viewModel.measurements.collectAsState()
     val lastReport by viewModel.lastAiReport.collectAsState()
-//    val norms by viewModel.norms.collectAsState()
+    val reportLoading by viewModel.reportLoading.collectAsState()
+    val normsCache by viewModel.normsCache.collectAsState()
     val norms by viewModel.n.collectAsState()
     val selectedChartType by viewModel.selectedChartType.collectAsState()
 
     val child = childState.getOrNull()
     val measurements = measurementsState.getOrNull() ?: emptyList()
+
+    val currentAgeDays = remember(child) {
+        if (child == null) 0.0
+        else ChronoUnit.DAYS.between(child.birthDate, java.time.LocalDate.now()).toDouble()
+    }
+
+    fun getNormRange(type: GrowthChartType): ClosedFloatingPointRange<Float>? {
+        val typeNorms = normsCache[type] ?: return null
+        val nearest = typeNorms.minByOrNull { abs(it.x - currentAgeDays) } ?: return null
+        return nearest.p15.toFloat()..nearest.p85.toFloat()
+    }
 
     if (childState is UiState.Loading || measurementsState is UiState.Loading) {
         LoadingScreen()
@@ -151,6 +180,8 @@ fun ChildDetailsScreen(
             child = child,
             initialWeight = measurements.firstOrNull { it.weight != null }?.weight,
             initialHeight = measurements.firstOrNull { it.height != null }?.height,
+            weightNorm = getNormRange(GrowthChartType.WeightForAge),
+            heightNorm = getNormRange(GrowthChartType.HeightForAge),
             onDismiss = { showAddMeasurementSheet = false },
             onDoneClick = { weight, height ->
                 viewModel.addMeasurement(weight, height, null)
@@ -163,6 +194,7 @@ fun ChildDetailsScreen(
         AddHeadCircBottomSheet(
             childName = child.name,
             prevHeadCirc = measurements.firstOrNull { it.headCirc != null }?.headCirc,
+            normRange = getNormRange(GrowthChartType.HeadCircumference),
             onDismiss = { showAddHeadCircSheet = false },
             onDoneClick = { headCirc ->
                 viewModel.addMeasurement(null, null, headCirc)
@@ -171,23 +203,20 @@ fun ChildDetailsScreen(
         )
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 24.dp)
-    ) {
-        GrowthTab(
-            child = child,
-            measurements = measurements,
-            norms = norms,
-            lastReport = lastReport,
-            modelProducer = modelProducer,
-            selectedChartType = selectedChartType,
-            onChartTypeChange = { viewModel.onChartTypeChange(it) },
-            onViewAiReportClick = onViewAiReport,
-            onAddMeasurementClick = { showActionSelectionSheet = true }
-        )
-    }
+    GrowthTab(
+        child = child,
+        measurements = measurements,
+        norms = norms,
+        normsCache = normsCache,
+        lastReport = lastReport,
+        reportLoading = reportLoading,
+        modelProducer = modelProducer,
+        selectedChartType = selectedChartType,
+        lifePeriods = lifePeriods,
+        onChartTypeChange = { viewModel.onChartTypeChange(it) },
+        onViewAiReportClick = onViewAiReport,
+        onAddMeasurementClick = { showActionSelectionSheet = true }
+    )
 }
 
 @Composable
@@ -195,14 +224,42 @@ fun GrowthTab(
     child: Child?,
     measurements: List<Measurement>,
     norms: List<ChartNormPoint>,
+    normsCache: Map<GrowthChartType, List<ChartNormPoint>>,
     lastReport: MeasurementAiReport?,
+    reportLoading: Boolean,
     modelProducer: CartesianChartModelProducer,
     selectedChartType: GrowthChartType,
+    lifePeriods: List<String>,
     onChartTypeChange: (GrowthChartType) -> Unit,
     onViewAiReportClick: () -> Unit,
     onAddMeasurementClick: () -> Unit
 ) {
     TrackFab(show = true, icon = Icons.Default.Add, onClick = onAddMeasurementClick)
+
+    val currentAgeMonths = remember(child) {
+        if (child == null) 0.0
+        else ChronoUnit.DAYS.between(child.birthDate, java.time.LocalDate.now()).toDouble() / 30.44
+    }
+
+    val autoPeriodLabel = remember(currentAgeMonths, lifePeriods) {
+        lifePeriods.find { label ->
+            val (start, end) = if (label.contains("-")) {
+                val parts = label.split("-")
+                (parts.getOrNull(0)?.toDoubleOrNull() ?: 0.0) to (parts.getOrNull(1)
+                    ?.toDoubleOrNull() ?: 72.0)
+            } else {
+                val e = label.toDoubleOrNull() ?: 72.0
+                val idx = lifePeriods.indexOf(label)
+                val s = if (idx > 0) {
+                    val prevLabel = lifePeriods[idx - 1]
+                    if (prevLabel.contains("-")) prevLabel.split("-").last().toDoubleOrNull() ?: 0.0
+                    else prevLabel.toDoubleOrNull() ?: 0.0
+                } else 0.0
+                s to e
+            }
+            currentAgeMonths >= start && currentAgeMonths <= end
+        } ?: "0-72"
+    }
 
     val mainLineColor = CurakidTheme.colors.primary
     val normLineColor = Color.LightGray.copy(alpha = 0.5f)
@@ -405,64 +462,132 @@ fun GrowthTab(
         GrowthChartType.HeadCircumference -> "Обхват голови, см"
     }
 
-    val xAxisLabel =
-        if (selectedChartType == GrowthChartType.WeightForHeight) "Зріст, см" else "Вік, місяці"
+    val xAxisLabel = when {
+        selectedChartType == GrowthChartType.WeightForHeight -> "Зріст, см"
+        else -> {
+            val (start, end) = if (autoPeriodLabel.contains("-")) {
+                val parts = autoPeriodLabel.split("-")
+                (parts.getOrNull(0)?.toDoubleOrNull() ?: 0.0) to (parts.getOrNull(1)
+                    ?.toDoubleOrNull() ?: 0.0)
+            } else {
+                val e = autoPeriodLabel.toDoubleOrNull() ?: 72.0
+                val idx = lifePeriods.indexOf(autoPeriodLabel)
+                val s = if (idx > 0) {
+                    val prevLabel = lifePeriods[idx - 1]
+                    if (prevLabel.contains("-")) prevLabel.split("-").last().toDoubleOrNull() ?: 0.0
+                    else prevLabel.toDoubleOrNull() ?: 0.0
+                } else 0.0
+                s to e
+            }
+            if ((end - start) <= 3.0) "Вік, дні"
+            else if ((end - start) <= 6.0) "Вік, тижні"
+            else "Вік, місяці"
+        }
+    }
 
-    val xAxisStep = if (selectedChartType == GrowthChartType.WeightForHeight) 2.0 else 0.25
-    val yAxisStep = if (selectedChartType == GrowthChartType.WeightForHeight) 2.0 else 0.25
     val maxAgeMonths = 72.0
-    val chartData = remember(measurements, selectedChartType, child) {
-        when (selectedChartType) {
-            GrowthChartType.WeightForAge -> measurements.filter {
-                it.weight != null && child != null &&
-                        ChronoUnit.DAYS.between(child.birthDate, it.date.toLocalDate())
-                            .toDouble() / 30.44 <= maxAgeMonths
-            }
-                .sortedBy { it.date }
-
-            GrowthChartType.HeightForAge -> measurements.filter {
-                it.height != null && child != null &&
-                        ChronoUnit.DAYS.between(child.birthDate, it.date.toLocalDate())
-                            .toDouble() / 30.44 <= maxAgeMonths
-            }
-                .sortedBy { it.date }
-
+    val chartData = remember(measurements, selectedChartType, child, autoPeriodLabel, lifePeriods) {
+        val baseData = when (selectedChartType) {
+            GrowthChartType.WeightForAge -> measurements.filter { it.weight != null }
+            GrowthChartType.HeightForAge -> measurements.filter { it.height != null }
             GrowthChartType.WeightForHeight -> measurements.filter { it.weight != null && it.height != null }
-                .sortedBy { it.height }
+            GrowthChartType.BMI -> measurements.filter { it.weight != null && it.height != null }
+            GrowthChartType.HeadCircumference -> measurements.filter { it.headCirc != null }
+        }
 
-            GrowthChartType.BMI -> measurements.filter {
-                it.weight != null && it.height != null && child != null &&
-                        ChronoUnit.DAYS.between(child.birthDate, it.date.toLocalDate())
-                            .toDouble() / 30.44 <= maxAgeMonths
-            }
-                .sortedBy { it.date }
+        if (child == null) return@remember emptyList<Measurement>()
 
-            GrowthChartType.HeadCircumference -> measurements.filter {
-                it.headCirc != null && child != null &&
-                        ChronoUnit.DAYS.between(child.birthDate, it.date.toLocalDate())
-                            .toDouble() / 30.44 <= maxAgeMonths
+        val filtered = if (selectedChartType == GrowthChartType.WeightForHeight) {
+            baseData.filter { m ->
+                val days = ChronoUnit.DAYS.between(child.birthDate, m.date.toLocalDate()).toDouble()
+                days / 30.44 <= maxAgeMonths
             }
-                .sortedBy { it.date }
+        } else {
+            val (startMonth, endMonth) = if (autoPeriodLabel.contains("-")) {
+                val parts = autoPeriodLabel.split("-")
+                (parts.getOrNull(0)?.toDoubleOrNull() ?: 0.0) to (parts.getOrNull(1)
+                    ?.toDoubleOrNull() ?: 72.0)
+            } else {
+                val e = autoPeriodLabel.toDoubleOrNull() ?: 72.0
+                val idx = lifePeriods.indexOf(autoPeriodLabel)
+                val s = if (idx > 0) {
+                    val prevLabel = lifePeriods[idx - 1]
+                    if (prevLabel.contains("-")) prevLabel.split("-").last().toDoubleOrNull() ?: 0.0
+                    else prevLabel.toDoubleOrNull() ?: 0.0
+                } else 0.0
+                s to e
+            }
+
+            baseData.filter { m ->
+                val days = ChronoUnit.DAYS.between(child.birthDate, m.date.toLocalDate()).toDouble()
+                val month = days / 30.44
+                month >= startMonth && month <= endMonth
+            }
+        }
+
+        when (selectedChartType) {
+            GrowthChartType.WeightForHeight -> filtered.sortedBy { it.height }
+            else -> filtered.sortedBy { it.date }
         }
     }
 
     var selectedMarkerX by remember { mutableStateOf<Double?>(null) }
+    var chartRangeY by remember { mutableStateOf<Pair<Double, Double>?>(null) }
+    var hasNormsDrawn by remember { mutableStateOf(false) }
 
-    val childMeasurementByX = remember(chartData, selectedChartType, child) {
-        if (child == null) {
-            emptyMap()
-        } else {
-            chartData.associateBy { m ->
-                if (selectedChartType == GrowthChartType.WeightForHeight) {
-                    m.height!!
+    // Reset chart state when switching chart type to prevent stale Vico internal Y-range state.
+    // Without this, the old CartesianChart tries to animate with the new transaction's series
+    // count but the old range map keys, causing NoSuchElementException.
+    LaunchedEffect(selectedChartType) {
+        Log.d(
+            "ChartDebug",
+            "=== selectedChartType changed to $selectedChartType, resetting state ==="
+        )
+
+        chartRangeY = null
+        hasNormsDrawn = false
+        selectedMarkerX = null
+    }
+
+    val childMeasurementByX =
+        remember(chartData, selectedChartType, child, autoPeriodLabel, lifePeriods) {
+            if (child == null) {
+                emptyMap()
+            } else {
+                val isWfh = selectedChartType == GrowthChartType.WeightForHeight
+                val (startMonth, endMonth) = if (autoPeriodLabel.contains("-")) {
+                    val parts = autoPeriodLabel.split("-")
+                    (parts.getOrNull(0)?.toDoubleOrNull() ?: 0.0) to (parts.getOrNull(1)
+                        ?.toDoubleOrNull() ?: 72.0)
                 } else {
-                    (ChronoUnit.DAYS.between(child.birthDate, m.date.toLocalDate())
-                        .toDouble() / 30.44)
-                        .roundForChart()
+                    val e = autoPeriodLabel.toDoubleOrNull() ?: 72.0
+                    val idx = lifePeriods.indexOf(autoPeriodLabel)
+                    val s = if (idx > 0) {
+                        val prevLabel = lifePeriods[idx - 1]
+                        if (prevLabel.contains("-")) prevLabel.split("-").last().toDoubleOrNull()
+                            ?: 0.0
+                        else prevLabel.toDoubleOrNull() ?: 0.0
+                    } else 0.0
+                    s to e
+                }
+                val xUnitScale = when {
+                    isWfh -> 1.0
+                    (endMonth - startMonth) <= 3.0 -> 1.0 // Days if period length <= 3 months
+                    (endMonth - startMonth) <= 6.0 -> 7.0 // Weeks
+                    else -> 30.44 // Months
+                }
+
+                chartData.associateBy { m ->
+                    if (isWfh) {
+                        m.height ?: 0.0
+                    } else {
+                        val days = ChronoUnit.DAYS.between(child.birthDate, m.date.toLocalDate())
+                            .toDouble()
+                        ((days - (startMonth * 30.44)) / xUnitScale).roundForChart()
+                    }
                 }
             }
         }
-    }
 
     val selectedMeasurement = selectedMarkerX?.let { childMeasurementByX[it] }
 
@@ -490,67 +615,142 @@ fun GrowthTab(
         }
     }
 
+    var chartReady by remember(selectedChartType) { mutableStateOf(false) }
+    val chartJob = remember { mutableStateOf<Job?>(null) }
+    val scope = rememberCoroutineScope()
 
-    LaunchedEffect(chartData, child, norms, selectedChartType) {
-        if (child == null) return@LaunchedEffect
+    DisposableEffect(chartData, child, norms, selectedChartType, autoPeriodLabel, lifePeriods) {
+        Log.d(
+            "ChartDebug",
+            "=== LaunchedEffect START, chartType=$selectedChartType, chartReady=false ==="
+        )
 
-        withContext(Dispatchers.Default) {
-            val isWfh = selectedChartType == GrowthChartType.WeightForHeight
+        chartJob.value?.cancel()
+        chartReady = false
 
-            // 1. Готуємо координати для дитини (переводимо дні в місяці)
-            val childPoints = chartData.map { m ->
-                val xValue = if (isWfh) {
-                    m.height!!
+        chartJob.value = scope.launch {
+            if (child == null) return@launch
+            if (norms.isEmpty()) return@launch
+            val capturedType = selectedChartType
+
+            val result = withContext(Dispatchers.Default) {
+                val isWfh = capturedType == GrowthChartType.WeightForHeight
+
+                val (startMonth, endMonth) = if (autoPeriodLabel.contains("-")) {
+                    val parts = autoPeriodLabel.split("-")
+                    (parts.getOrNull(0)?.toDoubleOrNull() ?: 0.0) to (parts.getOrNull(1)
+                        ?.toDoubleOrNull() ?: 72.0)
                 } else {
-                    val days =
-                        ChronoUnit.DAYS.between(child.birthDate, m.date.toLocalDate()).toDouble()
-                    // Переводимо в місяці та округляємо до 1 знаку (наприклад, 1.5 місяці)
-                    (days / 30.44)
+                    val e = autoPeriodLabel.toDoubleOrNull() ?: 72.0
+                    val idx = lifePeriods.indexOf(autoPeriodLabel)
+                    val s = if (idx > 0) {
+                        val prevLabel = lifePeriods[idx - 1]
+                        if (prevLabel.contains("-")) prevLabel.split("-").last().toDoubleOrNull()
+                            ?: 0.0
+                        else prevLabel.toDoubleOrNull() ?: 0.0
+                    } else 0.0
+                    s to e
                 }
 
-                val yValue = when (selectedChartType) {
-                    GrowthChartType.WeightForAge -> m.weight!!
-                    GrowthChartType.HeightForAge -> m.height!!
-                    GrowthChartType.WeightForHeight -> m.weight!!
-                    GrowthChartType.BMI -> m.weight!! / (m.height!! / 100.0).pow(2.0)
-                    GrowthChartType.HeadCircumference -> m.headCirc!!
+                val xUnitScale = when {
+                    isWfh -> 1.0
+                    (endMonth - startMonth) <= 3.0 -> 1.0
+                    (endMonth - startMonth) <= 6.0 -> 7.0
+                    else -> 30.44
                 }
-                xValue.roundForChart() to yValue
-            }.sortedBy { it.first }
 
-            // 2. Готуємо норми (переводимо дні в місяці та фільтруємо до 72 місяців)
-            val xLimit = if (isWfh) (childPoints.maxOfOrNull { it.first } ?: 100.0) * 1.1 else 72.0
+                val filteredChildPoints = chartData.filter { m ->
+                    if (isWfh) true
+                    else {
+                        val days = ChronoUnit.DAYS.between(child.birthDate, m.date.toLocalDate())
+                            .toDouble()
+                        val mAgeMonths = days / 30.44
+                        mAgeMonths >= startMonth && mAgeMonths <= endMonth
+                    }
+                }.map { m ->
+                    val xValue = if (isWfh) {
+                        m.height!!
+                    } else {
+                        val days = ChronoUnit.DAYS.between(child.birthDate, m.date.toLocalDate())
+                            .toDouble()
+                        (days - (startMonth * 30.44)) / xUnitScale
+                    }
+                    val yValue = when (capturedType) {  // ← capturedType, не selectedChartType
+                        GrowthChartType.WeightForAge -> m.weight!!
+                        GrowthChartType.HeightForAge -> m.height!!
+                        GrowthChartType.WeightForHeight -> m.weight!!
+                        GrowthChartType.BMI -> m.weight!! / (m.height!! / 100.0).pow(2.0)
+                        GrowthChartType.HeadCircumference -> m.headCirc!!
+                    }
+                    xValue.roundForChart() to yValue
+                }.sortedBy { it.first }
 
-            val filteredNorms = norms.map { norm ->
-                val normX = if (isWfh) norm.x else (norm.x / 30.44)
-                norm.copy(x = normX.roundForChart())
-            }.filter { it.x <= xLimit }.sortedBy { it.x }
+                val filteredNorms = norms.filter { norm ->
+                    if (isWfh) {
+                        val minH = filteredChildPoints.minOfOrNull { it.first } ?: 45.0
+                        val maxH = filteredChildPoints.maxOfOrNull { it.first } ?: 120.0
+                        norm.x >= minH * 0.9 && norm.x <= maxH * 1.1
+                    } else {
+                        val mAgeMonths = norm.x / 30.44
+                        mAgeMonths >= startMonth && mAgeMonths <= endMonth
+                    }
+                }.map { norm ->
+                    val normX = if (isWfh) norm.x else (norm.x - (startMonth * 30.44)) / xUnitScale
+                    norm.copy(x = normX.roundForChart())
+                }.sortedBy { it.x }
 
-            if (childPoints.isEmpty() && filteredNorms.isEmpty()) return@withContext
+                if (filteredChildPoints.isEmpty() && filteredNorms.isEmpty()) return@withContext null
 
-            // 3. Передаємо дані у Vico (кожна лінія отримує свої власні X і Y)
+                if (!isActive) return@withContext null  // скасовано поки рахували
+
+                val minY = minOf(
+                    filteredNorms.minOfOrNull { it.p3 } ?: Double.MAX_VALUE,
+                    filteredChildPoints.minOfOrNull { it.second } ?: Double.MAX_VALUE
+                ).takeIf { it != Double.MAX_VALUE } ?: 0.0
+
+                val maxY = maxOf(
+                    filteredNorms.maxOfOrNull { it.p97 } ?: Double.MIN_VALUE,
+                    filteredChildPoints.maxOfOrNull { it.second } ?: Double.MIN_VALUE
+                ).takeIf { it != Double.MIN_VALUE } ?: 10.0
+
+                ChartComputationResult(filteredNorms, filteredChildPoints, minY, maxY)
+            } ?: return@launch  // null = порожньо або скасовано
+
+            // Перевірка після withContext — тип міг змінитись поки рахували
+            if (capturedType != selectedChartType) {
+                Log.d("ChartDebug", "Chart type changed during computation, skipping")
+                return@launch
+            }
+
+            chartRangeY = (result.minY * 0.95) to (result.maxY * 1.05)
+            hasNormsDrawn = result.filteredNorms.isNotEmpty()
+
             modelProducer.runTransaction {
                 lineSeries {
-                    if (filteredNorms.isNotEmpty()) {
-                        val normXValues = filteredNorms.map { it.x }
-
-                        // Порядок ліній відповідає вашому lineProvider
-                        series(x = normXValues, y = filteredNorms.map { it.p3 })
-                        series(x = normXValues, y = filteredNorms.map { it.p15 })
-                        series(x = normXValues, y = filteredNorms.map { it.p50 })
-                        series(x = normXValues, y = filteredNorms.map { it.p85 })
-                        series(x = normXValues, y = filteredNorms.map { it.p97 })
+                    if (result.filteredNorms.isNotEmpty()) {
+                        val normXValues = result.filteredNorms.map { it.x }
+                        series(x = normXValues, y = result.filteredNorms.map { it.p3 })
+                        series(x = normXValues, y = result.filteredNorms.map { it.p15 })
+                        series(x = normXValues, y = result.filteredNorms.map { it.p50 })
+                        series(x = normXValues, y = result.filteredNorms.map { it.p85 })
+                        series(x = normXValues, y = result.filteredNorms.map { it.p97 })
                     }
-
-                    // Лінія дитини будується СУТО по своїх точках
-                    if (childPoints.isNotEmpty()) {
+                    if (result.filteredChildPoints.isNotEmpty()) {
                         series(
-                            x = childPoints.map { it.first },
-                            y = childPoints.map { it.second }
+                            x = result.filteredChildPoints.map { it.first },
+                            y = result.filteredChildPoints.map { it.second }
                         )
                     }
                 }
             }
+
+            if (isActive && capturedType == selectedChartType) {
+                chartReady = true
+            }
+        }
+
+        onDispose {
+            chartJob.value?.cancel()
         }
     }
 
@@ -559,36 +759,38 @@ fun GrowthTab(
         verticalArrangement = Arrangement.spacedBy(CurakidTheme.paddings.medium),
         contentPadding = rememberListContentPadding()
     ) {
-        item {
+        itemWrapper {
             Column {
                 ScreenHeader(title = "Заміри", childName = child?.name ?: "")
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Top summary cards: Z-score, Percentile, Trend
                 TopSummaryRow(
                     child = child,
                     measurements = measurements,
                     norms = norms,
                     selectedChartType = selectedChartType
                 )
-
-                LazyRow(
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    items(GrowthChartType.entries.toTypedArray()) { type ->
-                        FilterChip(
-                            selected = selectedChartType == type,
-                            onClick = { onChartTypeChange(type) },
-                            label = { Text(type.label) }
-                        )
-                    }
-                }
             }
         }
 
         item {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(horizontal = CurakidTheme.paddings.medium),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                items(GrowthChartType.entries.toTypedArray()) { type ->
+                    FilterChip(
+                        selected = selectedChartType == type,
+                        onClick = { onChartTypeChange(type) },
+                        label = { Text(type.label) }
+                    )
+                }
+            }
+        }
+
+        itemWrapper {
             if (chartData.isEmpty()) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Text(stringResource(R.string.no_data_yet), color = Color.Gray)
@@ -622,75 +824,113 @@ fun GrowthTab(
                                 )
                                 .padding(16.dp)
                         ) {
-                            CartesianChartHost(
-                                zoomState = rememberVicoZoomState(zoomEnabled = true, minZoom = Zoom.fixed(2f)),
-                                chart = rememberCartesianChart(
-                                    rememberLineCartesianLayer(
-                                        lineProvider = { seriesIndex, _ ->
-                                            val hasNorms = norms.isNotEmpty()
-                                            val childSeriesIndex = if (hasNorms) 5 else 0
-                                            when {
-                                                !hasNorms -> mainLineStyle
-                                                seriesIndex == childSeriesIndex -> childSeriesStyle
-                                                // Norms order: p3(0), p15(1), p50(2), p85(3), p97(4)
-                                                seriesIndex == 0 -> p3Style
-                                                seriesIndex == 1 -> p15Style
-                                                seriesIndex == 2 -> p50Style
-                                                seriesIndex == 3 -> p85Style
-                                                seriesIndex == 4 -> p97Style
-                                                else -> normLineStyle
-                                            }
-                                        },
-                                    ),
-                                    getXStep = { xAxisStep },
-                                    markerController = CartesianMarkerController.rememberToggleOnTap(),
-                                    markerVisibilityListener = markerVisibilityListener,
-                                    startAxis = VerticalAxis.rememberStart(
-                                        guideline = rememberLineComponent(
-                                            fill = Fill(Color.LightGray.copy(alpha = 0.2f)),
-                                            thickness = 1.dp,
-                                            shape = DashedShape(dashLength = 4.dp, gapLength = 2.dp)
-                                        ),
-                                        titleComponent = axisTitleComponent,
-                                        title = { yAxisLabel },
-                                        itemPlacer = VerticalAxis.ItemPlacer.count(count = { 6 })
-                                    ),
-                                    bottomAxis = HorizontalAxis.rememberBottom(
-                                        guideline = null,
-                                        titleComponent = axisTitleComponent,
-                                        title = { xAxisLabel },
-                                        itemPlacer = HorizontalAxis.ItemPlacer.aligned(
-                                            spacing = {
-                                                if (selectedChartType == GrowthChartType.WeightForHeight) {
-                                                    5
-                                                } else 4
-                                            },
-                                            addExtremeLabelPadding = true
-                                        ),
-                                        valueFormatter = { _, value, _ ->
-                                            if (selectedChartType == GrowthChartType.WeightForHeight) {
-                                                value.roundToInt().toString()
-                                            } else {
-                                                if (value % 1.0 == 0.0) {
-                                                    value.toInt().toString()
-                                                } else {
-                                                    String.format(Locale.US, "%.1f", value)
-                                                }
-                                            }
-                                        }
-                                    ),
-                                    marker = marker,
-                                    legend = legend,
-                                ),
-                                modelProducer = modelProducer,
+                            Log.d(
+                                "ChartDebug",
+                                "Render check — chartReady=$chartReady, chartRangeY=$chartRangeY, hasNormsDrawn=$hasNormsDrawn, selectedChartType=$selectedChartType"
                             )
+
+                            if (!chartReady || chartRangeY == null) {
+                                // Show a loading indicator until Y range is computed
+                                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                    CircularProgressIndicator()
+                                }
+                            } else {
+                                key(selectedChartType) {
+                                    CartesianChartHost(
+                                        zoomState = rememberVicoZoomState(
+                                            zoomEnabled = true,
+                                            minZoom = Zoom.fixed(2f)
+                                        ),
+                                        chart = key(chartRangeY, hasNormsDrawn) {
+                                            rememberCartesianChart(
+                                                rememberLineCartesianLayer(
+                                                    lineProvider = { seriesIndex, _ ->
+                                                        Log.d(
+                                                            "ChartDebug",
+                                                            "lineProvider called: seriesIndex=$seriesIndex, hasNormsDrawn=$hasNormsDrawn"
+                                                        )
+
+                                                        val childSeriesIndex =
+                                                            if (hasNormsDrawn) 5 else 0
+                                                        when {
+                                                            !hasNormsDrawn -> childSeriesStyle
+                                                            seriesIndex == childSeriesIndex -> childSeriesStyle
+                                                            // Norms order: p3(0), p15(1), p50(2), p85(3), p97(4)
+                                                            seriesIndex == 0 -> p3Style
+                                                            seriesIndex == 1 -> p15Style
+                                                            seriesIndex == 2 -> p50Style
+                                                            seriesIndex == 3 -> p85Style
+                                                            seriesIndex == 4 -> p97Style
+                                                            else -> normLineStyle
+                                                        }
+                                                    },
+                                                    rangeProvider = CartesianLayerRangeProvider.fixed(
+                                                        minY = chartRangeY!!.first,
+                                                        maxY = chartRangeY!!.second
+                                                    )
+                                                ),
+                                                getXStep = {
+                                                    if (selectedChartType == GrowthChartType.WeightForHeight) 1.0
+                                                    else 1.0
+                                                },
+                                                markerController = CartesianMarkerController.rememberToggleOnTap(),
+                                                markerVisibilityListener = markerVisibilityListener,
+                                                startAxis = VerticalAxis.rememberStart(
+                                                    guideline = rememberLineComponent(
+                                                        fill = Fill(Color.LightGray.copy(alpha = 0.2f)),
+                                                        thickness = 1.dp,
+                                                        shape = DashedShape(
+                                                            dashLength = 4.dp,
+                                                            gapLength = 2.dp
+                                                        )
+                                                    ),
+                                                    titleComponent = axisTitleComponent,
+                                                    title = { yAxisLabel },
+                                                    itemPlacer = VerticalAxis.ItemPlacer.count(count = { 6 })
+                                                ),
+                                                bottomAxis = HorizontalAxis.rememberBottom(
+                                                    guideline = null,
+                                                    titleComponent = axisTitleComponent,
+                                                    title = { xAxisLabel },
+                                                    itemPlacer = HorizontalAxis.ItemPlacer.aligned(
+                                                        spacing = {
+                                                            if (selectedChartType == GrowthChartType.WeightForHeight) {
+                                                                5
+                                                            } else 4
+                                                        },
+                                                        addExtremeLabelPadding = true
+                                                    ),
+                                                    valueFormatter = { _, value, _ ->
+                                                        if (selectedChartType == GrowthChartType.WeightForHeight) {
+                                                            value.roundToInt().toString()
+                                                        } else {
+                                                            if (value % 1.0 == 0.0) {
+                                                                value.toInt().toString()
+                                                            } else {
+                                                                String.format(
+                                                                    Locale.US,
+                                                                    "%.1f",
+                                                                    value
+                                                                )
+                                                            }
+                                                        }
+                                                    }
+                                                ),
+                                                marker = marker,
+                                                legend = legend,
+                                            )
+                                        },
+                                        modelProducer = modelProducer,
+                                    )
+                                }
+                            }
                         }
                     }
                 }
             }
         }
 
-        item {
+        itemWrapper {
             AnimatedVisibility(
                 visible = selectedMeasurement != null,
                 enter = expandVertically(expandFrom = Alignment.Top) + fadeIn(),
@@ -718,20 +958,33 @@ fun GrowthTab(
                             if (selectedChartType == GrowthChartType.WeightForHeight) {
                                 "${it.height?.roundToInt() ?: 0} см"
                             } else {
-                                val months = ChronoUnit.DAYS.between(child!!.birthDate, it.date.toLocalDate()).toDouble() / 30.44
+                                val months = ChronoUnit.DAYS.between(
+                                    child!!.birthDate,
+                                    it.date.toLocalDate()
+                                ).toDouble() / 30.44
                                 String.format(Locale.US, "%.1f міс", months)
                             }
                         } ?: "—"
-                        val weightText = measurement?.weight?.let { String.format(Locale.US, "%.1f кг", it) } ?: "—"
-                        val heightText = measurement?.height?.let { String.format(Locale.US, "%.1f см", it) } ?: "—"
+                        val weightText =
+                            measurement?.weight?.let { String.format(Locale.US, "%.1f кг", it) }
+                                ?: "—"
+                        val heightText =
+                            measurement?.height?.let { String.format(Locale.US, "%.1f см", it) }
+                                ?: "—"
                         val bmiText = measurement?.let {
                             if (it.weight != null && it.height != null) {
-                                String.format(Locale.US, "%.2f", it.weight!! / (it.height!! / 100.0).pow(2.0))
+                                String.format(
+                                    Locale.US,
+                                    "%.2f",
+                                    it.weight!! / (it.height!! / 100.0).pow(2.0)
+                                )
                             } else {
                                 "—"
                             }
                         } ?: "—"
-                        val headCircText = measurement?.headCirc?.let { String.format(Locale.US, "%.1f см", it) } ?: "—"
+                        val headCircText =
+                            measurement?.headCirc?.let { String.format(Locale.US, "%.1f см", it) }
+                                ?: "—"
 
                         DetailRow(label = "Дата", value = formattedDate)
                         DetailRow(label = "Вік", value = ageMonths)
@@ -744,9 +997,9 @@ fun GrowthTab(
             }
         }
 
-        item {
+        itemWrapper {
             AnimatedVisibility(
-                visible = lastReport != null && (lastReport.text.isNotBlank() || lastReport.recommendations.isNotBlank()),
+                visible = reportLoading || (lastReport != null && (lastReport.text.isNotBlank() || lastReport.recommendations.isNotBlank())),
                 enter = expandVertically() + fadeIn(),
                 exit = shrinkVertically() + fadeOut()
             ) {
@@ -754,11 +1007,12 @@ fun GrowthTab(
                     title = "Аналіз останнього заміру",
                     reportText = lastReport?.text ?: "",
                     recommendations = lastReport?.recommendations ?: "",
+                    isLoading = reportLoading
                 )
             }
         }
 
-        item {
+        itemWrapper {
             SectionHeader(
                 title = stringResource(R.string.measurement_history),
                 actionLabel = ""
@@ -860,9 +1114,20 @@ private fun TopSummaryRow(
         GrowthChartType.HeadCircumference -> m.headCirc
     }
 
+    fun measurementZValue(m: Measurement): Double? = when (selectedChartType) {
+        GrowthChartType.WeightForAge -> m.wfaZscore
+        GrowthChartType.HeightForAge -> m.hfaZscore
+        GrowthChartType.WeightForHeight -> m.wfhZscore
+        GrowthChartType.BMI -> m.bmiZscore
+        GrowthChartType.HeadCircumference -> m.hcfaZscore
+    }
+
     // Estimate percentile and z-score by nearest norm
-    val percentileText: String
-    val zScoreText: String
+    var percentileText = "—"
+    var zScoreText = "—"
+    var zScoreStatus = "Статус"
+    var zScoreColor = Color.Gray
+
     if (child == null || last == null || norms.isEmpty()) {
         percentileText = "—"
         zScoreText = "—"
@@ -874,13 +1139,14 @@ private fun TopSummaryRow(
         }
 
         val value = measurementValue(last)
+        val zValue = measurementZValue(last) ?: 0.0
         if (value == null) {
             percentileText = "—"
             zScoreText = "—"
         } else {
             // find nearest norm point
             val nearest =
-                norms.minByOrNull { kotlin.math.abs(it.x / (if (selectedChartType == GrowthChartType.WeightForHeight) 1.0 else 30.44) - x) }
+                norms.minByOrNull { abs(it.x / (if (selectedChartType == GrowthChartType.WeightForHeight) 1.0 else 30.44) - x) }
             if (nearest == null) {
                 percentileText = "—"
                 zScoreText = "—"
@@ -903,17 +1169,20 @@ private fun TopSummaryRow(
 
                 percentileText = "${pct.toInt()}‑й"
 
-                // Map percentile to z approximately using anchors: p3:-1.88, p15:-1.04, p50:0, p85:1.04, p97:1.88
-                val z = when {
-                    pct <= 3 -> -1.88
-                    pct <= 15 -> interp(-1.88, -1.04, 3.0, 15.0)
-                    pct <= 50 -> interp(-1.04, 0.0, 15.0, 50.0)
-                    pct <= 85 -> interp(0.0, 1.04, 50.0, 85.0)
-                    pct <= 97 -> interp(1.04, 1.88, 85.0, 97.0)
-                    else -> 1.88
+                zScoreStatus = when (zValue) {
+                    in -2.0..2.0 -> "Норма"
+                    in 2.0..3.0 -> "Вище норми"
+                    in -3.0..-2.0 -> "Помірний дефіцит"
+                    else -> "Значне відхилення"
                 }
 
-                zScoreText = String.format(Locale.US, "%.2f", z)
+                zScoreColor = when (zValue) {
+                    in -2.0..2.0 -> Color(0xFF4CAF50)
+                    in -3.0..3.0 -> Color(0xFFFFC107)
+                    else -> Color(0xFFEF5350)
+                }
+
+                zScoreText = String.format(Locale.US, "%.2f", zValue)
             }
         }
     }
@@ -931,7 +1200,7 @@ private fun TopSummaryRow(
         } else {
             val delta = lastVal - prevVal
             when {
-                kotlin.math.abs(delta) < (kotlin.math.abs(prevVal) * 0.02 + 0.01) -> {
+                abs(delta) < (abs(prevVal) * 0.02 + 0.01) -> {
                     trendText = "Стабільно"
                     trendIconColor = Color.Gray
                 }
@@ -957,8 +1226,8 @@ private fun TopSummaryRow(
             modifier = Modifier.weight(1f),
             title = "Останній Z‑score",
             value = zScoreText,
-            subtitle = "Статус",
-            tint = Color(0xFF4CAF50)
+            subtitle = zScoreStatus,
+            tint = zScoreColor
         )
         TopStatCard(
             modifier = Modifier.weight(1f),

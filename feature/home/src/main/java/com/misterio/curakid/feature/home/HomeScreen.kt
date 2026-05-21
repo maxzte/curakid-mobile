@@ -49,6 +49,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -56,7 +57,9 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.LocalViewModelStoreOwner
 import com.misterio.core.domain.UiState
 import com.misterio.core.domain.model.Event
+import com.misterio.core.domain.model.EventStatus
 import com.misterio.core.domain.model.EventType
+import com.misterio.core.domain.model.LifePeriodAiReport
 import com.misterio.core.domain.model.VaccineType
 import com.misterio.core.ui.components.LoadingScreen
 import com.misterio.core.ui.components.ScreenHeader
@@ -124,6 +127,8 @@ fun HomeScreen(
     onEventClick: (eventId: String) -> Unit,
     onVaccinationClick: (vaccinationId: String) -> Unit,
     onShowAllUpcoming: () -> Unit,
+    onChatClick: () -> Unit,
+    onAiReportClick: (reportId: String) -> Unit,
 ) {
     val viewModel: HomeViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsState()
@@ -138,9 +143,12 @@ fun HomeScreen(
                 nextVaccination = data.vaccineEvent,
                 nextDoctorVisit = data.doctorEvent,
                 upcomingList = data.upcomingItems,
+                aiReports = data.aiReports,
                 onEventClick = onEventClick,
                 onVaccinationClick = onVaccinationClick,
                 onShowAllUpcoming = onShowAllUpcoming,
+                onChatClick = onChatClick,
+                onAiReportClick = onAiReportClick
             )
         }
 
@@ -158,10 +166,13 @@ private fun HomeContent(
     exercises: List<Exercise> = sampleExercises(),
     tips: List<Tip> = sampleTips(),
     upcomingList: List<Event> = emptyList(),
+    aiReports: List<LifePeriodAiReport> = emptyList(),
     onItemClick: (Event) -> Unit = {},
     onEventClick: (eventId: String) -> Unit,
     onVaccinationClick: (String) -> Unit,
     onShowAllUpcoming: () -> Unit,
+    onChatClick: () -> Unit = {},
+    onAiReportClick: (String) -> Unit = {},
 ) {
     val owner = LocalViewModelStoreOwner.current
 
@@ -174,7 +185,7 @@ private fun HomeContent(
         contentPadding = rememberListContentPadding()
     ) {
         itemWrapper {
-            ScreenHeader(title = "CuraKid", childName = childName)
+            ScreenHeader(title = "CuraKid", childName = childName, onChatClick = onChatClick)
         }
 
         item {
@@ -203,28 +214,16 @@ private fun HomeContent(
             }
         }
 
-//        itemWrapper {
-//            SectionHeader(
-//                title = "Вправи на тиждень",
-//                actionLabel = "Всі →",
-//                onAction = {}
-//            )
-//        }
-//
-//        item {
-//            ExercisesRow(
-//                exercises = exercises,
-//                onItemClick = {}
-//            )
-//        }
-
-        if (tips.isNotEmpty()) {
+        if (aiReports.isNotEmpty()) {
             item {
-                SectionHeader(title = "Поради для тебе", actionLabel = "", onAction = {})
+                SectionHeader(title = "Звіти та Рекомендації", actionLabel = "", onAction = {})
             }
 
             item {
-                TipsRow(tips = tips)
+                AiReportsRow(
+                    reports = aiReports,
+                    onItemClick = onAiReportClick
+                )
             }
         }
     }
@@ -235,16 +234,16 @@ private fun HomeContent(
 fun HomePreview() {
     CurakidTheme {
         HomeContent(
-            "",
-            null,
-            null,
-            sampleExercises(),
-            sampleTips(),
-            emptyList(),
-            {},
-            {},
-            {},
-            {}
+            childName = "",
+            nextVaccination = null,
+            nextDoctorVisit = null,
+            upcomingList = emptyList(),
+            aiReports = emptyList(),
+            onEventClick = {},
+            onVaccinationClick = {},
+            onShowAllUpcoming = {},
+            onChatClick = {},
+            onAiReportClick = {}
         )
     }
 }
@@ -675,45 +674,49 @@ private fun ExerciseCard(exercise: Exercise, onClick: () -> Unit) {
 }
 
 @Composable
-private fun TipsRow(tips: List<Tip>) {
+private fun AiReportsRow(reports: List<LifePeriodAiReport>, onItemClick: (String) -> Unit) {
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(CurakidTheme.paddings.small),
         contentPadding = PaddingValues(horizontal = CurakidTheme.paddings.medium)
     ) {
-        items(tips) { tip ->
-            TipCard(tip = tip)
+        items(reports) { report ->
+            AiReportCard(report = report, onClick = { onItemClick(report.id) })
         }
     }
 }
 
 @Composable
-private fun TipCard(tip: Tip) {
+private fun AiReportCard(report: LifePeriodAiReport, onClick: () -> Unit) {
     Card(
-        modifier = Modifier.width(220.dp),
+        onClick = onClick,
+        modifier = Modifier.width(260.dp),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = CurakidTheme.colors.surface),
         border = BorderStroke(0.5.dp, CurakidTheme.colors.outlineVariant),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
+        Column(modifier = Modifier.padding(16.dp)) {
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(20.dp))
-                    .background(tip.bg)
+                    .background(CurakidTheme.colors.primaryContainer)
                     .padding(horizontal = 10.dp, vertical = 4.dp)
             ) {
                 Text(
-                    tip.categoryLabel,
+                    text = "Аналіз розвитку",
                     style = CurakidTheme.typography.labelSmall,
-                    color = tip.textColor,
-                    fontWeight = FontWeight.Bold
+                    color = CurakidTheme.colors.primary,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1
                 )
             }
             Spacer(Modifier.height(8.dp))
             Text(
-                tip.text,
-                style = CurakidTheme.typography.labelMedium,
-                color = CurakidTheme.colors.onSurface
+                text = report.reportText ?: "Звіт порожній",
+                style = CurakidTheme.typography.bodyMedium,
+                color = CurakidTheme.colors.onSurface,
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
             )
         }
     }

@@ -5,7 +5,7 @@ import androidx.work.Data
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
-import com.misterio.core.common.SettingsManager
+import com.misterio.curakid.core.common.SettingsManager
 import com.misterio.core.domain.model.Event
 import com.misterio.core.domain.util.EventNotificationScheduler
 import dagger.hilt.android.qualifiers.ApplicationContext

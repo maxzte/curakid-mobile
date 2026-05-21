@@ -120,6 +120,7 @@ data class MilestoneSummary(
 @Composable
 fun DevelopmentScreen(
     onAddMeasurements: (List<String>) -> Unit = {},
+    onChatClick: () -> Unit = {},
 ) {
     val viewModel: DevelopmentViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
@@ -154,7 +155,7 @@ fun DevelopmentScreen(
         }
 
         itemWrapper {
-            ScreenHeader(title = "Розвиток", childName = selectedChild?.name ?: "")
+            ScreenHeader(title = "Розвиток", childName = selectedChild?.name ?: "", onChatClick = onChatClick)
         }
 
         item {

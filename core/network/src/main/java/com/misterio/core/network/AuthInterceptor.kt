@@ -1,7 +1,7 @@
 package com.misterio.core.network
 
 import android.util.Log
-import com.misterio.core.common.TokenManager
+import com.misterio.curakid.core.common.TokenManager
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.Interceptor

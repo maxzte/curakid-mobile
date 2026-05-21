@@ -16,6 +16,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.misterio.core.domain.model.Measurement
+import com.misterio.core.ui.theme.CurakidTheme
 import com.misterio.feature.development.R
 import java.time.format.DateTimeFormatter
 
@@ -24,7 +25,7 @@ fun MeasurementItem(measurement: Measurement) {
     Card(
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        modifier = Modifier.fillMaxWidth()
+        modifier = Modifier.padding(horizontal = CurakidTheme.paddings.medium).fillMaxWidth()
     ) {
         Row(
             modifier = Modifier

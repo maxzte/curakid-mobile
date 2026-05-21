@@ -1,4 +1,4 @@
-package com.misterio.core.common
+package com.misterio.curakid.core.common
 
 import android.content.Context
 import android.util.Log

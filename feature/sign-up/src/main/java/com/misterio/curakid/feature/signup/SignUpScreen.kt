@@ -9,13 +9,8 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -27,29 +22,36 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.misterio.core.domain.UiState
 import com.misterio.core.ui.components.CuraKidTextField
 
-
 @Composable
 fun SignUpScreen(
     onNavigateToLogIn: () -> Unit,
+    onNavigateToVerify: (String) -> Unit,
     nameError: String? = null,
-    passwordError: String? = null
+    emailError: String? = null,
+    passwordError: String? = null,
+    viewModel: SignUpViewModel = hiltViewModel()
 ) {
-    val viewModel: SignUpViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsState()
 
     var name by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
 
+    val error = (uiState as? UiState.Error)?.errorMessage
+    val currentEmailError = emailError ?: if (error == "Невірний формат email") error else null
+
     // Focus chain: name → email → password → submit
     val emailFocus = remember { FocusRequester() }
     val passwordFocus = remember { FocusRequester() }
 
+    LaunchedEffect(uiState) {
+        if (uiState is UiState.Success) {
+            onNavigateToVerify(email)
+        }
+    }
+
     fun submit() {
         viewModel.signUp(email, password, name)
-        if (uiState is UiState.Success) {
-            onNavigateToLogIn()
-        }
     }
 
     AuthScaffold {
@@ -91,7 +93,7 @@ fun SignUpScreen(
             keyboardActions = KeyboardActions(
                 onNext = { passwordFocus.requestFocus() }
             ),
-            error = if (uiState is UiState.Error) (uiState as UiState.Error).errorMessage else null,
+            error = currentEmailError,
             modifier = Modifier.focusRequester(emailFocus)
         )
 
@@ -145,6 +147,18 @@ fun SignUpScreen(
 @Composable
 fun RegisterScreenPreview() {
     MaterialTheme {
-        SignUpScreen({})
+        SignUpScreen({}, {})
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun RegisterWithErrorPreview() {
+    MaterialTheme {
+        SignUpScreen(
+            onNavigateToLogIn = {},
+            onNavigateToVerify = {},
+            emailError = "Невірний формат email"
+        )
     }
 }

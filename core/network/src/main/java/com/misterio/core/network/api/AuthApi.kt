@@ -11,12 +11,18 @@ interface AuthApi {
     suspend fun login(@Body request: LoginRequest): Response<AuthResponse>
 
     @POST("api/auth/register")
-    suspend fun register(@Body request: RegisterRequest): Response<AuthResponse>
+    suspend fun register(@Body request: RegisterRequest): Response<MessageResponse>
+
+    @POST("api/auth/verify-email")
+    suspend fun verifyEmail(@Body request: VerifyEmailRequest): Response<AuthResponse>
+
+    @POST("api/auth/forgot-password")
+    suspend fun forgotPassword(@Body request: ForgotPasswordRequest): Response<MessageResponse>
+
+    @POST("api/auth/reset-password")
+    suspend fun resetPassword(@Body request: ResetPasswordRequest): Response<MessageResponse>
 
     @POST("api/auth/refresh")
-    suspend fun refresh(@Body request: RefreshRequest): Response<AuthResponse>
-
-    @POST("api/auth/logout")
-    suspend fun logout(@Body request: RefreshRequest): Response<Unit>
+    suspend fun refresh(@Body request: RefreshTokenRequest): Response<AuthResponse>
 
 }

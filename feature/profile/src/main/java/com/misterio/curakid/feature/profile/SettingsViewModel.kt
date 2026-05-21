@@ -2,7 +2,8 @@ package com.misterio.curakid.feature.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.misterio.core.common.SettingsManager
+import com.misterio.curakid.core.common.SecurityManager
+import com.misterio.curakid.core.common.SettingsManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -12,7 +13,8 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val settingsManager: SettingsManager
+    private val settingsManager: SettingsManager,
+    securityManager: SecurityManager
 ) : ViewModel() {
 
     val isAppEnabled: StateFlow<Boolean> = settingsManager.isAppEnabled
@@ -27,6 +29,13 @@ class SettingsViewModel @Inject constructor(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = true
+        )
+
+    val isPasscodeEnabled: StateFlow<Boolean> = securityManager.isPasscodeEnabled
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = false
         )
 
     fun setAppEnabled(enabled: Boolean) {

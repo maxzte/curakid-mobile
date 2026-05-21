@@ -17,7 +17,12 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.util.concurrent.TimeUnit
 import javax.inject.Named
+import javax.inject.Qualifier
 import javax.inject.Singleton
+
+@Qualifier
+@Retention(AnnotationRetention.BINARY)
+annotation class SseClient
 
 @Module
 @InstallIn(SingletonComponent::class)
@@ -70,6 +75,15 @@ object NetworkModule {
             .authenticator(tokenAuthenticator)
             .build()
     }
+
+    @Provides
+    @Singleton
+    @SseClient
+    fun provideSseOkHttpClient(
+        baseClient: OkHttpClient
+    ): OkHttpClient = baseClient.newBuilder()
+        .readTimeout(0, TimeUnit.MILLISECONDS)
+        .build()
 
     @Provides
     @Singleton

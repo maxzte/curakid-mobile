@@ -5,6 +5,7 @@ package com.misterio.curakid.feature.development
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MonitorWeight
@@ -19,6 +20,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.misterio.core.domain.model.Child
+import com.misterio.core.ui.components.CuraKidAlertDialog
 import com.misterio.core.ui.components.CuraKidButton
 import com.misterio.core.ui.components.RulerSlider
 import com.misterio.feature.development.R
@@ -75,6 +77,8 @@ fun AddMeasurementBottomSheet(
     child: Child,
     initialWeight: Double? = null,
     initialHeight: Double? = null,
+    weightNorm: ClosedFloatingPointRange<Float>? = null,
+    heightNorm: ClosedFloatingPointRange<Float>? = null,
     onDismiss: () -> Unit,
     onDoneClick: (weight: Double?, height: Double?) -> Unit,
 ) {
@@ -96,6 +100,26 @@ fun AddMeasurementBottomSheet(
         )
     }
 
+    var showConfirmationDialog by remember { mutableStateOf(false) }
+
+    if (showConfirmationDialog) {
+        CuraKidAlertDialog(
+            onDismissRequest = { showConfirmationDialog = false },
+            onConfirm = {
+                val w = floor(weightWhole) + weightDecimal
+                val h = floor(heightWhole) + heightDecimal
+                onDoneClick(
+                    if (w == 0.0) null else w,
+                    if (h == 0.0) null else h,
+                )
+                showConfirmationDialog = false
+            },
+            title = "Заміри поза нормою",
+            text = "Введені дані (вага або зріст) значно відрізняються від вікових норм. Ви впевнені, що хочете їх зберегти?",
+            confirmButtonColor = Color(0xFFEF5350)
+        )
+    }
+
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
@@ -113,22 +137,28 @@ fun AddMeasurementBottomSheet(
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
+            val currentWeight = weightWhole + weightDecimal
             Text(
-                text = String.format(Locale.US, "%.1f kg", weightWhole + weightDecimal),
+                text = String.format(Locale.US, "%.1f kg", currentWeight),
                 style = MaterialTheme.typography.headlineMedium.copy(
                     color = Color(0xFF6200EE),
                     fontWeight = FontWeight.Bold
                 )
             )
 
+            NormStatus(value = currentWeight.toFloat(), normRange = weightNorm)
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             RulerSlider(
                 value = weightWhole.toFloat(),
                 onValueChange = { weightWhole = round(it.toDouble()) },
-                range = 0f..40f,
+                range = 0f..32f,
                 step = 1f,
-                modifier = Modifier.height(80.dp)
+                modifier = Modifier.height(80.dp),
+                normRange = weightNorm
             )
 
             RulerSlider(
@@ -146,22 +176,28 @@ fun AddMeasurementBottomSheet(
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
+            val currentHeight = heightWhole + heightDecimal
             Text(
-                text = String.format(Locale.US, "%.1f cm", heightWhole + heightDecimal),
+                text = String.format(Locale.US, "%.1f cm", currentHeight),
                 style = MaterialTheme.typography.headlineMedium.copy(
                     color = Color(0xFF6200EE),
                     fontWeight = FontWeight.Bold
                 )
             )
 
+            NormStatus(value = currentHeight.toFloat(), normRange = heightNorm)
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             RulerSlider(
                 value = heightWhole.toFloat(),
                 onValueChange = { heightWhole = round(it.toDouble()) },
-                range = 30f..180f,
+                range = 30f..125f,
                 step = 1f,
-                modifier = Modifier.height(80.dp)
+                modifier = Modifier.height(80.dp),
+                normRange = heightNorm
             )
 
             RulerSlider(
@@ -179,10 +215,18 @@ fun AddMeasurementBottomSheet(
                 onClick = {
                     val w = floor(weightWhole) + weightDecimal
                     val h = floor(heightWhole) + heightDecimal
-                    onDoneClick(
-                         if (w == 0.0) null else w,
-                         if (h == 0.0) null else h,
-                    )
+                    
+                    val isWeightOut = weightNorm != null && w.toFloat() !in weightNorm
+                    val isHeightOut = heightNorm != null && h.toFloat() !in heightNorm
+                    
+                    if (isWeightOut || isHeightOut) {
+                        showConfirmationDialog = true
+                    } else {
+                        onDoneClick(
+                             if (w == 0.0) null else w,
+                             if (h == 0.0) null else h,
+                        )
+                    }
                 },
                 modifier = Modifier.fillMaxWidth()
             )
@@ -197,6 +241,7 @@ fun AddMeasurementBottomSheet(
 fun AddHeadCircBottomSheet(
     childName: String,
     prevHeadCirc: Double? = null,
+    normRange: ClosedFloatingPointRange<Float>? = null,
     onDismiss: () -> Unit,
     onDoneClick: (Double) -> Unit,
 ) {
@@ -207,6 +252,21 @@ fun AddHeadCircBottomSheet(
     var headCircDecimal by rememberSaveable(initialValue) {
         mutableDoubleStateOf(
             round((initialValue - floor(initialValue)) * 10.0) / 10.0
+        )
+    }
+
+    var showConfirmationDialog by remember { mutableStateOf(false) }
+
+    if (showConfirmationDialog) {
+        CuraKidAlertDialog(
+            onDismissRequest = { showConfirmationDialog = false },
+            onConfirm = {
+                onDoneClick(floor(headCircWhole) + headCircDecimal)
+                showConfirmationDialog = false
+            },
+            title = "Замір поза нормою",
+            text = "Введений обхват голови значно відрізняється від вікових норм. Ви впевнені, що хочете його зберегти?",
+            confirmButtonColor = Color(0xFFEF5350)
         )
     }
 
@@ -226,22 +286,28 @@ fun AddHeadCircBottomSheet(
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
+            val currentVal = headCircWhole + headCircDecimal
             Text(
-                text = String.format(Locale.US, "%.1f cm", headCircWhole + headCircDecimal),
+                text = String.format(Locale.US, "%.1f cm", currentVal),
                 style = MaterialTheme.typography.headlineMedium.copy(
                     color = Color(0xFF6200EE),
                     fontWeight = FontWeight.Bold
                 )
             )
 
+            NormStatus(value = currentVal.toFloat(), normRange = normRange)
+
+            Spacer(modifier = Modifier.height(8.dp))
+
             RulerSlider(
                 value = headCircWhole.toFloat(),
                 onValueChange = { headCircWhole = round(it.toDouble()) },
                 range = 30f..60f,
                 step = 1f,
-                modifier = Modifier.height(80.dp)
+                modifier = Modifier.height(80.dp),
+                normRange = normRange
             )
 
             RulerSlider(
@@ -256,12 +322,47 @@ fun AddHeadCircBottomSheet(
 
             CuraKidButton(
                 text = stringResource(R.string.done),
-                onClick = { onDoneClick(floor(headCircWhole) + headCircDecimal) },
+                onClick = {
+                    val currentVal = floor(headCircWhole) + headCircDecimal
+                    if (normRange != null && currentVal.toFloat() !in normRange) {
+                        showConfirmationDialog = true
+                    } else {
+                        onDoneClick(currentVal)
+                    }
+                },
                 modifier = Modifier
                     .fillMaxWidth()
             )
 
             Spacer(modifier = Modifier.height(24.dp))
         }
+    }
+}
+
+@Composable
+fun NormStatus(
+    value: Float,
+    normRange: ClosedFloatingPointRange<Float>?,
+    modifier: Modifier = Modifier
+) {
+    if (normRange == null) return
+
+    val isWithinNorm = value in normRange
+    val text = if (isWithinNorm) "В межах норми" else "Поза нормою"
+    val color = if (isWithinNorm) Color(0xFF4CAF50) else Color(0xFFEF5350)
+
+    Surface(
+        color = color.copy(alpha = 0.1f),
+        shape = RoundedCornerShape(16.dp),
+        modifier = modifier.padding(vertical = 4.dp)
+    ) {
+        Text(
+            text = text,
+            style = MaterialTheme.typography.labelMedium.copy(
+                color = color,
+                fontWeight = FontWeight.SemiBold
+            ),
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp)
+        )
     }
 }

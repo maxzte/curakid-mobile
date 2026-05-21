@@ -31,6 +31,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -151,10 +152,11 @@ enum class MedicalCategory(
 
 @Composable
 fun ProfileScreen(
-    viewModel: ProfileViewModel = hiltViewModel(),
     onAddChild: () -> Unit = {},
     onSettingsOpen: () -> Unit = {},
+    onChatClick: () -> Unit = {},
 ) {
+    val viewModel: ProfileViewModel = hiltViewModel()
     val children by viewModel.children.collectAsState()
     val selectedChild by viewModel.selectedChild.collectAsState()
 
@@ -206,7 +208,7 @@ fun ProfileScreen(
         verticalArrangement = Arrangement.spacedBy(CurakidTheme.paddings.medium),
     ) {
         itemWrapper {
-            ProfileHeader(onAction = onSettingsOpen)
+            ProfileHeader(onAction = onSettingsOpen, onChatClick = onChatClick)
         }
 
         item {
@@ -286,7 +288,7 @@ fun ProfileScreen(
 }
 
 @Composable
-private fun ProfileHeader(onAction: () -> Unit) {
+private fun ProfileHeader(onAction: () -> Unit, onChatClick: () -> Unit) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
@@ -299,13 +301,24 @@ private fun ProfileHeader(onAction: () -> Unit) {
             fontWeight = FontWeight.Medium
         )
 
-        IconButton(
-            onClick = onAction
-        ) {
-            Icon(
-                imageVector = Icons.Default.Settings,
-                contentDescription = "settings icon"
-            )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconButton(
+                onClick = onChatClick
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.Chat,
+                    contentDescription = "chat icon"
+                )
+            }
+            
+            IconButton(
+                onClick = onAction
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Settings,
+                    contentDescription = "settings icon"
+                )
+            }
         }
     }
 }

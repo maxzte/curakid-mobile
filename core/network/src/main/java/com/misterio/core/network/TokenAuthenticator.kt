@@ -1,13 +1,11 @@
 package com.misterio.core.network
 
 import android.util.Log
-import com.misterio.core.common.TokenManager
+import com.misterio.curakid.core.common.TokenManager
 import com.misterio.core.network.api.AuthApi
-import com.misterio.core.network.dto.RefreshRequest
+import com.misterio.core.network.dto.RefreshTokenRequest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import okhttp3.Authenticator
@@ -114,7 +112,7 @@ class TokenAuthenticator @Inject constructor(
 
         val refreshResponse = try {
             authApi.refresh(
-                RefreshRequest(refreshToken)
+                RefreshTokenRequest(refreshToken)
             )
         } catch (e: Exception) {
             Log.e(TAG, "performRefresh: Exception during API call", e)

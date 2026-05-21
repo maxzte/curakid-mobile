@@ -1,4 +1,4 @@
-package com.misterio.core.common
+package com.misterio.curakid.core.common
 
 import android.content.Context
 import android.util.Log
@@ -28,6 +28,7 @@ private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(na
 @Singleton
 class TokenManager @Inject constructor(
     @param:ApplicationContext private val context: Context,
+    private val securityManager: SecurityManager,
     scope: CoroutineScope,
 ) {
 
@@ -67,8 +68,16 @@ class TokenManager @Inject constructor(
                 }
                 .collect { prefs ->
                 val rt = prefs[refreshTokenKey]
-                Log.d(TAG, "init: Loaded tokens. Access: ${currentToken?.take(10)}..., Refresh: ${rt?.take(10)}...")
-                _refreshToken.value = rt
+                val decryptedRt = try {
+                    rt?.let { securityManager.decrypt(it) }
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to decrypt refresh token. Clearing tokens.", e)
+                    // If decryption fails (e.g. migration from plain text), clear tokens
+                    scope.launch { clearTokens() }
+                    null
+                }
+                Log.d(TAG, "init: Loaded tokens. Access: ${currentToken?.take(10)}..., Refresh: ${decryptedRt?.take(10)}...")
+                _refreshToken.value = decryptedRt
                 _isInitialized.value = true
             }
         }
@@ -88,8 +97,10 @@ class TokenManager @Inject constructor(
         Log.i(TAG, "saving tokens: $accessToken\n$refreshToken")
         _accessToken.value = accessToken
 
+        val encryptedRt = securityManager.encrypt(refreshToken)
+
         context.dataStore.edit { prefs ->
-            prefs[refreshTokenKey] = refreshToken
+            prefs[refreshTokenKey] = encryptedRt
         }
     }
 

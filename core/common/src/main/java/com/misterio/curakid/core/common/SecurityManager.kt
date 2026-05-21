@@ -1,0 +1,116 @@
+package com.misterio.curakid.core.common
+
+import android.content.Context
+import android.security.keystore.KeyGenParameterSpec
+import android.security.keystore.KeyProperties
+import android.util.Base64
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
+import kotlinx.serialization.Serializable
+import java.security.KeyStore
+import javax.crypto.Cipher
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
+import javax.crypto.spec.GCMParameterSpec
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Serializable
+enum class PasscodeMode {
+    SETUP,
+    UNLOCK,
+    DISABLE
+}
+
+private val Context.securityDataStore: DataStore<Preferences> by preferencesDataStore(name = "security_prefs")
+
+@Singleton
+class SecurityManager @Inject constructor(
+    @param:ApplicationContext private val context: Context
+) {
+    private val passcodeKey = stringPreferencesKey("encrypted_passcode")
+    private val alias = "passcode_key"
+    private val transformation = "AES/GCM/NoPadding"
+    private val provider = "AndroidKeyStore"
+
+    val isPasscodeEnabled: Flow<Boolean> = context.securityDataStore.data.map { 
+        !it[passcodeKey].isNullOrEmpty() 
+    }
+
+    suspend fun savePasscode(passcode: String) {
+        val encrypted = encrypt(passcode)
+        context.securityDataStore.edit { it[passcodeKey] = encrypted }
+    }
+
+    suspend fun clearPasscode() {
+        context.securityDataStore.edit { it.remove(passcodeKey) }
+    }
+
+    suspend fun verifyPasscode(enteredPasscode: String): Boolean {
+        val storedEncrypted = context.securityDataStore.data.map { it[passcodeKey] }.first() ?: return false
+        return try {
+            val decrypted = decrypt(storedEncrypted)
+            decrypted == enteredPasscode
+        } catch (e: Exception) {
+            false
+        }
+    }
+
+    fun encrypt(data: String): String {
+        val cipher = Cipher.getInstance(transformation)
+        cipher.init(Cipher.ENCRYPT_MODE, getOrCreateKey())
+        val encryptedBytes = cipher.doFinal(data.toByteArray())
+        val iv = cipher.iv
+        
+        // Combine IV and encrypted data for storage
+        val combined = iv + encryptedBytes
+        return Base64.encodeToString(combined, Base64.NO_WRAP)
+    }
+
+    fun decrypt(encryptedData: String): String {
+        val combined = try {
+            Base64.decode(encryptedData, Base64.NO_WRAP)
+        } catch (e: Exception) {
+            // Fallback for cases where it was encoded with DEFAULT or is not base64
+            Base64.decode(encryptedData, Base64.DEFAULT)
+        }
+        
+        if (combined.size < 12) throw IllegalArgumentException("Invalid encrypted data")
+
+        val iv = combined.sliceArray(0 until 12) // GCM IV is 12 bytes
+        val encryptedBytes = combined.sliceArray(12 until combined.size)
+
+        val cipher = Cipher.getInstance(transformation)
+        val spec = GCMParameterSpec(128, iv)
+        cipher.init(Cipher.DECRYPT_MODE, getOrCreateKey(), spec)
+        
+        return String(cipher.doFinal(encryptedBytes))
+    }
+
+    private fun getOrCreateKey(): SecretKey {
+        val keyStore = KeyStore.getInstance(provider)
+        keyStore.load(null)
+        
+        keyStore.getKey(alias, null)?.let { return it as SecretKey }
+
+        val keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, provider)
+        val spec = KeyGenParameterSpec.Builder(
+            alias,
+            KeyProperties.PURPOSE_ENCRYPT or KeyProperties.PURPOSE_DECRYPT
+        )
+            .setBlockModes(KeyProperties.BLOCK_MODE_GCM)
+            .setEncryptionPaddings(KeyProperties.ENCRYPTION_PADDING_NONE)
+            .setKeySize(256)
+            .build()
+            
+        keyGenerator.init(spec)
+        return keyGenerator.generateKey()
+    }
+}

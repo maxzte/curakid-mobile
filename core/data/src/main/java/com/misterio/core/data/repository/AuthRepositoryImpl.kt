@@ -1,15 +1,13 @@
 package com.misterio.core.data.repository
 
 import android.util.Log
-import com.misterio.core.common.AppDataStore
-import com.misterio.core.common.SettingsManager
-import com.misterio.core.common.TokenManager
+import com.misterio.curakid.core.common.AppDataStore
+import com.misterio.curakid.core.common.SettingsManager
+import com.misterio.curakid.core.common.TokenManager
 import com.misterio.core.database.AppDatabase
 import com.misterio.core.domain.repository.AuthRepository
 import com.misterio.core.network.api.AuthApi
-import com.misterio.core.network.dto.LoginRequest
-import com.misterio.core.network.dto.RefreshRequest
-import com.misterio.core.network.dto.RegisterRequest
+import com.misterio.core.network.dto.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.withContext
@@ -41,14 +39,55 @@ class AuthRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun register(email: String, password: String, name: String): Result<Unit> {
+    override suspend fun register(email: String, password: String, name: String): Result<String> {
         return try {
             val response = authApi.register(RegisterRequest(email, password, name))
-            if (response.isSuccessful) {
-                appDataStore.setOnboardingCompleted(false)
-                Result.success(Unit)
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!.message)
             } else {
                 Result.failure(Exception("Registration failed: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun verifyEmail(email: String, code: String): Result<Unit> {
+        return try {
+            val response = authApi.verifyEmail(VerifyEmailRequest(email, code))
+            if (response.isSuccessful && response.body() != null) {
+                val tokens = response.body()!!
+                appDataStore.setOnboardingCompleted(tokens.onboardingCompleted)
+                tokenManager.save(tokens.accessToken, tokens.refreshToken)
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("Verification failed: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun forgotPassword(email: String): Result<String> {
+        return try {
+            val response = authApi.forgotPassword(ForgotPasswordRequest(email))
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!.message)
+            } else {
+                Result.failure(Exception("Forgot password failed: ${response.code()}"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    override suspend fun resetPassword(email: String, code: String, newPassword: String): Result<String> {
+        return try {
+            val response = authApi.resetPassword(ResetPasswordRequest(email, code, newPassword))
+            if (response.isSuccessful && response.body() != null) {
+                Result.success(response.body()!!.message)
+            } else {
+                Result.failure(Exception("Reset password failed: ${response.code()}"))
             }
         } catch (e: Exception) {
             Result.failure(e)
@@ -61,7 +100,7 @@ class AuthRepositoryImpl @Inject constructor(
 
         val hasRefreshToken = tokenManager.currentRefreshToken != null
         if (hasRefreshToken) {
-            val res = authApi.refresh(RefreshRequest(tokenManager.currentRefreshToken!!))
+            val res = authApi.refresh(RefreshTokenRequest(tokenManager.currentRefreshToken!!))
             val body = res.body()
             if (res.isSuccessful && body != null) {
                 tokenManager.save(
@@ -75,14 +114,9 @@ class AuthRepositoryImpl @Inject constructor(
     override suspend fun logout(): Result<Unit> = withContext(Dispatchers.IO) {
         Log.i(TAG, "LOGOUT")
         try {
-            val rToken = tokenManager.refreshToken.firstOrNull()
             tokenManager.clearTokens()
             database.clearAllTables()
             settingsManager.clear()
-
-            rToken?.let {
-                authApi.logout(RefreshRequest(it))
-            }
             appDataStore.clear()
 
             Result.success(Unit)

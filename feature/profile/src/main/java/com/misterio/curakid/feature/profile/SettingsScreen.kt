@@ -28,15 +28,18 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.misterio.core.ui.theme.CurakidTheme
+import com.misterio.curakid.core.common.PasscodeMode
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
-    viewModel: SettingsViewModel = hiltViewModel()
+    onNavigateToPasscode: (PasscodeMode) -> Unit,
 ) {
+    val viewModel: SettingsViewModel = hiltViewModel()
     val isAppEnabled by viewModel.isAppEnabled.collectAsState()
     val isNotificationsEnabled by viewModel.isNotificationsEnabled.collectAsState()
+    val isPasscodeEnabled by viewModel.isPasscodeEnabled.collectAsState()
 
     Scaffold(
         topBar = {
@@ -106,6 +109,38 @@ fun SettingsScreen(
                 )
             }
             
+            HorizontalDivider(thickness = 0.5.dp, color = CurakidTheme.colors.outlineVariant)
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Захист ПІН-кодом",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                    Text(
+                        text = "Запитувати ПІН-код при вході в застосунок",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = isPasscodeEnabled,
+                    onCheckedChange = { enabled ->
+                        if (enabled) {
+                            onNavigateToPasscode(PasscodeMode.SETUP)
+                        } else {
+                            onNavigateToPasscode(PasscodeMode.DISABLE)
+                        }
+                    }
+                )
+            }
+
             HorizontalDivider(thickness = 0.5.dp, color = CurakidTheme.colors.outlineVariant)
             
             Spacer(modifier = Modifier.height(16.dp))

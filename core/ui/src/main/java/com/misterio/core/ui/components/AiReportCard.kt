@@ -6,10 +6,14 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AutoAwesome
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.halilibo.richtext.commonmark.CommonmarkAstNodeParser
+import com.halilibo.richtext.markdown.BasicMarkdown
+import com.halilibo.richtext.ui.BasicRichText
 import com.misterio.core.ui.theme.CurakidTheme
 
 @Composable
@@ -20,6 +24,13 @@ fun AiReportCard(
     modifier: Modifier = Modifier,
     isLoading: Boolean = false
 ) {
+    val parser = remember { CommonmarkAstNodeParser() }
+    val astNodeReport = remember {
+        parser.parse(reportText.trimIndent())
+    }
+    val astNodeRec = remember {
+        parser.parse(recommendations.trimIndent())
+    }
     OutlinedCard(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(CurakidTheme.paddings.medium),
@@ -69,11 +80,9 @@ fun AiReportCard(
                         Box(modifier = Modifier.fillMaxWidth(0.95f).height(14.dp).shimmerEffect())
                     }
                 } else {
-                    Text(
-                        text = reportText,
-                        style = CurakidTheme.typography.bodyMedium,
-                        color = CurakidTheme.colors.onSurfaceVariant
-                    )
+                    BasicRichText {
+                        BasicMarkdown(astNodeReport)
+                    }
                 }
             }
 
@@ -91,11 +100,9 @@ fun AiReportCard(
                         Box(modifier = Modifier.fillMaxWidth(0.85f).height(14.dp).shimmerEffect())
                     }
                 } else {
-                    Text(
-                        text = recommendations,
-                        style = CurakidTheme.typography.bodyMedium,
-                        color = CurakidTheme.colors.onSurfaceVariant
-                    )
+                    BasicRichText {
+                        BasicMarkdown(astNodeRec)
+                    }
                 }
             }
         }

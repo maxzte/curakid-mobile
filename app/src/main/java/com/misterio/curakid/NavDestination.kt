@@ -7,6 +7,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation3.runtime.NavKey
+import com.misterio.curakid.core.common.PasscodeMode
 import kotlinx.serialization.Serializable
 
 
@@ -18,6 +19,9 @@ sealed interface Route : NavKey {
 
     @Serializable
     data object SignUp : Route
+
+    @Serializable
+    data class VerifyEmail(val email: String) : Route
 
     @Serializable
     data object RegisterChild : Route
@@ -63,7 +67,13 @@ sealed interface Route : NavKey {
     data class ChildDetails(val lifePeriods: List<String>) : Route
 
     @Serializable
-    data object AiReport : Route
+    data class AiReport(val reportId: String) : Route
+
+    @Serializable
+    data object Chat : Route
+
+    @Serializable
+    data class Passcode(val mode: PasscodeMode) : Route
 }
 
 enum class BottomTab(

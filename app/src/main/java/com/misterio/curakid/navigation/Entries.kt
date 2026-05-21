@@ -12,21 +12,27 @@ import com.misterio.curakid.feature.home.VaccinationDetailScreen
 import com.misterio.curakid.feature.profile.AddChildScreen
 import com.misterio.curakid.feature.profile.ProfileScreen
 import com.misterio.curakid.feature.profile.SettingsScreen
-import com.misterio.feature.dashboard.AiReportScreen
+import com.misterio.curakid.feature.home.AiReportScreen
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.misterio.curakid.core.common.PasscodeMode
+import com.misterio.curakid.feature.home.ChatScreen
 import com.misterio.curakid.feature.home.HomeViewModel
 
 fun EntryProviderScope<NavKey>.homeEntry(
     onEventClick: (String) -> Unit,
     onVaccinationClick: (String) -> Unit,
     onShowAllUpcoming: () -> Unit,
+    onChatClick: () -> Unit,
+    onAiReportClick: (String) -> Unit,
     onBack: () -> Unit,
 ) {
     entry<Route.HomeRoot> {
         HomeScreen(
             onEventClick = onEventClick,
             onVaccinationClick = onVaccinationClick,
-            onShowAllUpcoming = onShowAllUpcoming
+            onShowAllUpcoming = onShowAllUpcoming,
+            onChatClick = onChatClick,
+            onAiReportClick = onAiReportClick
         )
     }
     entry<Route.CalendarFromHome> { key ->
@@ -53,11 +59,13 @@ fun EntryProviderScope<NavKey>.homeEntry(
 
 fun EntryProviderScope<NavKey>.calendarEntry(
     onVaccinationClick: (String) -> Unit,
+    onChatClick: () -> Unit,
 ) {
     entry<Route.CalendarRoot> {
         CalendarScreen(
             eventId = null,
-            onVaccinationClick = onVaccinationClick
+            onVaccinationClick = onVaccinationClick,
+            onChatClick = onChatClick
         )
     }
 }
@@ -66,15 +74,21 @@ fun EntryProviderScope<NavKey>.profileEntry(
     onAddChild: () -> Unit,
     onSettingsOpen: () -> Unit,
     onBack: () -> Unit,
+    onChatClick: () -> Unit,
+    onNavigateToPasscode: (PasscodeMode) -> Unit,
 ) {
     entry<Route.ProfileRoot> {
         ProfileScreen(
             onAddChild = onAddChild,
-            onSettingsOpen = onSettingsOpen
+            onSettingsOpen = onSettingsOpen,
+            onChatClick = onChatClick
         )
     }
     entry<Route.Settings> {
-        SettingsScreen(onBack = onBack)
+        SettingsScreen(
+            onBack = onBack,
+            onNavigateToPasscode = onNavigateToPasscode
+        )
     }
     entry<Route.AddChild> {
         AddChildScreen(onBack = onBack)
@@ -84,12 +98,14 @@ fun EntryProviderScope<NavKey>.profileEntry(
 fun EntryProviderScope<NavKey>.growthEntry(
     onAddMeasurements: (List<String>) -> Unit,
     onBack: () -> Unit,
+    onChatClick: () -> Unit,
 ) {
     entry<Route.GrowthRoot> {
         DevelopmentScreen(
             onAddMeasurements = { lifePeriods ->
                 onAddMeasurements(lifePeriods)
-            }
+            },
+            onChatClick = onChatClick
         )
     }
     entry<Route.ChildDetails> {
@@ -99,11 +115,20 @@ fun EntryProviderScope<NavKey>.growthEntry(
             onViewAiReport = { }
         )
     }
-    entry<Route.AiReport> {
+    entry<Route.AiReport> { key ->
         AiReportScreen(
-            onBack = {
+            reportId = key.reportId,
+            onBack = onBack
+        )
+    }
+}
 
-            }
+fun EntryProviderScope<NavKey>.commonEntries(
+    onBack: () -> Unit
+) {
+    entry<Route.Chat> {
+        ChatScreen(
+            onBack = onBack
         )
     }
 }

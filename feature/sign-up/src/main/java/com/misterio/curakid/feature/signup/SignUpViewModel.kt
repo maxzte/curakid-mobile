@@ -3,7 +3,6 @@ package com.misterio.curakid.feature.signup
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.misterio.core.domain.UiState
-import com.misterio.core.domain.usecase.LoginUseCase
 import com.misterio.core.domain.usecase.RegisterUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,7 +14,6 @@ import javax.inject.Inject
 @HiltViewModel
 class SignUpViewModel @Inject constructor(
     private val registerUseCase: RegisterUseCase,
-    private val loginUseCase: LoginUseCase,
 ) : ViewModel() {
     private val _uiState: MutableStateFlow<UiState<String>> = MutableStateFlow(UiState.Initial)
     val uiState: StateFlow<UiState<String>> = _uiState.asStateFlow()
@@ -24,9 +22,8 @@ class SignUpViewModel @Inject constructor(
         viewModelScope.launch {
             _uiState.value = UiState.Loading
             registerUseCase(email, password, name)
-                .onSuccess {
-                    _uiState.value = UiState.Success("Registration successful")
-                    loginUseCase(email, password)
+                .onSuccess { message ->
+                    _uiState.value = UiState.Success(message)
                 }
                 .onFailure { error ->
                     _uiState.value = UiState.Error(error.message ?: "Unknown error")

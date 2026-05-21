@@ -1,5 +1,8 @@
-package com.misterio.feature.dashboard
+@file:OptIn(ExperimentalMaterial3Api::class)
 
+package com.misterio.curakid.feature.home
+
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -21,25 +24,33 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import com.halilibo.richtext.commonmark.CommonmarkAstNodeParser
+import com.halilibo.richtext.markdown.BasicMarkdown
+import com.halilibo.richtext.ui.BasicRichText
 import com.misterio.core.domain.UiState
-import com.misterio.curakid.feature.home.AiReportViewModel
+import com.misterio.core.ui.theme.CurakidTheme
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AiReportScreen(
+    reportId: String,
     onBack: () -> Unit
 ) {
-    val viewModel: AiReportViewModel = hiltViewModel()
+    val viewModel: AiReportViewModel = hiltViewModel(
+        creationCallback = { factory: AiReportViewModel.Factory ->
+            factory.create(reportId)
+        }
+    )
     val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("AI Analysis") },
+                title = { Text("Рекомендації") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -67,26 +78,39 @@ fun AiReportScreen(
                         // Here would be the shimmer effect
                     }
                 }
+
                 is UiState.Success -> {
-                    val report = (uiState as UiState.Success<String>).data
+                    val report = (uiState as UiState.Success).data.first
+                    val recommendations = (uiState as UiState.Success).data.second
+                    val parser = remember { CommonmarkAstNodeParser() }
+                    val astNodeReport = remember {
+                        parser.parse(report.trimIndent())
+                    }
+                    val astNodeRec = remember {
+                        parser.parse(recommendations.trimIndent())
+                    }
+
                     Column(
                         modifier = Modifier
                             .fillMaxSize()
-                            .padding(24.dp)
-                            .verticalScroll(rememberScrollState())
+                            .padding(16.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(CurakidTheme.paddings.medium)
                     ) {
-                        Text(
-                            text = report,
-                            style = MaterialTheme.typography.bodyLarge
-                        )
+                        BasicRichText {
+                            BasicMarkdown(astNode = astNodeReport)
+                            BasicMarkdown(astNode = astNodeRec)
+                        }
                     }
                 }
+
                 is UiState.Error -> {
                     val error = (uiState as UiState.Error).errorMessage
                     Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                         Text(text = error, color = MaterialTheme.colorScheme.error)
                     }
                 }
+
                 else -> {}
             }
         }
