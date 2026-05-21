@@ -36,10 +36,9 @@ dependencies {
     implementation(projects.core.domain)
     implementation(projects.core.ui)
 
-    implementation("androidx.credentials:credentials:1.6.0")
-    implementation("androidx.credentials:credentials-play-services-auth:1.6.0")
-
-    implementation("com.google.android.libraries.identity.googleid:googleid:1.2.0")
+    implementation(libs.androidx.credentials)
+    implementation(libs.androidx.credentials.play.services.auth)
+    implementation(libs.googleid)
 
     implementation(libs.androidx.ui.tooling.preview)
 
