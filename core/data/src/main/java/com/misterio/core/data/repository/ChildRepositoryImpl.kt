@@ -3,6 +3,7 @@
 package com.misterio.core.data.repository
 
 import android.util.Log
+import com.misterio.core.data.util.safeApiCall
 import androidx.room.withTransaction
 import com.misterio.curakid.core.common.AppDataStore
 import com.misterio.core.database.AppDatabase
@@ -60,21 +61,10 @@ class ChildRepositoryImpl @Inject constructor(
             }
         }
 
-        return try {
-            val response = childApi.getChildren()
-            if (response.isSuccessful && response.body() != null) {
-                val body = response.body()!!
-                childDao.insertChildren(body.map { it.toEntity() })
-                appDataStore.setLastChildrenSync(System.currentTimeMillis())
-                Result.success(Unit)
-            } else {
-                Log.e(TAG, "ERROR while SYNC ${response.code()}")
-                Result.failure(Exception("Sync failed: ${response.code()}"))
-            }
-        } catch (e: Exception) {
-            if (e is CancellationException) throw e
-            Log.e(TAG, "ERROR while SYNC $e")
-            Result.failure(e)
+        return safeApiCall { childApi.getChildren() }.map { body ->
+            childDao.insertChildren(body.map { it.toEntity() })
+            appDataStore.setLastChildrenSync(System.currentTimeMillis())
+            Unit
         }
     }
 
@@ -108,32 +98,25 @@ class ChildRepositoryImpl @Inject constructor(
         // 1. Optimistic insert
         childDao.insertChild(tempEntity)
 
-        return try {
-            val dto = CreateChildRequest(
-                name = name,
-                birthDate = birthDateLocal.toString(),
-                gender = gender.name,
-                isPremature = isPremature,
-                allergies = allergies,
-                chronicDiseases = chronicDiseases,
-                pastDiseases = pastDiseases,
-                specialFeatures = specialFeatures,
-            )
-            val response = childApi.createChild(dto)
-            if (response.isSuccessful && response.body() != null) {
-                appDataStore.setOnboardingCompleted(true)
-                val createdChild = response.body()!!
-                // 2. Replace with real ID and data atomically
-                database.withTransaction {
-                    childDao.deleteChild(tempEntity)
-                    childDao.insertChild(createdChild.toEntity())
-                }
-                Result.success(createdChild.id)
-            } else {
-                Result.failure(Exception("Add failed: ${response.code()}"))
+        val dto = CreateChildRequest(
+            name = name,
+            birthDate = birthDateLocal.toString(),
+            gender = gender.name,
+            isPremature = isPremature,
+            allergies = allergies,
+            chronicDiseases = chronicDiseases,
+            pastDiseases = pastDiseases,
+            specialFeatures = specialFeatures,
+        )
+
+        return safeApiCall { childApi.createChild(dto) }.map { createdChild ->
+            appDataStore.setOnboardingCompleted(true)
+            // 2. Replace with real ID and data atomically
+            database.withTransaction {
+                childDao.deleteChild(tempEntity)
+                childDao.insertChild(createdChild.toEntity())
             }
-        } catch (e: Exception) {
-            Result.failure(e)
+            createdChild.id
         }
     }
 
@@ -143,32 +126,27 @@ class ChildRepositoryImpl @Inject constructor(
         // 1. Optimistic update
         childDao.insertChild(child.toEntity())
 
-        return try {
-            val dto = ChildResponse(
-                id = child.id,
-                name = child.name,
-                birthDate = child.birthDate.toString(),
-                gender = child.gender.name,
-                isPremature = child.isPremature,
-                allergies = child.allergies,
-                chronicDiseases = child.chronicDiseases,
-                pastDiseases = child.pastDiseases,
-                specialFeatures = child.specialFeatures,
-            )
-            val response = childApi.updateChild(child.id, dto)
-            if (response.isSuccessful && response.body() != null) {
-                childDao.insertChild(response.body()!!.toEntity())
-                Result.success(Unit)
-            } else {
+        val dto = ChildResponse(
+            id = child.id,
+            name = child.name,
+            birthDate = child.birthDate.toString(),
+            gender = child.gender.name,
+            isPremature = child.isPremature,
+            allergies = child.allergies,
+            chronicDiseases = child.chronicDiseases,
+            pastDiseases = child.pastDiseases,
+            specialFeatures = child.specialFeatures,
+        )
+
+        return safeApiCall { childApi.updateChild(child.id, dto) }
+            .onSuccess { body ->
+                childDao.insertChild(body.toEntity())
+            }
+            .onFailure {
                 // Rollback on failure
                 originalEntity?.let { childDao.insertChild(it) }
-                Result.failure(Exception("Update failed: ${response.code()}"))
             }
-        } catch (e: Exception) {
-            // Rollback on error
-            originalEntity?.let { childDao.insertChild(it) }
-            Result.failure(e)
-        }
+            .map { Unit }
     }
 
     override fun getSelectedChild(): Flow<Child?> {

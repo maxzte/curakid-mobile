@@ -3,6 +3,7 @@ package com.misterio.curakid.feature.signup
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.misterio.core.domain.UiState
+import com.misterio.core.domain.model.DomainError
 import com.misterio.core.domain.usecase.VerifyEmailUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -26,7 +27,8 @@ class VerifyEmailViewModel @Inject constructor(
                     _uiState.value = UiState.Success(Unit)
                 }
                 .onFailure { error ->
-                    _uiState.value = UiState.Error(error.message ?: "Unknown error")
+                    val domainError = (error as? DomainError) ?: DomainError.UnknownError(error.message ?: "Unknown error", error)
+                    _uiState.value = UiState.Error(domainError)
                 }
         }
     }

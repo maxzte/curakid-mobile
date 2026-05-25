@@ -100,7 +100,11 @@ class CalendarViewModel @AssistedInject constructor(
                     return@collectLatest
                 }
                 Log.i(TAG, "Syncing events for child ${child.id}")
-                syncEventsUseCase(child.id)
+                runCatching {
+                    syncEventsUseCase(child.id)
+                }.onFailure { e ->
+                    Log.e(TAG, "Sync events error", e)
+                }
             }
         }
 
@@ -244,6 +248,14 @@ class CalendarViewModel @AssistedInject constructor(
     fun onSaveEvent() {
         val child = selectedChild.value ?: return
         val form = _eventForm.value
+
+        val originalEvent = allEvents.value.find { it.id == form.id }
+        if (originalEvent != null && originalEvent.status == EventStatus.DONE && originalEvent.date != form.date) {
+            viewModelScope.launch {
+                _toastMessage.emit("Неможливо змінити дату виконаної події")
+            }
+            return
+        }
 
         val finalStatus =
             if (form.status == EventStatus.PLANNED && form.date.isBefore(LocalDateTime.now())) {

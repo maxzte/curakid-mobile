@@ -514,30 +514,32 @@ fun EventCreationSheet(
             }
         }
 
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null,
-                    onClick = { showDatePicker = true }
-                )
-        ) {
-            OutlinedTextField(
-                value = state.date.format(DateTimeFormatter.ofPattern("d MMMM yyyy, HH:mm")),
-                onValueChange = { },
-                label = { Text(stringResource(R.string.date)) },
-                modifier = Modifier.fillMaxWidth(),
-                readOnly = true,
-                enabled = false,
-                colors = OutlinedTextFieldDefaults.colors(
-                    disabledTextColor = CurakidTheme.colors.onSurface,
-                    disabledBorderColor = CurakidTheme.colors.outline,
-                    disabledLabelColor = CurakidTheme.colors.onSurfaceVariant,
-                    disabledPlaceholderColor = CurakidTheme.colors.onSurfaceVariant,
-                )
+    val isDateEditable = state.status != EventStatus.DONE
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(
+                enabled = isDateEditable,
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = { showDatePicker = true }
             )
-        }
+    ) {
+        OutlinedTextField(
+            value = state.date.format(DateTimeFormatter.ofPattern("d MMMM yyyy, HH:mm")),
+            onValueChange = { },
+            label = { Text(stringResource(R.string.date)) },
+            modifier = Modifier.fillMaxWidth(),
+            readOnly = true,
+            enabled = false,
+            colors = OutlinedTextFieldDefaults.colors(
+                disabledTextColor = if (isDateEditable) CurakidTheme.colors.onSurface else CurakidTheme.colors.onSurface.copy(alpha = 0.38f),
+                disabledBorderColor = if (isDateEditable) CurakidTheme.colors.outline else CurakidTheme.colors.outline.copy(alpha = 0.38f),
+                disabledLabelColor = if (isDateEditable) CurakidTheme.colors.onSurfaceVariant else CurakidTheme.colors.onSurfaceVariant.copy(alpha = 0.38f),
+                disabledPlaceholderColor = CurakidTheme.colors.onSurfaceVariant,
+            )
+        )
+    }
 
         if (state.type == EventType.DOCTOR) {
             OutlinedTextField(

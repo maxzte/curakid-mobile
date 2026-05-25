@@ -3,6 +3,7 @@ package com.misterio.curakid.feature.signup
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.misterio.core.domain.UiState
+import com.misterio.core.domain.model.DomainError
 import com.misterio.core.domain.usecase.ForgotPasswordUseCase
 import com.misterio.core.domain.usecase.ResetPasswordUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -38,7 +39,8 @@ class ForgotPasswordViewModel @Inject constructor(
                     _step.value = ForgotPasswordStep.ResetPassword
                 }
                 .onFailure { error ->
-                    _uiState.value = UiState.Error(error.message ?: "Помилка при запиті на скидання паролю")
+                    val domainError = (error as? DomainError) ?: DomainError.UnknownError(error.message ?: "Помилка при запиті на скидання паролю", error)
+                    _uiState.value = UiState.Error(domainError)
                 }
         }
     }
@@ -52,7 +54,8 @@ class ForgotPasswordViewModel @Inject constructor(
                     _step.value = ForgotPasswordStep.Success
                 }
                 .onFailure { error ->
-                    _uiState.value = UiState.Error(error.message ?: "Помилка при зміні паролю")
+                    val domainError = (error as? DomainError) ?: DomainError.UnknownError(error.message ?: "Помилка при зміні паролю", error)
+                    _uiState.value = UiState.Error(domainError)
                 }
         }
     }

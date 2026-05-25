@@ -1,8 +1,7 @@
 package com.misterio.core.domain.model
 
-import com.misterio.core.domain.util.LocalDateTimeSerializer
 import kotlinx.serialization.Serializable
-import java.time.LocalDateTime
+import kotlin.time.Instant
 
 @Serializable
 data class ChildAssessment(
@@ -18,7 +17,7 @@ data class AssessmentAnswer(
     val id: String,
     val question: Question?,
     val selectedOption: Option?,
-    val answeredAt: @Serializable(with = LocalDateTimeSerializer::class) LocalDateTime,
+    val answeredAt: Instant,
 )
 
 data class CompletePeriodResult(

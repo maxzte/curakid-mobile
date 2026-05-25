@@ -1,6 +1,7 @@
 package com.misterio.core.ui
 
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
@@ -16,6 +17,8 @@ class ScaffoldController(
     initialFabConfig: FabConfiguration = FabConfiguration(),
     initialTopBarConfig: TopBarConfiguration = TopBarConfiguration()
 ) {
+    val snackbarHostState = SnackbarHostState()
+
     private val topBarStack = mutableStateListOf<Pair<String, TopBarConfiguration>>()
     private val fabStack = mutableStateListOf<Pair<String, FabConfiguration>>()
 

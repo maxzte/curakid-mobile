@@ -15,7 +15,9 @@ import com.misterio.core.network.dto.toDomain
 import com.misterio.core.network.dto.toRequest
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.time.Instant
 import java.time.LocalDateTime
+import java.time.ZoneId
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -150,7 +152,7 @@ class EventRepositoryImpl @Inject constructor(
             val request = UpdateEventRequest(
                 title = event.title,
                 type = event.type,
-                date = event.date.toString(),
+                date = event.date.atZone(ZoneId.systemDefault()).toInstant().toString(),
                 location = if (event is Event.General) event.location else null,
                 description = event.description,
                 status = event.status

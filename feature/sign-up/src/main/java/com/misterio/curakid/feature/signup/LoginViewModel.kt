@@ -3,6 +3,7 @@ package com.misterio.curakid.feature.signup
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.misterio.core.domain.UiState
+import com.misterio.core.domain.model.DomainError
 import com.misterio.core.domain.usecase.LoginUseCase
 import com.misterio.core.domain.usecase.OAuthLoginUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -28,7 +29,8 @@ class LoginViewModel @Inject constructor(
                     _uiState.value = UiState.Success("Login successful")
                 }
                 .onFailure { error ->
-                    _uiState.value = UiState.Error(error.message ?: "Unknown error")
+                    val domainError = (error as? DomainError) ?: DomainError.UnknownError(error.message ?: "Unknown error", error)
+                    _uiState.value = UiState.Error(domainError)
                 }
         }
     }
@@ -41,7 +43,8 @@ class LoginViewModel @Inject constructor(
                     _uiState.value = UiState.Success("Login successful")
                 }
                 .onFailure { error ->
-                    _uiState.value = UiState.Error(error.message ?: "Unknown error")
+                    val domainError = (error as? DomainError) ?: DomainError.UnknownError(error.message ?: "Unknown error", error)
+                    _uiState.value = UiState.Error(domainError)
                 }
         }
     }

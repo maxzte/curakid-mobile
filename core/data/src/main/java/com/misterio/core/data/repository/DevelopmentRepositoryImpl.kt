@@ -1,5 +1,6 @@
 package com.misterio.core.data.repository
 
+import com.misterio.core.data.util.safeApiCall
 import com.misterio.core.data.mapper.toDomain
 import com.misterio.core.database.dao.LifePeriodDao
 import com.misterio.core.database.entity.LifePeriodEntity
@@ -29,20 +30,10 @@ class DevelopmentRepositoryImpl @Inject constructor(
     }
 
     override suspend fun syncLifePeriods(): Result<Unit> {
-        return try {
-            val response = developmentApi.getLifePeriods()
-            if (response.isSuccessful && response.body() != null) {
-                val body = response.body()!!
-                android.util.Log.d(TAG, "Syncing ${body.size} periods from network")
-                dao.insertLifePeriods(body.map { it.toEntity() })
-                Result.success(Unit)
-            } else {
-                android.util.Log.e(TAG, "Sync failed with code: ${response.code()}")
-                Result.failure(Exception("Sync life periods failed: ${response.code()}"))
-            }
-        } catch (e: Exception) {
-            android.util.Log.e(TAG, "Sync error", e)
-            Result.failure(e)
+        return safeApiCall { developmentApi.getLifePeriods() }.map { body ->
+            android.util.Log.d(TAG, "Syncing ${body.size} periods from network")
+            dao.insertLifePeriods(body.map { it.toEntity() })
+            Unit
         }
     }
 

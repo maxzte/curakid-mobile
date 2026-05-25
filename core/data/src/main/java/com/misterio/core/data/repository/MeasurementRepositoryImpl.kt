@@ -1,6 +1,7 @@
 package com.misterio.core.data.repository
 
 import android.util.Log
+import com.misterio.core.data.util.safeApiCall
 import com.misterio.curakid.core.common.AppDataStore
 import com.misterio.core.database.dao.ChartNormDao
 import com.misterio.core.database.dao.MeasurementDao
@@ -16,7 +17,9 @@ import com.misterio.core.network.dto.AddMeasurementRequest
 import com.misterio.core.network.dto.MeasurementResponse
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import java.time.Instant
 import java.time.LocalDateTime
+import java.time.ZoneId
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -44,21 +47,12 @@ class MeasurementRepositoryImpl @Inject constructor(
 //            return Result.success(Unit)
 //        }
 
-        return try {
+        return safeApiCall { measurementApi.getMeasurements(childId) }.map { dtos ->
             Log.d("MEASUREMENT", "SYNC MEASUREMENT FOR $childId")
-            val response = measurementApi.getMeasurements(childId)
-            if (response.isSuccessful && response.body() != null) {
-                val dtos = response.body()!!
-                Log.d("MEASUREMENT", "DTOs: ${response.body()}")
-                measurementDao.insertMeasurements(dtos.map { it.toEntity() })
+            Log.d("MEASUREMENT", "DTOs: $dtos")
+            measurementDao.insertMeasurements(dtos.map { it.toEntity() })
 //                settingsManager.saveLastSyncTime(childId, currentTime)
-                Result.success(Unit)
-            } else {
-                Result.failure(Exception("Sync failed: ${response.code()}"))
-            }
-        } catch (e: Exception) {
-            if (e is kotlinx.coroutines.CancellationException) throw e
-            Result.failure(e)
+            Unit
         }
     }
 
@@ -80,32 +74,21 @@ class MeasurementRepositoryImpl @Inject constructor(
             isSynced = false,
         )
 
-        return try {
-            // 1. Optimistic insert
-            measurementDao.insertMeasurement(tempEntity)
+        // 1. Optimistic insert
+        measurementDao.insertMeasurement(tempEntity)
 
-            val dto = AddMeasurementRequest(
-                weightKg = tempEntity.weightKg,
-                heightCm = tempEntity.heightCm,
-                headCircCm = tempEntity.headCircCm,
-                measurementDate = tempEntity.measurementDate.toString()
-            )
+        val dto = AddMeasurementRequest(
+            weightKg = tempEntity.weightKg,
+            heightCm = tempEntity.heightCm,
+            headCircCm = tempEntity.headCircCm,
+            measurementDate = tempEntity.measurementDate.atZone(ZoneId.systemDefault()).toInstant().toString()
+        )
 
-            // 2. Network request
-            val response = measurementApi.addMeasurement(childId, dto)
-            if (response.isSuccessful && response.body() != null) {
-                val savedDto = response.body()!!
-                // 3. Replace local temp with real data from server
-                measurementDao.deleteByLocalId(tempId)
-                measurementDao.insertMeasurement(savedDto.toEntity())
-                Result.success(Unit)
-            } else {
-                // Keep it in DB as unsynced
-                Result.failure(Exception("Add measurement failed: ${response.code()}"))
-            }
-        } catch (e: Exception) {
-            // Keep it in DB as unsynced
-            Result.failure(e)
+        return safeApiCall { measurementApi.addMeasurement(childId, dto) }.map { savedDto ->
+            // 3. Replace local temp with real data from server
+            measurementDao.deleteByLocalId(tempId)
+            measurementDao.insertMeasurement(savedDto.toEntity())
+            Unit
         }
     }
 
@@ -114,43 +97,30 @@ class MeasurementRepositoryImpl @Inject constructor(
         gender: Gender
     ): Result<List<ChartNormPoint>> {
         Log.d(TAG, "getting meas. norms")
-        return try {
-            val lastSync = appDataStore.getLastNormsSyncTime(chartType.name, gender.name)
-            val currentTime = System.currentTimeMillis()
-            val isExpired = currentTime - lastSync > MEASUREMENT_NORMS_LIFETIME
+        val lastSync = appDataStore.getLastNormsSyncTime(chartType.name, gender.name)
+        val currentTime = System.currentTimeMillis()
+        val isExpired = currentTime - lastSync > MEASUREMENT_NORMS_LIFETIME
 
-            val cachedNorms = chartNormDao.getNorms(chartType.name, gender.name)
+        val cachedNorms = chartNormDao.getNorms(chartType.name, gender.name)
 
-            if (cachedNorms.isNotEmpty() && !isExpired) {
-                Log.d(TAG, "CACHE IS fresh")
-                Result.success(cachedNorms.map { it.toDomain() })
-            } else {
-                val res = measurementApi.getMeasurementNorms(chartType.name, gender.name)
-                val body = res.body()
-                if (res.isSuccessful && body != null) {
-                    chartNormDao.insertNorms(body.map { it.toEntity(chartType, gender) })
-                    appDataStore.saveLastNormsSyncTime(chartType.name, gender.name, currentTime)
-                    Result.success(body)
-                } else if (cachedNorms.isNotEmpty()) {
-                    // Fallback to expired cache if network fails
-                    Result.success(cachedNorms.map { it.toDomain() })
+        if (cachedNorms.isNotEmpty() && !isExpired) {
+            Log.d(TAG, "CACHE IS fresh")
+            return Result.success(cachedNorms.map { it.toDomain() })
+        }
+
+        return safeApiCall { measurementApi.getMeasurementNorms(chartType.name, gender.name) }
+            .map { body ->
+                chartNormDao.insertNorms(body.map { it.toEntity(chartType, gender) })
+                appDataStore.saveLastNormsSyncTime(chartType.name, gender.name, currentTime)
+                body
+            }
+            .recover { error ->
+                if (cachedNorms.isNotEmpty()) {
+                    cachedNorms.map { it.toDomain() }
                 } else {
-                    Result.failure(Exception("Get norms failure: ${res.code()}"))
+                    throw error
                 }
             }
-        } catch (e: Exception) {
-            // Try to return cached data even if an exception occurs
-            val cachedNorms = try {
-                chartNormDao.getNorms(chartType.name, gender.name)
-            } catch (inner: Exception) {
-                emptyList()
-            }
-            if (cachedNorms.isNotEmpty()) {
-                Result.success(cachedNorms.map { it.toDomain() })
-            } else {
-                Result.failure(e)
-            }
-        }
     }
 
     private fun ChartNormEntity.toDomain() = ChartNormPoint(
@@ -221,7 +191,7 @@ class MeasurementRepositoryImpl @Inject constructor(
     private fun MeasurementResponse.toEntity() = MeasurementEntity(
         id = id,
         childId = childId,
-        measurementDate = LocalDateTime.parse(measurementDate),
+        measurementDate = Instant.parse(measurementDate).atZone(ZoneId.systemDefault()).toLocalDateTime(),
         aiReportId = aiReportId,
 
         weightKg = weightKg,

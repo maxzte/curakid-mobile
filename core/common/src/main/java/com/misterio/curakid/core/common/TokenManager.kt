@@ -1,14 +1,11 @@
 package com.misterio.curakid.core.common
 
-import android.content.Context
 import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -21,13 +18,12 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+import javax.inject.Named
 import javax.inject.Singleton
-
-private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "auth_prefs")
 
 @Singleton
 class TokenManager @Inject constructor(
-    @param:ApplicationContext private val context: Context,
+    @param:Named("TokenDataStore") private val dataStore: DataStore<Preferences>,
     private val securityManager: SecurityManager,
     scope: CoroutineScope,
 ) {
@@ -61,25 +57,30 @@ class TokenManager @Inject constructor(
     init {
         Log.d(TAG, "init: Starting DataStore collection")
         scope.launch {
-            context.dataStore.data
-                .catch { 
+            dataStore.data
+                .catch {
                     Log.e(TAG, "init: Error collecting DataStore", it)
-                    emit(emptyPreferences()) 
+                    emit(emptyPreferences())
                 }
                 .collect { prefs ->
-                val rt = prefs[refreshTokenKey]
-                val decryptedRt = try {
-                    rt?.let { securityManager.decrypt(it) }
-                } catch (e: Exception) {
-                    Log.e(TAG, "Failed to decrypt refresh token. Clearing tokens.", e)
-                    // If decryption fails (e.g. migration from plain text), clear tokens
-                    scope.launch { clearTokens() }
-                    null
+                    val rt = prefs[refreshTokenKey]
+                    val decryptedRt = try {
+                        rt?.let { securityManager.decrypt(it) }
+                    } catch (e: Exception) {
+                        Log.e(TAG, "Failed to decrypt refresh token. Clearing tokens.", e)
+                        // If decryption fails (e.g. migration from plain text), clear tokens
+                        scope.launch { clearTokens() }
+                        null
+                    }
+                    Log.d(
+                        TAG,
+                        "init: Loaded tokens. Access: ${currentToken?.take(10)}..., Refresh: ${
+                            decryptedRt?.take(10)
+                        }..."
+                    )
+                    _refreshToken.value = decryptedRt
+                    _isInitialized.value = true
                 }
-                Log.d(TAG, "init: Loaded tokens. Access: ${currentToken?.take(10)}..., Refresh: ${decryptedRt?.take(10)}...")
-                _refreshToken.value = decryptedRt
-                _isInitialized.value = true
-            }
         }
     }
 
@@ -99,7 +100,7 @@ class TokenManager @Inject constructor(
 
         val encryptedRt = securityManager.encrypt(refreshToken)
 
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs[refreshTokenKey] = encryptedRt
         }
     }
@@ -107,7 +108,7 @@ class TokenManager @Inject constructor(
     suspend fun clearTokens() {
         Log.i(TAG, "clearing tokens")
         _accessToken.value = null
-        context.dataStore.edit { prefs ->
+        dataStore.edit { prefs ->
             prefs.remove(refreshTokenKey)
         }
     }

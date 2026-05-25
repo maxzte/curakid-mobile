@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.misterio.core.domain.UiState
 import com.misterio.core.ui.components.CuraKidTextField
+import com.misterio.curakid.core.common.util.ValidationUtils
 
 @Composable
 fun SignUpScreen(
@@ -36,6 +37,10 @@ fun SignUpScreen(
     var name by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
+
+    val isEmailValid = remember(email) { ValidationUtils.isValidEmail(email) }
+    val isPasswordValid = remember(password) { ValidationUtils.isValidPassword(password) }
+    val isFormValid = name.isNotBlank() && isEmailValid && isPasswordValid
 
     val error = (uiState as? UiState.Error)?.errorMessage
     val currentEmailError = emailError ?: if (error == "Невірний формат email") error else null
@@ -122,6 +127,7 @@ fun SignUpScreen(
         AuthPrimaryButton(
             text = "Зареєструватись",
             isLoading = uiState is UiState.Loading,
+            enabled = isFormValid,
             onClick = ::submit
         )
 

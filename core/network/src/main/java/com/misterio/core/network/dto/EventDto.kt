@@ -4,7 +4,8 @@ import com.misterio.core.domain.model.Event
 import com.misterio.core.domain.model.EventStatus
 import com.misterio.core.domain.model.EventType
 import com.misterio.core.domain.model.VaccineType
-import java.time.LocalDateTime
+import java.time.Instant
+import java.time.ZoneId
 import java.util.UUID
 
 data class EventRequest(
@@ -58,7 +59,7 @@ fun EventResponse.toDomain() = Event.General(
     id = id.toString(),
     title = title,
     type = type,
-    date = LocalDateTime.parse(date),
+    date = Instant.parse(date).atZone(ZoneId.systemDefault()).toLocalDateTime(),
     location = location,
     description = description,
     status = status,
@@ -68,7 +69,7 @@ fun EventResponse.toDomain() = Event.General(
 fun VaccineEventResponse.toDomain() = Event.Vaccine(
     id = id,
     title = name,
-    date = LocalDateTime.parse(date),
+    date = Instant.parse(date).atZone(ZoneId.systemDefault()).toLocalDateTime(),
     status = status,
     description = description,
     isSynced = true,
@@ -84,7 +85,7 @@ fun VaccineEventResponse.toDomain() = Event.Vaccine(
 fun Event.toRequest(childId: String) = EventRequest(
     title = title,
     type = type,
-    date = date.toString(),
+    date = date.atZone(ZoneId.systemDefault()).toInstant().toString(),
     location = if (this is Event.General) location else null,
     description = description,
     childId = childId

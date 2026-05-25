@@ -51,16 +51,25 @@ class ChatViewModel @Inject constructor(
             _messages.update { it + initialAiMessage }
 
             var fullText = ""
-            chatRepository.startChatStream(UUID.fromString(childId), text)
-                .collect { chunk ->
-                    fullText += chunk
-                    _messages.update { list ->
-                        list.map { msg ->
-                            if (msg.id == aiMessageId) msg.copy(text = fullText) else msg
+            runCatching {
+                chatRepository.startChatStream(UUID.fromString(childId), text)
+                    .collect { chunk ->
+                        fullText += chunk
+                        _messages.update { list ->
+                            list.map { msg ->
+                                if (msg.id == aiMessageId) msg.copy(text = fullText) else msg
+                            }
                         }
+                        _isLoading.value = false
                     }
-                    _isLoading.value = false
+            }.onFailure { e ->
+                _isLoading.value = false
+                _messages.update { list ->
+                    list.map { msg ->
+                        if (msg.id == aiMessageId) msg.copy(text = "Помилка: ${e.message ?: "Не вдалося отримати відповідь"}") else msg
+                    }
                 }
+            }
         }
     }
 }

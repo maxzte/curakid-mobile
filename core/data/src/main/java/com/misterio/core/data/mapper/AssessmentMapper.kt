@@ -5,13 +5,23 @@ import com.misterio.core.domain.model.AssessmentAnswer
 import com.misterio.core.domain.model.ChildAssessment
 import com.misterio.core.network.dto.AssessmentAnswerResponse
 import com.misterio.core.network.dto.AssessmentResponse
-import java.time.LocalDateTime
+import java.time.Instant.parse
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import kotlin.time.Instant
+
+private val dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")
+    .withZone(ZoneId.systemDefault())
 
 fun AssessmentResponse.toDomain() = ChildAssessment(
     id = id,
     childId = childId,
     answers = answers.map { it.toDomain() },
-    assessmentDate = assessmentDate,
+    assessmentDate = try {
+        dateFormatter.format(parse(assessmentDate))
+    } catch (e: Exception) {
+        assessmentDate
+    },
     completedAt = null
 )
 
@@ -28,13 +38,23 @@ fun ChildSkillAssessmentEntity.toDomain() = ChildAssessment(
     id = id,
     childId = childId,
     answers = answers,
-    assessmentDate = assessmentDate,
-    completedAt = completedAt
+    assessmentDate = try {
+        dateFormatter.format(parse(assessmentDate))
+    } catch (e: Exception) {
+        assessmentDate
+    },
+    completedAt = completedAt?.let {
+        try {
+            dateFormatter.format(parse(it))
+        } catch (e: Exception) {
+            it
+        }
+    }
 )
 
 fun AssessmentAnswerResponse.toDomain() = AssessmentAnswer(
     id = id,
     question = question?.toDomain(),
     selectedOption = selectedOption?.toDomain(),
-    answeredAt = LocalDateTime.parse(answeredAt),
+    answeredAt = Instant.parse(answeredAt),
 )

@@ -1,5 +1,6 @@
 package com.misterio.core.data.repository
 
+import com.misterio.core.data.util.safeApiCall
 import com.misterio.core.database.dao.ChildReportDao
 import com.misterio.core.database.entity.ChildReportEntity
 import com.misterio.core.domain.model.LifePeriodAiReport
@@ -13,7 +14,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import java.time.LocalDateTime
+import java.time.Instant
+import java.time.ZoneId
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -41,41 +43,29 @@ class AiRepositoryImpl @Inject constructor(
         val maxAttempts = 20 // 20 * 3s = 1 minute timeout
 
         while (attempts < maxAttempts) {
-            try {
-                val res = aiApi.getReportStatus(reportId)
-                val body = res.body()
+            val result = safeApiCall { aiApi.getReportStatus(reportId) }
+            emit(result)
 
-                emit(Result.success(body ?: false))
-
-                if (body != null && body) {
-                    break
-                }
-            } catch (e: Exception) {
-                emit(Result.failure(e))
+            if (result.isSuccess && result.getOrThrow()) {
+                break
+            }
+            if (result.isFailure) {
                 break
             }
 
             attempts++
             delay(3000)
         }
-        
+
         if (attempts >= maxAttempts) {
-            emit(Result.failure(Exception("Polling timeout for report $reportId")))
+            emit(Result.failure(Exception("Перевищено час очікування звіту $reportId")))
         }
     }.flowOn(Dispatchers.IO)
 
     override suspend fun syncReports(childId: String): Result<Unit> {
-        return try {
-            val res = aiApi.getChildReports(childId)
-            val body = res.body()
-            if (res.isSuccessful && body != null) {
-                childReportDao.insertReports(body.map { it.toEntity() })
-                Result.success(Unit)
-            } else {
-                throw Exception()
-            }
-        } catch (e: Exception) {
-            Result.failure(e)
+        return safeApiCall { aiApi.getChildReports(childId) }.map { body ->
+            childReportDao.insertReports(body.map { it.toEntity() })
+            Unit
         }
     }
 
@@ -93,7 +83,7 @@ private fun ReportResponse.toEntity() = ChildReportEntity(
     recommendations = recommendations,
     isFallback = isFallback,
     urgencyScore = urgencyScore,
-    createdAt = LocalDateTime.parse(createdAt)
+    createdAt = Instant.parse(createdAt).atZone(ZoneId.systemDefault()).toLocalDateTime(),
 )
 
 private fun ChildReportEntity.toDomain() = LifePeriodAiReport(

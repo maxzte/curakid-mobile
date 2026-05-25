@@ -17,12 +17,17 @@ class AuthInterceptor @Inject constructor(
         val url = chain.request().url.toString()
         Log.d(TAG, "intercept: START Request to $url")
         
-        runBlocking {
-            Log.d(TAG, "intercept: Waiting for TokenManager initialization for $url (timeout 5s)")
-            withTimeoutOrNull(5000) {
-                tokenManager.waitForInitialization()
+        try {
+            runBlocking {
+                Log.d(TAG, "intercept: Waiting for TokenManager initialization for $url (timeout 5s)")
+                withTimeoutOrNull(5000) {
+                    tokenManager.waitForInitialization()
+                }
+                Log.d(TAG, "intercept: TokenManager ready check finished for $url")
             }
-            Log.d(TAG, "intercept: TokenManager ready check finished for $url")
+        } catch (e: Exception) {
+            Log.e(TAG, "intercept: TokenManager initialization FAILED for $url", e)
+            // Continue without token if initialization fails
         }
         
         val token = tokenManager.currentToken

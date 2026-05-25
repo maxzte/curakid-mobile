@@ -464,25 +464,34 @@ fun GrowthTab(
 
     val xAxisLabel = when {
         selectedChartType == GrowthChartType.WeightForHeight -> "Зріст, см"
-        else -> {
-            val (start, end) = if (autoPeriodLabel.contains("-")) {
-                val parts = autoPeriodLabel.split("-")
-                (parts.getOrNull(0)?.toDoubleOrNull() ?: 0.0) to (parts.getOrNull(1)
-                    ?.toDoubleOrNull() ?: 0.0)
-            } else {
-                val e = autoPeriodLabel.toDoubleOrNull() ?: 72.0
-                val idx = lifePeriods.indexOf(autoPeriodLabel)
-                val s = if (idx > 0) {
-                    val prevLabel = lifePeriods[idx - 1]
-                    if (prevLabel.contains("-")) prevLabel.split("-").last().toDoubleOrNull() ?: 0.0
-                    else prevLabel.toDoubleOrNull() ?: 0.0
-                } else 0.0
-                s to e
-            }
-            if ((end - start) <= 3.0) "Вік, дні"
-            else if ((end - start) <= 6.0) "Вік, тижні"
-            else "Вік, місяці"
-        }
+        else -> "Вік"
+//            {
+//            val tokens = autoPeriodLabel.split(Regex("[-–—]"))
+//
+//            val (start, end) = if (tokens.size == 2) {
+//                val s = tokens[0].toDoubleOrNull() ?: 0.0
+//                val e = tokens[1].toDoubleOrNull() ?: 0.0
+//                s to e
+//            } else {
+//                // Логіка для поодиноких значень, якщо вони є
+//                val e = autoPeriodLabel.toDoubleOrNull() ?: 72.0
+//                val idx = lifePeriods.indexOf(autoPeriodLabel)
+//                val s = if (idx > 0) {
+//                    val prevLabel = lifePeriods[idx - 1]
+//                    val prevTokens = prevLabel.split(Regex("[-–—]"))
+//                    if (prevTokens.size == 2) prevTokens[1].toDoubleOrNull() ?: 0.0
+//                    else prevLabel.toDoubleOrNull() ?: 0.0
+//                } else 0.0
+//                s to e
+//            }
+//
+//            // Логіка визначення підпису
+//            when {
+//                (end - start) <= 3.0 -> "Вік, дні"
+//                (end - start) <= 6.0 -> "Вік, тижні"
+//                else -> "Вік, місяці"
+//            }
+//        }
     }
 
     val maxAgeMonths = 72.0
@@ -1098,7 +1107,8 @@ private fun TopSummaryRow(
     norms: List<ChartNormPoint>,
     selectedChartType: GrowthChartType
 ) {
-    val last = measurements.lastOrNull()
+    // Sort and filter to find the latest record that actually has data for the selected type
+    val sorted = measurements.sortedBy { it.date }
 
     // Helper to get value for selected chart type
     fun measurementValue(m: Measurement): Double? = when (selectedChartType) {
@@ -1114,6 +1124,16 @@ private fun TopSummaryRow(
         GrowthChartType.HeadCircumference -> m.headCirc
     }
 
+    val relevantMeasurements = sorted.filter { m ->
+        val value = measurementValue(m)
+        if (value == null) return@filter false
+        // For WeightForHeight we specifically need height as the X-axis
+        if (selectedChartType == GrowthChartType.WeightForHeight && m.height == null) return@filter false
+        true
+    }
+
+    val last = relevantMeasurements.lastOrNull()
+
     fun measurementZValue(m: Measurement): Double? = when (selectedChartType) {
         GrowthChartType.WeightForAge -> m.wfaZscore
         GrowthChartType.HeightForAge -> m.hfaZscore
@@ -1122,85 +1142,86 @@ private fun TopSummaryRow(
         GrowthChartType.HeadCircumference -> m.hcfaZscore
     }
 
+    fun measurementPercentile(m: Measurement): Double? = when (selectedChartType) {
+        GrowthChartType.WeightForAge -> m.wfaPercentile
+        GrowthChartType.HeightForAge -> m.hfaPercentile
+        GrowthChartType.WeightForHeight -> m.wfhPercentile
+        GrowthChartType.BMI -> m.bmiPercentile
+        GrowthChartType.HeadCircumference -> m.hcfaPercentile
+    }
+
     // Estimate percentile and z-score by nearest norm
     var percentileText = "—"
     var zScoreText = "—"
     var zScoreStatus = "Статус"
     var zScoreColor = Color.Gray
 
-    if (child == null || last == null || norms.isEmpty()) {
-        percentileText = "—"
-        zScoreText = "—"
-    } else {
-        val x = if (selectedChartType == GrowthChartType.WeightForHeight) {
-            last.height ?: 0.0
-        } else {
-            ChronoUnit.DAYS.between(child.birthDate, last.date.toLocalDate()).toDouble() / 30.44
+    if (child != null && last != null) {
+        val zValue = measurementZValue(last)
+        val pValue = measurementPercentile(last)
+
+        if (zValue != null) {
+            zScoreText = String.format(Locale.US, "%.2f", zValue)
+            zScoreStatus = when {
+                zValue >= -2.0 && zValue <= 2.0 -> "Норма"
+                zValue > 2.0 && zValue <= 3.0 -> "Вище норми"
+                zValue < -2.0 && zValue >= -3.0 -> "Помірний дефіцит"
+                else -> "Значне відхилення"
+            }
+            zScoreColor = when {
+                zValue >= -2.0 && zValue <= 2.0 -> Color(0xFF4CAF50)
+                zValue >= -3.0 && zValue <= 3.0 -> Color(0xFFFFC107)
+                else -> Color(0xFFEF5350)
+            }
         }
 
-        val value = measurementValue(last)
-        val zValue = measurementZValue(last) ?: 0.0
-        if (value == null) {
-            percentileText = "—"
-            zScoreText = "—"
-        } else {
-            // find nearest norm point
-            val nearest =
-                norms.minByOrNull { abs(it.x / (if (selectedChartType == GrowthChartType.WeightForHeight) 1.0 else 30.44) - x) }
-            if (nearest == null) {
-                percentileText = "—"
-                zScoreText = "—"
+        if (pValue != null) {
+            percentileText = "${pValue.roundToInt()}‑й"
+        } else if (norms.isNotEmpty()) {
+            val x = if (selectedChartType == GrowthChartType.WeightForHeight) {
+                last.height ?: 0.0
             } else {
-                // Simple interpolation between stored percentiles
-                fun interp(pLow: Double, pHigh: Double, valLow: Double, valHigh: Double): Double {
-                    if (valHigh == valLow) return (pLow + pHigh) / 2.0
-                    val t = ((value - valLow) / (valHigh - valLow)).coerceIn(0.0, 1.0)
-                    return pLow + t * (pHigh - pLow)
+                ChronoUnit.DAYS.between(child.birthDate, last.date.toLocalDate()).toDouble()
+            }
+
+            val value = measurementValue(last)
+            if (value != null) {
+                // find nearest norm point
+                val nearest = norms.minByOrNull { abs(it.x - x) }
+                if (nearest == null) {
+                    percentileText = "—"
+                } else {
+                    // Simple interpolation between stored percentiles
+                    fun interp(pLow: Double, pHigh: Double, valLow: Double, valHigh: Double): Double {
+                        if (valHigh == valLow) return (pLow + pHigh) / 2.0
+                        val t = ((value - valLow) / (valHigh - valLow)).coerceIn(0.0, 1.0)
+                        return pLow + t * (pHigh - pLow)
+                    }
+
+                    val pct = when {
+                        value <= nearest.p3 -> 3.0
+                        value <= nearest.p15 -> interp(3.0, 15.0, nearest.p3, nearest.p15)
+                        value <= nearest.p50 -> interp(15.0, 50.0, nearest.p15, nearest.p50)
+                        value <= nearest.p85 -> interp(50.0, 85.0, nearest.p50, nearest.p85)
+                        value <= nearest.p97 -> interp(85.0, 97.0, nearest.p85, nearest.p97)
+                        else -> 97.0
+                    }
+                    percentileText = "${pct.toInt()}‑й"
                 }
-
-                val pct = when {
-                    value <= nearest.p3 -> 3.0
-                    value <= nearest.p15 -> interp(3.0, 15.0, nearest.p3, nearest.p15)
-                    value <= nearest.p50 -> interp(15.0, 50.0, nearest.p15, nearest.p50)
-                    value <= nearest.p85 -> interp(50.0, 85.0, nearest.p50, nearest.p85)
-                    value <= nearest.p97 -> interp(85.0, 97.0, nearest.p85, nearest.p97)
-                    else -> 97.0
-                }
-
-                percentileText = "${pct.toInt()}‑й"
-
-                zScoreStatus = when (zValue) {
-                    in -2.0..2.0 -> "Норма"
-                    in 2.0..3.0 -> "Вище норми"
-                    in -3.0..-2.0 -> "Помірний дефіцит"
-                    else -> "Значне відхилення"
-                }
-
-                zScoreColor = when (zValue) {
-                    in -2.0..2.0 -> Color(0xFF4CAF50)
-                    in -3.0..3.0 -> Color(0xFFFFC107)
-                    else -> Color(0xFFEF5350)
-                }
-
-                zScoreText = String.format(Locale.US, "%.2f", zValue)
             }
         }
     }
 
-    // Trend: compare last two values
-    val trendText: String
-    val trendIconColor: Color
-    run {
-        val lastVal = last?.let { measurementValue(it) }
-        val prev = measurements.dropLast(1).lastOrNull()
-        val prevVal = prev?.let { measurementValue(it) }
-        if (lastVal == null || prevVal == null) {
-            trendText = "—"
-            trendIconColor = Color.Gray
-        } else {
+    // Trend: compare last two relevant values
+    var trendText = "—"
+    var trendIconColor = Color.Gray
+    if (relevantMeasurements.size >= 2) {
+        val lastVal = measurementValue(relevantMeasurements.last())
+        val prevVal = measurementValue(relevantMeasurements[relevantMeasurements.size - 2])
+        if (lastVal != null && prevVal != null) {
             val delta = lastVal - prevVal
             when {
-                abs(delta) < (abs(prevVal) * 0.02 + 0.01) -> {
+                abs(delta) < (abs(prevVal) * 0.01) -> {
                     trendText = "Стабільно"
                     trendIconColor = Color.Gray
                 }

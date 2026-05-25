@@ -72,14 +72,14 @@ class TokenAuthenticator @Inject constructor(
             }
         }
 
-        val newToken = runBlocking {
-            try {
+        val newToken = try {
+            runBlocking {
                 job.await()
-            } catch (e: Exception) {
-                Log.e(TAG, "authenticate: Refresh job failed", e)
-                if (e is CancellationException) throw e
-                null
             }
+        } catch (e: Exception) {
+            Log.e(TAG, "authenticate: Refresh job failed", e)
+            if (e is CancellationException) throw e
+            null
         }
 
         // Only clear the job if we are the ones who held this specific job

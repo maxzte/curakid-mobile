@@ -1,5 +1,6 @@
 package com.misterio.core.data.repository
 
+import com.misterio.core.data.util.safeApiCall
 import android.util.Log
 import com.misterio.core.database.dao.EventDao
 import com.misterio.core.domain.model.Event
@@ -25,19 +26,11 @@ class VaccineRepositoryImpl @Inject constructor(
         }
 
     override suspend fun syncVaccines(childId: String): Result<Unit> {
-        return try {
-            val response = eventApi.getVaccineEventsFor(childId)
-            if (response.isSuccessful && response.body() != null) {
-                val remoteVaccines = response.body()!!.map { it.toDomain() }
-                eventDao.insertEvents(remoteVaccines.map { it.toEntity(childId) })
-                Log.i(TAG, "remoteVaccines $remoteVaccines")
-                Result.success(Unit)
-            } else {
-                Result.failure(Exception("Failed to fetch vaccines: ${response.code()}"))
-            }
-        } catch (e: Exception) {
-            if (e is kotlinx.coroutines.CancellationException) throw e
-            Result.failure(e)
+        return safeApiCall { eventApi.getVaccineEventsFor(childId) }.map { body ->
+            val remoteVaccines = body.map { it.toDomain() }
+            eventDao.insertEvents(remoteVaccines.map { it.toEntity(childId) })
+            Log.i(TAG, "remoteVaccines $remoteVaccines")
+            Unit
         }
     }
 

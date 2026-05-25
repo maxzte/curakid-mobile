@@ -37,7 +37,7 @@ data class CompletePeriodAssessmentResponse(
     @SerializedName("periodCode") val periodCode: String,
     @SerializedName("completionPercent") val completionPercent: Int,
     @SerializedName("requiredPercent") val requiredPercent: Int,
-    @SerializedName("completedAt") val completedAt: String?,
+    @SerializedName("completedAt") val completedAt: String,
     @SerializedName("assessments") val assessments: List<AssessmentResponse>,
     @SerializedName("reportId") val reportId: String? = null,
 )

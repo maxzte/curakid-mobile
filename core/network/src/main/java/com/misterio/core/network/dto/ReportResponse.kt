@@ -9,5 +9,5 @@ data class ReportResponse(
     val recommendations: String?,
     val isFallback: Boolean,
     val urgencyScore: Double?,
-    val createdAt: String, //LocalDateTime
+    val createdAt: String,
 )

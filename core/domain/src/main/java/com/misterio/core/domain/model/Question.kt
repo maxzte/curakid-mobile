@@ -15,6 +15,6 @@ data class Question(
 data class Option(
     val id: String,
     val text: String,
-    val value: String,
+    val value: Double,
     val displayOrder: Int,
 )

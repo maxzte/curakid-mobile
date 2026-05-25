@@ -67,7 +67,9 @@ class ChildDetailsViewModel @Inject constructor(
         .distinctUntilChanged()
         .onEach { child ->
             child?.let {
-                measurementRepository.syncMeasurementsForChild(it.id)
+                runCatching {
+                    measurementRepository.syncMeasurementsForChild(it.id)
+                }
                 prefetchNorms(it)
             }
         }

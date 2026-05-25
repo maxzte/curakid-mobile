@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.misterio.core.domain.UiState
 import com.misterio.core.ui.components.CuraKidTextField
+import com.misterio.curakid.core.common.util.ValidationUtils
 
 @Composable
 fun LoginScreen(
@@ -37,6 +38,9 @@ fun LoginScreen(
     val uiState by viewModel.uiState.collectAsState()
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
+
+    val isEmailValid = remember(email) { ValidationUtils.isValidEmail(email) }
+    val isFormValid = isEmailValid && password.isNotBlank()
 
     // Focus chain: email → password → submit
     val passwordFocus = remember { FocusRequester() }
@@ -107,6 +111,7 @@ fun LoginScreen(
         AuthPrimaryButton(
             text = "Увійти",
             isLoading = uiState is UiState.Loading,
+            enabled = isFormValid,
             onClick = ::submit
         )
 

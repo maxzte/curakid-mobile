@@ -56,7 +56,11 @@ class HomeViewModel @Inject constructor(
 
     private val selectedChild = getChildUseCase()
         .distinctUntilChanged()
-        .onStart { syncChildrenUseCase(false) }
+        .onStart {
+            runCatching {
+                syncChildrenUseCase(false)
+            }
+        }
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -67,7 +71,9 @@ class HomeViewModel @Inject constructor(
         .flatMapLatest { child ->
             if (child != null) {
                 viewModelScope.launch {
-                    syncEventsUseCase(child.id)
+                    runCatching {
+                        syncEventsUseCase(child.id)
+                    }
                 }
                 getEventsUseCase(child.id)
             } else {
@@ -79,7 +85,9 @@ class HomeViewModel @Inject constructor(
         .flatMapLatest { child ->
             if (child != null) {
                 viewModelScope.launch {
-                    syncChildAiReportsUseCase(child.id)
+                    runCatching {
+                        syncChildAiReportsUseCase(child.id)
+                    }
                 }
                 getChildAiReportsUseCase(child.id)
             } else {

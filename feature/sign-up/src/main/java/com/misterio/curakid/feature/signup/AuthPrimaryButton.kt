@@ -18,11 +18,12 @@ import com.misterio.core.ui.theme.CurakidTheme
 internal fun AuthPrimaryButton(
     text: String,
     isLoading: Boolean,
+    enabled: Boolean = true,
     onClick: () -> Unit
 ) {
     Button(
         onClick = onClick,
-        enabled = !isLoading,
+        enabled = !isLoading && enabled,
         modifier = Modifier
             .fillMaxWidth()
             .height(52.dp),

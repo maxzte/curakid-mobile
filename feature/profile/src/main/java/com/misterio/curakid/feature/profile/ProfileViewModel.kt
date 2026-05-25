@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.misterio.core.domain.UiState
+import com.misterio.core.domain.model.DomainError
 import com.misterio.core.domain.model.Child
 import com.misterio.core.domain.model.Gender
 import com.misterio.core.domain.repository.ChildRepository
@@ -95,7 +96,8 @@ class ProfileViewModel @Inject constructor(
                     _uiState.value = UiState.Initial
                 }
                 .onFailure { error ->
-                    _uiState.value = UiState.Error(error.message ?: "Failed to add child")
+                    val domainError = (error as? DomainError) ?: DomainError.UnknownError(error.message ?: "Failed to add child", error)
+                    _uiState.value = UiState.Error(domainError)
                 }
         }
     }
@@ -110,7 +112,8 @@ class ProfileViewModel @Inject constructor(
                     _uiState.value = UiState.Initial
                 }
                 .onFailure { error ->
-                    _uiState.value = UiState.Error(error.message ?: "Failed to update child")
+                    val domainError = (error as? DomainError) ?: DomainError.UnknownError(error.message ?: "Failed to update child", error)
+                    _uiState.value = UiState.Error(domainError)
                 }
         }
     }

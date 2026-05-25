@@ -13,6 +13,6 @@ data class QuestionResponse(
 data class OptionResponse(
     @SerializedName("optionId") val id: String,
     @SerializedName("text") val text: String,
-    @SerializedName("value") val value: String,
+    @SerializedName("value") val value: Double,
     @SerializedName("displayOrder") val displayOrder: Int,
 )
