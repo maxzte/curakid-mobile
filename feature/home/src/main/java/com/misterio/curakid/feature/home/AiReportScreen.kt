@@ -83,10 +83,10 @@ fun AiReportScreen(
                     val report = (uiState as UiState.Success).data.first
                     val recommendations = (uiState as UiState.Success).data.second
                     val parser = remember { CommonmarkAstNodeParser() }
-                    val astNodeReport = remember {
+                    val astNodeReport = remember(report) {
                         parser.parse(report.trimIndent())
                     }
-                    val astNodeRec = remember {
+                    val astNodeRec = remember(recommendations) {
                         parser.parse(recommendations.trimIndent())
                     }
 

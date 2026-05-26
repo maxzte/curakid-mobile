@@ -29,6 +29,12 @@ class AuthRepositoryImpl @Inject constructor(
     private val appDataStore: AppDataStore,
 ) : AuthRepository {
 
+    init {
+        tokenManager.setRefreshAction {
+            refresh()
+        }
+    }
+
     override suspend fun login(email: String, password: String): Result<Unit> {
         return safeApiCall { authApi.login(LoginRequest(email, password)) }.map { tokens ->
             appDataStore.setOnboardingCompleted(tokens.onboardingCompleted)

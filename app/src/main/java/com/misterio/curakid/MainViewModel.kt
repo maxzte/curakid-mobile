@@ -26,7 +26,6 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    private val refreshTokenUseCase: RefreshTokenUseCase,
     private val appDataStore: AppDataStore,
     private val tokenManager: TokenManager,
     connectivityRepository: ConnectivityRepository,
@@ -54,7 +53,6 @@ class MainViewModel @Inject constructor(
                 is TokenState.Available -> if (onboardingCompleted) Route.HomeRoot else Route.RegisterChild
             }
         }
-            .onStart { refreshTokenUseCase() }
             .distinctUntilChanged()
             .stateIn(
                 scope = viewModelScope,

@@ -12,7 +12,7 @@ interface AiApi {
         @Path("childId") childId: String
     ): Response<List<ReportResponse>>
 
-    @GET("reports/{reportId}/status")
+    @GET("api/reports/{reportId}/status")
     suspend fun getReportStatus(@Path ("reportId") reportId: String): Response<Boolean>
 
 }

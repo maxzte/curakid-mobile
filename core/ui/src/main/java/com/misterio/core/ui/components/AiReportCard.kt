@@ -25,10 +25,10 @@ fun AiReportCard(
     isLoading: Boolean = false
 ) {
     val parser = remember { CommonmarkAstNodeParser() }
-    val astNodeReport = remember {
+    val astNodeReport = remember(reportText) {
         parser.parse(reportText.trimIndent())
     }
-    val astNodeRec = remember {
+    val astNodeRec = remember(recommendations) {
         parser.parse(recommendations.trimIndent())
     }
     OutlinedCard(

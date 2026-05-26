@@ -38,6 +38,12 @@ class TokenManager @Inject constructor(
     private val _isInitialized = MutableStateFlow(false)
     val isInitialized: StateFlow<Boolean> = _isInitialized.asStateFlow()
 
+    private var refreshAction: (suspend () -> Unit)? = null
+
+    fun setRefreshAction(action: suspend () -> Unit) {
+        refreshAction = action
+    }
+
     val currentToken: String?
         get() = _accessToken.value
 
@@ -45,14 +51,18 @@ class TokenManager @Inject constructor(
         get() = _refreshToken.value
 
 
-    val tokenState: StateFlow<TokenState> = _accessToken
-        .combine(_isInitialized) { token, initialized ->
-            when {
-                !initialized -> TokenState.Loading
-                token.isNullOrEmpty() -> TokenState.Empty
-                else -> TokenState.Available(token)
-            }
-        }.stateIn(scope, SharingStarted.Eagerly, TokenState.Loading)
+    val tokenState: StateFlow<TokenState> = combine(
+        _accessToken,
+        _refreshToken,
+        _isInitialized
+    ) { accessToken, refreshToken, initialized ->
+        when {
+            !initialized -> TokenState.Loading
+            !accessToken.isNullOrEmpty() -> TokenState.Available(accessToken)
+            !refreshToken.isNullOrEmpty() -> TokenState.Available("") // Temporary state while refreshing
+            else -> TokenState.Empty
+        }
+    }.stateIn(scope, SharingStarted.Eagerly, TokenState.Loading)
 
     init {
         Log.d(TAG, "init: Starting DataStore collection")
@@ -80,6 +90,12 @@ class TokenManager @Inject constructor(
                     )
                     _refreshToken.value = decryptedRt
                     _isInitialized.value = true
+
+                    if (decryptedRt != null && _accessToken.value == null) {
+                        scope.launch {
+                            refreshAction?.invoke()
+                        }
+                    }
                 }
         }
     }

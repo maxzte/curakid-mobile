@@ -6,5 +6,6 @@ data class Message(
     val id: String = UUID.randomUUID().toString(),
     val text: String,
     val isFromUser: Boolean,
+    val isStreaming: Boolean = false,
     val timestamp: Long = System.currentTimeMillis()
 )

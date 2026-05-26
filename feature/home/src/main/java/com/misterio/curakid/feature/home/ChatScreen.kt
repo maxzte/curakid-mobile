@@ -2,6 +2,18 @@
 
 package com.misterio.curakid.feature.home
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.EaseInOut
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.StartOffset
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -12,15 +24,14 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -44,12 +55,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.halilibo.richtext.commonmark.CommonmarkAstNodeParser
 import com.halilibo.richtext.markdown.BasicMarkdown
 import com.halilibo.richtext.ui.BasicRichText
-import com.halilibo.richtext.ui.RichTextStyle
 import com.misterio.core.domain.model.Message
 import com.misterio.core.ui.theme.CurakidTheme
 
@@ -101,6 +114,7 @@ fun ChatScreen(
                 onTextChange = { inputText = it },
                 onSend = {
                     viewModel.sendMessage(inputText)
+//                    viewModel.sendTestMessage(inputText)
                     inputText = ""
                 },
                 isLoading = isLoading
@@ -116,18 +130,16 @@ fun ChatScreen(
             contentPadding = PaddingValues(vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(messages) { message ->
+            items(
+                messages,
+                key = { it.id }
+            ) { message ->
                 MessageBubble(message)
             }
 
             if (isLoading && messages.lastOrNull()?.isFromUser == true) {
                 item {
-                    CircularProgressIndicator(
-                        modifier = Modifier
-                            .size(24.dp)
-                            .padding(4.dp),
-                        strokeWidth = 2.dp
-                    )
+                    TypingIndicatorBubble()
                 }
             }
         }
@@ -136,32 +148,71 @@ fun ChatScreen(
 
 @Composable
 fun MessageBubble(message: Message) {
-    val alignment = if (message.isFromUser) Alignment.CenterEnd else Alignment.CenterStart
-    val containerColor =
-        if (message.isFromUser) CurakidTheme.colors.primary else CurakidTheme.colors.surfaceVariant
-    val contentColor = if (message.isFromUser) Color.White else CurakidTheme.colors.onSurfaceVariant
+    // Колір фону та тексту залежно від автора
+    val containerColor = if (message.isFromUser) {
+        CurakidTheme.colors.onSecondaryContainer
+    } else {
+        CurakidTheme.colors.secondaryContainer
+    }
+    val contentColor = if (message.isFromUser) {
+        Color.White
+    } else {
+        CurakidTheme.colors.onSurfaceVariant
+    }
+
+    // Текст користувача вирівнюємо по правому краю, ШІ — по лівому
+    val textAlign = if (message.isFromUser) {
+        TextAlign.End
+    } else {
+        TextAlign.Start
+    }
+
     val shape = if (message.isFromUser) {
         RoundedCornerShape(16.dp, 16.dp, 4.dp, 16.dp)
     } else {
         RoundedCornerShape(16.dp, 16.dp, 16.dp, 4.dp)
     }
-    val parser = remember { CommonmarkAstNodeParser() }
-    val astNode = remember {
-        parser.parse(message.text.trimIndent())
-    }
+    val bubbleAlignment = if (message.isFromUser) Alignment.CenterEnd else Alignment.CenterStart
+//    val parser = remember { CommonmarkAstNodeParser() }
+//    val astNode = remember(message.text) {
+//        parser.parse(message.text.trimIndent())
+//    }
 
-    Box(modifier = Modifier.fillMaxWidth(), contentAlignment = alignment) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 2.dp),
+        contentAlignment = bubbleAlignment
+    ) {
         Surface(
-            color = containerColor,
-            contentColor = contentColor,
+//            color = containerColor,
+//            contentColor = contentColor,
             shape = shape,
-            modifier = Modifier.widthIn(max = 280.dp)
         ) {
-            BasicRichText(
-                modifier = Modifier.padding(CurakidTheme.paddings.small),
-                style = RichTextStyle.Default
+            Box(
+                modifier = Modifier.padding(CurakidTheme.paddings.small)
             ) {
-                BasicMarkdown(astNode = astNode)
+                if (message.isStreaming) {
+                    AnimatedContent(
+                        targetState = message.text,
+                        transitionSpec = {
+                            fadeIn(tween(150)) togetherWith fadeOut(tween(0))
+                        },
+                        label = "StreamingText"
+                    ) { text ->
+                        Text(text = text)
+                    }
+                } else {
+                    val parser = remember { CommonmarkAstNodeParser() }
+                    val astNode = remember(message.text) {
+                        parser.parse(message.text.trimIndent())
+                    }
+                    BasicRichText(
+                        modifier = Modifier.align(Alignment.CenterEnd)
+                    ) {
+                        BasicMarkdown(astNode = astNode)
+                    }
+                }
             }
         }
     }
@@ -200,7 +251,7 @@ fun ChatInput(
                 value = text,
                 onValueChange = onTextChange,
                 modifier = Modifier.weight(1f),
-                placeholder = { Text("Ask something...") },
+                placeholder = { Text("Запитайте щось...") },
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color.Transparent,
                     unfocusedContainerColor = Color.Transparent,
@@ -216,10 +267,73 @@ fun ChatInput(
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.Send,
-                    contentDescription = "Send",
+                    contentDescription = "Відправити",
                     tint = if (text.isNotBlank() && !isLoading) CurakidTheme.colors.primary else Color.Gray
                 )
             }
         }
     }
 }
+
+@Composable
+fun TypingIndicatorBubble() {
+    val d1 by animatedOffset(0)
+    val d2 by animatedOffset(150)
+    val d3 by animatedOffset(300)
+
+    val density = LocalDensity.current
+
+    Box(
+        modifier = Modifier.fillMaxWidth(),
+        contentAlignment = Alignment.CenterStart
+    ) {
+        Surface(
+            color = CurakidTheme.colors.surfaceVariant,
+            shape = RoundedCornerShape(16.dp, 16.dp, 16.dp, 4.dp)
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+
+                @Composable
+                fun Dot(offset: Float) {
+
+                    val px = with(density) { offset.dp.toPx() }
+
+                    Box(
+                        modifier = Modifier
+                            .graphicsLayer {
+                                translationY = px
+                            }
+                            .size(6.dp)
+                            .background(
+                                CurakidTheme.colors.onSurfaceVariant,
+                                CircleShape
+                            )
+                    )
+                }
+
+                Dot(d1)
+                Dot(d2)
+                Dot(d3)
+            }
+        }
+    }
+}
+
+@Composable
+fun animatedOffset(delay: Int) = rememberInfiniteTransition(label = "dot").animateFloat(
+    initialValue = 0f,
+    targetValue = -6f,
+    animationSpec = infiniteRepeatable(
+        animation = tween(
+            durationMillis = 300,
+            easing = EaseInOut
+        ),
+        repeatMode = RepeatMode.Reverse,
+        initialStartOffset = StartOffset(delay)
+    ),
+    label = "offset"
+)
