@@ -6,14 +6,17 @@ import javax.inject.Inject
 class RegisterUseCase @Inject constructor(
     private val repository: AuthRepository
 ) {
-    suspend operator fun invoke(email: String, password: String, name: String): Result<String> {
+    suspend operator fun invoke(email: String, password: String, name: String, isAccepted: Boolean): Result<String> {
         if (email.isBlank() || password.isBlank() || name.isBlank()) {
             return Result.failure(Exception("All fields are required"))
+        }
+        if (!isAccepted) {
+            return Result.failure(Exception("Ви повинні погодитись з політикою використання"))
         }
         if (!email.matches(EMAIL_REGEX)) {
             return Result.failure(Exception("Невірний формат email"))
         }
-        return repository.register(email, password, name)
+        return repository.register(email, password, name, isAccepted)
     }
 
     companion object {

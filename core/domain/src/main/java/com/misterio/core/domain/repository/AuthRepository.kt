@@ -6,7 +6,7 @@ interface AuthRepository {
 
     suspend fun oAuthLogin(idToken: String): Result<Unit>
 
-    suspend fun register(email: String, password: String, name: String): Result<String>
+    suspend fun register(email: String, password: String, name: String, isAccepted: Boolean): Result<String>
 
     suspend fun verifyEmail(email: String, code: String): Result<Unit>
 
@@ -17,5 +17,7 @@ interface AuthRepository {
     suspend fun refresh()
 
     suspend fun logout(): Result<Unit>
+
+    suspend fun deleteAccount(): Result<Unit>
 
 }

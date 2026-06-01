@@ -3,6 +3,7 @@ package com.misterio.core.network.api
 import com.misterio.core.network.dto.*
 import retrofit2.Response
 import retrofit2.http.Body
+import retrofit2.http.DELETE
 import retrofit2.http.POST
 
 interface AuthApi {
@@ -27,5 +28,8 @@ interface AuthApi {
 
     @POST("api/auth/oauth/google")
     suspend fun oAuthLogin(@Body request: OAuthRequest): Response<AuthResponse>
+
+    @DELETE("api/auth/delete/me")
+    suspend fun deleteAccount(): Response<Unit>
 
 }

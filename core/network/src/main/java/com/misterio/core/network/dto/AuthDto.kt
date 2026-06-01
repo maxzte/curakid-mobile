@@ -13,10 +13,27 @@ data class AuthResponse(
     @SerializedName("onboardingCompleted") val onboardingCompleted: Boolean,
 )
 
+data class LegalDocumentResponse(
+    val type: String,
+    val version: String,
+    val url: String,
+    val publishedAt: String,
+)
+
 data class RegisterRequest(
     @SerializedName("email") val email: String,
     @SerializedName("password") val password: String,
-    @SerializedName("name") val name: String
+    @SerializedName("name") val name: String,
+    @SerializedName("consent") val consent: ConsentRequest,
+)
+
+data class ConsentRequest(
+    val termsAccepted: Boolean,        // true
+    val privacyAccepted: Boolean,      // true
+    val consentTimestamp: String,      // ISO 8601
+    val consentVersion: String,        // "1.0.2"
+    val appVersion: String,            // "1.2.0"
+    val deviceLocale: String           // "uk-UA"
 )
 
 data class RefreshTokenRequest(

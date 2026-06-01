@@ -43,6 +43,8 @@ dependencies {
 
     implementation(libs.androidx.ui.tooling.preview)
 
+    implementation(libs.bundles.richtext)
+
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
     implementation(libs.androidx.compose.material.icons.extended)

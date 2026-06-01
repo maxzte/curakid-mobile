@@ -46,6 +46,8 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.Period
 import javax.inject.Inject
+import kotlin.math.ceil
+import kotlin.math.max
 
 data class AnswerUI(
     val assessmentId: String?,
@@ -68,7 +70,9 @@ data class DevelopmentUiState(
     val lifePeriods: List<LifePeriod> = emptyList(),
     val aiReports: List<LifePeriodAiReport> = emptyList(),
     val measurements: List<Measurement> = emptyList(),
-    val pendingAnswers: Map<String, Answer> = emptyMap()
+    val pendingAnswers: Map<String, Answer> = emptyMap(),
+    val remainingQuestions: Int = 0,
+    val isMinAnswersRequirementMet: Boolean = false
 )
 
 @HiltViewModel
@@ -190,6 +194,8 @@ class DevelopmentViewModel @Inject constructor(
                         val currentAiReport =
                             snapshot.reports.find { it.lifePeriodId == currentPeriod?.id }
 
+                        val (remaining, met) = calculateRequirementMet(mergedAnswers, state.pendingAnswers, currentPeriod)
+
                         Log.d(TAG, "observeData: Mapping for period ${currentPeriod?.id}")
                         Log.d(TAG, "observeData: found report=${currentAiReport?.id}")
                         if (currentAiReport == null && snapshot.reports.isNotEmpty()) {
@@ -207,7 +213,9 @@ class DevelopmentViewModel @Inject constructor(
                             currentAiReport = currentAiReport,
                             answers = mergedAnswers,
                             isLoading = false,
-                            isCompleted = currentAiReport != null
+                            isCompleted = currentAiReport != null,
+                            remainingQuestions = remaining,
+                            isMinAnswersRequirementMet = met
                         )
                     }
                 }
@@ -264,9 +272,12 @@ class DevelopmentViewModel @Inject constructor(
 
     fun selectPeriod(period: LifePeriod) {
         _uiState.update { state ->
+            val (remaining, met) = calculateRequirementMet(state.answers, state.pendingAnswers, period)
             state.copy(
                 currentPeriod = period,
-                currentAiReport = state.aiReports.find { it.lifePeriodId == period.id }
+                currentAiReport = state.aiReports.find { it.lifePeriodId == period.id },
+                remainingQuestions = remaining,
+                isMinAnswersRequirementMet = met
             )
         }
     }
@@ -288,7 +299,12 @@ class DevelopmentViewModel @Inject constructor(
                 val newAnswerUI = existingAnswer.copy(option = option)
                 val newAnswers =
                     state.answers.filterNot { it.questionId == questionId } + newAnswerUI
-                state.copy(answers = newAnswers)
+                val (remaining, met) = calculateRequirementMet(newAnswers, state.pendingAnswers, state.currentPeriod)
+                state.copy(
+                    answers = newAnswers,
+                    remainingQuestions = remaining,
+                    isMinAnswersRequirementMet = met
+                )
             }
             return
         }
@@ -301,9 +317,13 @@ class DevelopmentViewModel @Inject constructor(
                 originalOptionId = existingAnswer?.originalOptionId
             )
             val newAnswers = state.answers.filterNot { it.questionId == questionId } + newAnswerUI
+            val newPending = state.pendingAnswers + (questionId to Answer(questionId, optionId))
+            val (remaining, met) = calculateRequirementMet(newAnswers, newPending, state.currentPeriod)
             state.copy(
                 answers = newAnswers,
-                pendingAnswers = state.pendingAnswers + (questionId to Answer(questionId, optionId))
+                pendingAnswers = newPending,
+                remainingQuestions = remaining,
+                isMinAnswersRequirementMet = met
             )
         }
         _saveTrigger.tryEmit(Unit)
@@ -314,23 +334,46 @@ class DevelopmentViewModel @Inject constructor(
             val newAnswers = state.answers.map {
                 if (it.questionId == questionId) it.copy(option = null) else it
             }
-            state.copy(answers = newAnswers)
+            val (remaining, met) = calculateRequirementMet(newAnswers, state.pendingAnswers, state.currentPeriod)
+            state.copy(
+                answers = newAnswers,
+                remainingQuestions = remaining,
+                isMinAnswersRequirementMet = met
+            )
         }
     }
 
-    private fun validateCompletion(state: DevelopmentUiState): DomainError? {
-        val period = state.currentPeriod ?: return null
+    private fun calculateRequirementMet(
+        answers: List<AnswerUI>,
+        pendingAnswers: Map<String, Answer>,
+        period: LifePeriod?
+    ): Pair<Int, Boolean> {
+        val totalQuestions = period?.questions?.size ?: 0
+        if (totalQuestions == 0) return 0 to true
+        val answeredCount = answers.count { it.option != null && (it.assessmentId != null || pendingAnswers.containsKey(it.questionId)) }
+        val targetCount = ceil(totalQuestions * 0.8).toInt()
+        val remaining = max(0, targetCount - answeredCount)
+        return remaining to (remaining == 0)
+    }
+
+    private fun validateCompletion(state: DevelopmentUiState): Pair<Boolean, DomainError?> {
+        val period = state.currentPeriod ?: return true to null
         val totalQuestions = period.questions.size
-        if (totalQuestions == 0) return null
+        if (totalQuestions == 0) return true to null
 
         val answeredCount = state.answers.count { it.option != null && (it.assessmentId != null || state.pendingAnswers.containsKey(it.questionId)) }
         val percent = (answeredCount.toFloat() / totalQuestions.toFloat()) * 100
 
-        val missingItems = mutableListOf<String>()
+        val requiredItems = mutableListOf<String>()
+        val recommendations = mutableListOf<String>()
 
         if (percent < 80) {
-            val remaining = kotlin.math.max(1, (totalQuestions * 0.8).toInt() - answeredCount)
-            missingItems.add("відповісти ще хоча б на $remaining питань")
+            val targetCount = ceil(totalQuestions * 0.8).toInt()
+            val remaining = targetCount - answeredCount
+
+            if (remaining > 0) {
+                requiredItems.add("відповісти ще хоча б на $remaining питань (мінімум 80%)")
+            }
         }
 
         val birthDate = selectedChild.value?.birthDate
@@ -347,14 +390,20 @@ class DevelopmentViewModel @Inject constructor(
         val hasHeight = periodMeasurements.any { it.height != null }
         val hasHeadCirc = periodMeasurements.any { it.headCirc != null }
 
-        if (!hasWeight) missingItems.add("додати замір ваги")
-        if (!hasHeight) missingItems.add("додати замір зросту")
-        if (!hasHeadCirc) missingItems.add("додати замір обхвату голови")
+        if (!hasWeight) recommendations.add("додати замір ваги")
+        if (!hasHeight) recommendations.add("додати замір зросту")
+        if (!hasHeadCirc) recommendations.add("додати замір обхвату голови")
 
-        return if (missingItems.isNotEmpty()) {
-            DomainError.UnknownError("Для повного аналізу рекомендується: " + missingItems.joinToString(", ") + ".")
-        } else {
-            null
+        return when {
+            requiredItems.isNotEmpty() -> {
+                false to DomainError.UnknownError("Необхідно: " + requiredItems.joinToString(", ") + ".")
+            }
+            recommendations.isNotEmpty() -> {
+                true to DomainError.UnknownError("Для кращого аналізу рекомендується: " + recommendations.joinToString(", ") + ".")
+            }
+            else -> {
+                true to null
+            }
         }
     }
 
@@ -362,17 +411,26 @@ class DevelopmentViewModel @Inject constructor(
         val childId = selectedChild.value?.id ?: return
         val period = _uiState.value.currentPeriod ?: return
 
-        if (!allowEarlyTransition) {
-            val validationError = validateCompletion(_uiState.value)
-            if (validationError != null) {
-                _uiState.update {
-                    it.copy(
-                        error = validationError,
-                        showEarlyTransitionDialog = true
-                    )
-                }
-                return
+        val (isValid, validationError) = validateCompletion(_uiState.value)
+
+        if (!isValid) {
+            _uiState.update {
+                it.copy(
+                    error = validationError,
+                    showEarlyTransitionDialog = false
+                )
             }
+            return
+        }
+
+        if (!allowEarlyTransition && validationError != null) {
+            _uiState.update {
+                it.copy(
+                    error = validationError,
+                    showEarlyTransitionDialog = true
+                )
+            }
+            return
         }
 
         viewModelScope.launch {

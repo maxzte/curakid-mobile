@@ -44,15 +44,19 @@ import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Remove
-import androidx.compose.material.icons.filled.Straighten
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.OutlinedCard
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -69,16 +73,12 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.material3.SnackbarResult
-import androidx.compose.material3.Scaffold
-import androidx.compose.runtime.LaunchedEffect
-import com.misterio.core.domain.model.DomainError
-import com.misterio.core.ui.components.ErrorView
 import com.misterio.core.domain.model.LifePeriod
 import com.misterio.core.domain.model.Question
 import com.misterio.core.ui.TrackFab
 import com.misterio.core.ui.components.AiReportCard
 import com.misterio.core.ui.components.CuraKidAlertDialog
+import com.misterio.core.ui.components.ErrorView
 import com.misterio.core.ui.components.ScreenHeader
 import com.misterio.core.ui.components.itemWrapper
 import com.misterio.core.ui.components.rememberListContentPadding
@@ -141,7 +141,7 @@ fun DevelopmentScreen(
                 val result = snackbarHostState.showSnackbar(
                     message = error.message ?: "Виникла помилка",
                     actionLabel = "Повторити",
-                    duration = androidx.compose.material3.SnackbarDuration.Long
+                    duration = SnackbarDuration.Long
                 )
                 if (result == SnackbarResult.ActionPerformed) {
                     // Logic to retry could go here, e.g. viewModel.retry()
@@ -161,7 +161,7 @@ fun DevelopmentScreen(
         Box(modifier = Modifier.padding()) {
             if (uiState.isLoading && uiState.lifePeriods.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    androidx.compose.material3.CircularProgressIndicator()
+                    CircularProgressIndicator()
                 }
             } else if (uiState.error != null && uiState.lifePeriods.isEmpty()) {
                 ErrorView(
@@ -333,6 +333,9 @@ private fun DevelopmentContent(
                     onClick = { viewModel.completePeriod() },
                     modifier = Modifier.fillMaxWidth(),
                     enabled = !uiState.isLoading,
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (uiState.isMinAnswersRequirementMet) CurakidTheme.colors.primary else CuraKidColors.Neutral80
+                    )
                 ) {
                     Text("Завершити період")
                 }

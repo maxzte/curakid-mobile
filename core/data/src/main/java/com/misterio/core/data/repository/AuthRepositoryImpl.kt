@@ -1,11 +1,18 @@
 package com.misterio.core.data.repository
 
 import android.util.Log
+import com.misterio.core.data.BuildConfig
 import com.misterio.core.data.util.safeApiCall
 import com.misterio.core.database.AppDatabase
+import com.misterio.core.domain.model.LegalDocument
+import com.misterio.core.domain.model.ConsentType
 import com.misterio.core.domain.repository.AuthRepository
+import com.misterio.core.domain.repository.LegalDocumentRepository
 import com.misterio.core.network.api.AuthApi
+import com.misterio.core.network.api.LegalDocumentApi
+import com.misterio.core.network.dto.ConsentRequest
 import com.misterio.core.network.dto.ForgotPasswordRequest
+import com.misterio.core.network.dto.LegalDocumentResponse
 import com.misterio.core.network.dto.LoginRequest
 import com.misterio.core.network.dto.OAuthRequest
 import com.misterio.core.network.dto.RefreshTokenRequest
@@ -14,6 +21,9 @@ import com.misterio.core.network.dto.ResetPasswordRequest
 import com.misterio.core.network.dto.VerifyEmailRequest
 import com.misterio.curakid.core.common.AppDataStore
 import com.misterio.curakid.core.common.SettingsManager
+import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import com.misterio.curakid.core.common.TokenManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -27,6 +37,7 @@ class AuthRepositoryImpl @Inject constructor(
     private val database: AppDatabase,
     private val settingsManager: SettingsManager,
     private val appDataStore: AppDataStore,
+    private val legalDocumentRepository: LegalDocumentRepository,
 ) : AuthRepository {
 
     init {
@@ -51,8 +62,29 @@ class AuthRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun register(email: String, password: String, name: String): Result<String> {
-        return safeApiCall { authApi.register(RegisterRequest(email, password, name)) }.map { body ->
+    override suspend fun register(
+        email: String,
+        password: String,
+        name: String,
+        isAccepted: Boolean
+    ): Result<String> {
+        val legalDocs = legalDocumentRepository.getLegalDocuments().getOrNull()
+        val termsDoc = legalDocs?.find { it.type == ConsentType.TERMS }
+        
+        return safeApiCall {
+            authApi.register(
+                request = RegisterRequest(
+                    email, password, name, consent = ConsentRequest(
+                        termsAccepted = isAccepted,
+                        privacyAccepted = isAccepted,
+                        consentTimestamp = OffsetDateTime.now().format(DateTimeFormatter.ISO_OFFSET_DATE_TIME),
+                        consentVersion = termsDoc?.version ?: "1.0.0",
+                        appVersion = BuildConfig.VERSION_NAME,
+                        deviceLocale = Locale.getDefault().toLanguageTag()
+                    )
+                )
+            )
+        }.map { body ->
             body.message
         }
     }
@@ -118,6 +150,22 @@ class AuthRepositoryImpl @Inject constructor(
             appDataStore.clear()
             Result.failure(e)
         }
+    }
+
+    override suspend fun deleteAccount(): Result<Unit> = withContext(Dispatchers.IO) {
+        Log.i(TAG, "DELETE ACCOUNT")
+        val result = safeApiCall { authApi.deleteAccount() }
+        
+        // Even if the server fails, we should clear local data to "log out" the user
+        // and prevent them from being stuck in a broken state.
+        // But if it's a 401, they are already unauthorized.
+        
+        tokenManager.clearTokens()
+        database.clearAllTables()
+        settingsManager.clear()
+        appDataStore.clear()
+        
+        result.map { Unit }
     }
 
     private companion object {

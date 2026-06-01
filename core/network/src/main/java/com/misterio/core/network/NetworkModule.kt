@@ -7,6 +7,7 @@ import com.misterio.core.network.api.ChildApi
 import com.misterio.core.network.api.EventApi
 import com.misterio.core.network.api.MeasurementApi
 import com.misterio.core.network.api.DevelopmentApi
+import com.misterio.core.network.api.LegalDocumentApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -129,5 +130,11 @@ object NetworkModule {
     @Singleton
     fun provideEventApi(retrofit: Retrofit): EventApi {
         return retrofit.create(EventApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideLegalDocumentApi(retrofit: Retrofit): LegalDocumentApi {
+        return retrofit.create(LegalDocumentApi::class.java)
     }
 }

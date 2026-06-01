@@ -8,8 +8,13 @@ android {
     namespace = "com.misterio.core.data"
     compileSdk = 37
 
+    buildFeatures {
+        buildConfig = true
+    }
+
     defaultConfig {
         minSdk = 26
+        buildConfigField("String", "VERSION_NAME", "\"1.0.0\"")
     }
 }
 

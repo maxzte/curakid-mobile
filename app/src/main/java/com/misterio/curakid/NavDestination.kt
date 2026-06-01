@@ -76,6 +76,9 @@ sealed interface Route : NavKey {
     data object Chat : Route
 
     @Serializable
+    data class LegalDocument(val url: String, val title: String) : Route
+
+    @Serializable
     data class Passcode(val mode: PasscodeMode) : Route
 }
 

@@ -85,6 +85,7 @@ import com.misterio.curakid.core.common.SecurityManager
 import com.misterio.curakid.feature.profile.AddChildScreen
 import com.misterio.curakid.feature.profile.PasscodeScreen
 import com.misterio.curakid.feature.signup.ForgotPasswordScreen
+import com.misterio.curakid.feature.signup.LegalDocumentScreen
 import com.misterio.curakid.feature.signup.LoginScreen
 import com.misterio.curakid.feature.signup.SignUpScreen
 import com.misterio.curakid.feature.signup.VerifyEmailScreen
@@ -279,7 +280,16 @@ fun MainNavigation(
                             entry<Route.SignUp> {
                                 SignUpScreen(
                                     onNavigateToLogIn = { authStack.removeAt(authStack.lastIndex) },
-                                    onNavigateToVerify = { email -> authStack.add(Route.VerifyEmail(email)) }
+                                    onNavigateToVerify = { email -> authStack.add(Route.VerifyEmail(email)) },
+                                    onShowDocument = { url, title -> authStack.add(Route.LegalDocument(url, title)) }
+                                )
+                            }
+                            entry<Route.LegalDocument> { key ->
+                                LegalDocumentScreen(
+                                    url = key.url,
+                                    title = key.title,
+                                    onBack = { authStack.removeAt(authStack.lastIndex) },
+                                    viewModel = androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel()
                                 )
                             }
                             entry<Route.VerifyEmail> {

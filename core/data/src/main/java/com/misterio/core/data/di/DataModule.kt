@@ -8,6 +8,7 @@ import com.misterio.core.data.repository.ChildRepositoryImpl
 import com.misterio.core.data.repository.ConnectivityRepositoryImpl
 import com.misterio.core.data.repository.DevelopmentRepositoryImpl
 import com.misterio.core.data.repository.EventRepositoryImpl
+import com.misterio.core.data.repository.LegalDocumentRepositoryImpl
 import com.misterio.core.data.repository.MeasurementRepositoryImpl
 import com.misterio.core.data.repository.VaccineRepositoryImpl
 import com.misterio.core.domain.repository.AiRepository
@@ -18,6 +19,7 @@ import com.misterio.core.domain.repository.ChildRepository
 import com.misterio.core.domain.repository.ConnectivityRepository
 import com.misterio.core.domain.repository.DevelopmentRepository
 import com.misterio.core.domain.repository.EventRepository
+import com.misterio.core.domain.repository.LegalDocumentRepository
 import com.misterio.core.domain.repository.MeasurementRepository
 import com.misterio.core.domain.repository.VaccineRepository
 import dagger.Binds
@@ -89,4 +91,11 @@ abstract class DataModule {
     abstract fun bindChatRepository(
         chatRepositoryImpl: ChatRepositoryImpl
     ): ChatRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindLegalDocumentRepository(
+        legalDocumentRepositoryImpl: LegalDocumentRepositoryImpl
+    ): LegalDocumentRepository
+
 }
