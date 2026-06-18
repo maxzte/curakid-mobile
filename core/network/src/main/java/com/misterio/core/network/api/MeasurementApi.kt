@@ -8,15 +8,16 @@ import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
 import retrofit2.http.Path
+import java.util.UUID
 
 interface MeasurementApi {
 
     @GET("api/children/{childId}/measurements")
-    suspend fun getMeasurements(@Path("childId") childId: String): Response<List<MeasurementResponse>>
+    suspend fun getMeasurements(@Path("childId") childId: UUID): Response<List<MeasurementResponse>>
 
     @POST("api/children/{childId}/measurements")
     suspend fun addMeasurement(
-        @Path("childId") childId: String,
+        @Path("childId") childId: UUID,
         @Body measurement: AddMeasurementRequest
     ): Response<MeasurementResponse>
 

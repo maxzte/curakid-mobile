@@ -34,10 +34,11 @@ import com.halilibo.richtext.markdown.BasicMarkdown
 import com.halilibo.richtext.ui.BasicRichText
 import com.misterio.core.domain.UiState
 import com.misterio.core.ui.theme.CurakidTheme
+import java.util.UUID
 
 @Composable
 fun AiReportScreen(
-    reportId: String,
+    reportId: UUID,
     onBack: () -> Unit
 ) {
     val viewModel: AiReportViewModel = hiltViewModel(

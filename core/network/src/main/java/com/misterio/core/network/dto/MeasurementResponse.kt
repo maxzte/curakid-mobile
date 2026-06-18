@@ -1,8 +1,10 @@
 package com.misterio.core.network.dto
 
 import com.google.gson.annotations.SerializedName
+import java.util.UUID
 
 data class AddMeasurementRequest(
+    val id: UUID,
     @SerializedName("weightKg") val weightKg: Double?,
     @SerializedName("heightCm") val heightCm: Double?,
     @SerializedName("headCircCm") val headCircCm: Double?,
@@ -10,10 +12,10 @@ data class AddMeasurementRequest(
 )
 
 data class MeasurementResponse(
-    @SerializedName("id") val id: String,
-    @SerializedName("childId") val childId: String,
+    @SerializedName("id") val id: UUID,
+    @SerializedName("childId") val childId: UUID,
     @SerializedName("measurementDate") val measurementDate: String,
-    @SerializedName("aiReportId") val aiReportId: String?,
+    @SerializedName("aiReportId") val aiReportId: UUID?,
 
     @SerializedName("weightKg") val weightKg: Double?,
     @SerializedName("heightCm") val heightCm: Double?,

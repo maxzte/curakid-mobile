@@ -2,6 +2,7 @@
 
 package com.misterio.curakid
 
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -56,6 +57,7 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -82,6 +84,7 @@ import com.misterio.core.ui.ScaffoldController
 import com.misterio.core.ui.TopBarConfiguration
 import com.misterio.core.ui.theme.CurakidTheme
 import com.misterio.curakid.core.common.SecurityManager
+import com.misterio.curakid.feature.calendar.worker.EventNotificationWorker
 import com.misterio.curakid.feature.profile.AddChildScreen
 import com.misterio.curakid.feature.profile.PasscodeScreen
 import com.misterio.curakid.feature.signup.ForgotPasswordScreen
@@ -121,6 +124,10 @@ class MainActivity : ComponentActivity() {
             viewModel.startDestination.value == null
         }
 
+        if (intent?.hasExtra(EventNotificationWorker.EXTRA_EVENT_ID) == true) {
+            viewModel.setPendingEventId(intent.getStringExtra(EventNotificationWorker.EXTRA_EVENT_ID))
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             window.isNavigationBarContrastEnforced = false
         }
@@ -134,6 +141,14 @@ class MainActivity : ComponentActivity() {
             }
         }
     }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        val viewModel: MainViewModel by viewModels()
+        if (intent.hasExtra(EventNotificationWorker.EXTRA_EVENT_ID)) {
+            viewModel.setPendingEventId(intent.getStringExtra(EventNotificationWorker.EXTRA_EVENT_ID))
+        }
+    }
 }
 
 @Composable
@@ -145,6 +160,7 @@ fun MainNavigation(
     val startDestination by viewModel.startDestination.collectAsStateWithLifecycle()
     val isConnected by viewModel.isConnected.collectAsStateWithLifecycle(initialValue = true)
     val scaffoldController = remember { ScaffoldController() }
+    val pendingEventId by viewModel.pendingEventId.collectAsStateWithLifecycle()
 
     // Hoist ALL navigation state to the top level
     val navigationState = rememberNavigationState(
@@ -157,6 +173,13 @@ fun MainNavigation(
         )
     )
     val navigator = remember { Navigator(navigationState) }
+
+    LaunchedEffect(pendingEventId) {
+        pendingEventId?.let { id ->
+            navigator.navigate(Route.CalendarRoot(eventId = id))
+            viewModel.clearPendingEventId()
+        }
+    }
 
     val activeTab by remember {
         derivedStateOf {

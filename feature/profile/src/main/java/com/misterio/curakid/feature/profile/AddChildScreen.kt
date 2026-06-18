@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.plus
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -19,7 +20,6 @@ import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
@@ -31,6 +31,7 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -38,22 +39,23 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.misterio.core.domain.UiState
 import com.misterio.core.domain.model.Gender
 import com.misterio.core.ui.components.CuraKidButton
 import com.misterio.core.ui.components.CuraKidTextField
+import com.misterio.core.ui.components.rememberListContentPadding
 import com.misterio.core.ui.theme.CurakidTheme
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.misterio.core.ui.components.rememberListContentPadding
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddChildScreen(
     onBack: () -> Unit,
@@ -62,9 +64,11 @@ fun AddChildScreen(
     val viewModel: ProfileViewModel = hiltViewModel()
     val state by viewModel.uiState.collectAsStateWithLifecycle()
 
-    LaunchedEffect(state) {
-        if (state is UiState.Success) {
-            onBack()
+    LaunchedEffect(Unit) {
+        viewModel.uiEvent.collect { event ->
+            when (event) {
+                ProfileViewModel.UiEvent.NavigateBack -> onBack()
+            }
         }
     }
 
@@ -72,6 +76,7 @@ fun AddChildScreen(
     var birthDate by rememberSaveable { mutableLongStateOf(0L) }
     var gender by rememberSaveable { mutableStateOf(Gender.MALE) }
     var isPremature by rememberSaveable { mutableStateOf(false) }
+    var gestationalWeeks by rememberSaveable { mutableIntStateOf(0) }
 
     var allergies by rememberSaveable { mutableStateOf(emptyList<String>()) }
     var chronicDiseases by rememberSaveable { mutableStateOf(emptyList<String>()) }
@@ -190,7 +195,9 @@ fun AddChildScreen(
                     contentDescription = "Calendar"
                 )
             },
-            modifier = Modifier.clickable { showDatePickerDialog = true }
+            modifier = Modifier
+                .clip(CurakidTheme.shapes.medium)
+                .clickable { showDatePickerDialog = true }
         )
 
         Spacer(modifier = Modifier.height(16.dp))
@@ -256,6 +263,28 @@ fun AddChildScreen(
             )
         }
 
+        if (isPremature) {
+            Spacer(modifier = Modifier.height(16.dp))
+            CuraKidTextField(
+                value = if (gestationalWeeks == 0) "" else gestationalWeeks.toString(),
+                onValueChange = {
+                    val newValue = it.filter { char -> char.isDigit() }
+                    if (newValue.isEmpty()) {
+                        gestationalWeeks = 0
+                    } else {
+                        val weeks = newValue.toIntOrNull() ?: gestationalWeeks
+                        if (weeks <= 42) {
+                            gestationalWeeks = weeks
+                        }
+                    }
+                },
+                label = "Тиждень народження (20-37)",
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                error = if (isPremature && gestationalWeeks !in 20..37 && gestationalWeeks != 0)
+                    "Введіть коректний тиждень (20-37)" else null
+            )
+        }
+
         Spacer(modifier = Modifier.height(24.dp))
 
         MedicalSection(
@@ -297,12 +326,14 @@ fun AddChildScreen(
         CuraKidButton(
             text = "Зберегти",
             loading = state is UiState.Loading,
+            enabled = name.isNotBlank() && birthDate != 0L && (!isPremature || (gestationalWeeks in 20..37)),
             onClick = {
                 viewModel.addChild(
                     name = name,
                     birthDate = birthDate,
                     gender = gender,
                     isPremature = isPremature,
+                    gestationalWeeks = if (isPremature) gestationalWeeks else null,
                     allergies = allergies,
                     chronicDiseases = chronicDiseases,
                     pastDiseases = pastDiseases,
@@ -310,7 +341,5 @@ fun AddChildScreen(
                 )
             },
         )
-
-        Spacer(modifier = Modifier.height(24.dp))
     }
 }

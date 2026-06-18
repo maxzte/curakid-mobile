@@ -1,24 +1,17 @@
 package com.misterio.core.domain.usecase
 
-import com.misterio.core.domain.model.EventType
 import com.misterio.core.domain.repository.EventRepository
-import com.misterio.core.domain.util.EventNotificationScheduler
-import kotlinx.coroutines.flow.first
+import java.util.UUID
 import javax.inject.Inject
 
 class ScheduleDoctorVisitsUseCase @Inject constructor(
     private val eventRepository: EventRepository,
-    private val notificationScheduler: EventNotificationScheduler,
 ) {
-    suspend operator fun invoke(childId: String): Result<Unit> {
+    suspend operator fun invoke(childId: UUID): Result<Unit> {
         return try {
             // Sync events first to make sure we have the latest schedule
+            // EventRepository.syncEvents already handles notification scheduling
             eventRepository.syncEvents(childId)
-
-            val events = eventRepository.getEvents(childId)
-                .first()
-                .filter { it.type == EventType.DOCTOR }
-            notificationScheduler.schedule(events)
 
 //            val today = LocalDateTime.now()
 

@@ -19,6 +19,7 @@
             <option value="$PROJECT_DIR$/core/ui" />
             <option value="$PROJECT_DIR$/feature" />
             <option value="$PROJECT_DIR$/feature/calendar" />
+            <option value="$PROJECT_DIR$/feature/chat" />
             <option value="$PROJECT_DIR$/feature/development" />
             <option value="$PROJECT_DIR$/feature/home" />
             <option value="$PROJECT_DIR$/feature/profile" />

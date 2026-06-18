@@ -1,10 +1,12 @@
 package com.misterio.core.domain.model
 
+import java.util.UUID
+
 data class LifePeriodAiReport(
-    val id: String,
-    val childId: String,
-    val lifePeriodId: String?,
-    val triggerMeasurementId: String?,
+    val id: UUID,
+    val childId: UUID,
+    val lifePeriodId: UUID?,
+    val triggerMeasurementId: UUID?,
     val reportText: String?,
     val recommendations: String?,
     val urgencyScore: Double?,

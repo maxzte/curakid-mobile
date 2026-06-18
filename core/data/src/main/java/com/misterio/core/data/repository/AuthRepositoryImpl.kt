@@ -4,15 +4,12 @@ import android.util.Log
 import com.misterio.core.data.BuildConfig
 import com.misterio.core.data.util.safeApiCall
 import com.misterio.core.database.AppDatabase
-import com.misterio.core.domain.model.LegalDocument
 import com.misterio.core.domain.model.ConsentType
 import com.misterio.core.domain.repository.AuthRepository
 import com.misterio.core.domain.repository.LegalDocumentRepository
 import com.misterio.core.network.api.AuthApi
-import com.misterio.core.network.api.LegalDocumentApi
 import com.misterio.core.network.dto.ConsentRequest
 import com.misterio.core.network.dto.ForgotPasswordRequest
-import com.misterio.core.network.dto.LegalDocumentResponse
 import com.misterio.core.network.dto.LoginRequest
 import com.misterio.core.network.dto.OAuthRequest
 import com.misterio.core.network.dto.RefreshTokenRequest
@@ -21,12 +18,12 @@ import com.misterio.core.network.dto.ResetPasswordRequest
 import com.misterio.core.network.dto.VerifyEmailRequest
 import com.misterio.curakid.core.common.AppDataStore
 import com.misterio.curakid.core.common.SettingsManager
-import java.time.OffsetDateTime
-import java.time.format.DateTimeFormatter
-import java.util.Locale
 import com.misterio.curakid.core.common.TokenManager
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
+import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
 

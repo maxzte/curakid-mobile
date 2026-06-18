@@ -10,16 +10,17 @@ import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
+import java.util.UUID
 
 @HiltViewModel(assistedFactory = VaccineDetailsViewModel.Factory::class)
 class VaccineDetailsViewModel @AssistedInject constructor(
-    @Assisted("eventId") private val eventId: String,
+    @Assisted("eventId") private val eventId: UUID,
     getVaccineEventByIdUseCase: GetVaccineEventByIdUseCase,
 ) : ViewModel() {
 
     @AssistedFactory
     interface Factory {
-        fun create(@Assisted("eventId") eventId: String): VaccineDetailsViewModel
+        fun create(@Assisted("eventId") eventId: UUID): VaccineDetailsViewModel
     }
 
     val vaccineDetails = getVaccineEventByIdUseCase(eventId)

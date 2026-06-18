@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.misterio.feature.profile"
+    namespace = "com.misterio.curakid.feature.profile"
     compileSdk = 37
 
     defaultConfig {

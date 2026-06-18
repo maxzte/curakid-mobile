@@ -57,7 +57,6 @@ import com.misterio.core.domain.model.EventStatus
 import com.misterio.core.domain.model.EventType
 import com.misterio.core.ui.theme.CuraKidColors
 import com.misterio.core.ui.theme.CurakidTheme
-import com.misterio.feature.calendar.R
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 

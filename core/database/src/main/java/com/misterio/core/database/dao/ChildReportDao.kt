@@ -6,18 +6,19 @@ import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import com.misterio.core.database.entity.ChildReportEntity
 import kotlinx.coroutines.flow.Flow
+import java.util.UUID
 
 @Dao
 interface ChildReportDao {
 
     @Query("SELECT * FROM child_reports WHERE id = :id")
-    fun getReportById(id: String): Flow<ChildReportEntity?>
+    fun getReportById(id: UUID): Flow<ChildReportEntity?>
 
     @Query("SELECT * FROM child_reports WHERE childId = :childId")
-    fun getReportBy(childId: String): Flow<ChildReportEntity?>
+    fun getReportBy(childId: UUID): Flow<ChildReportEntity?>
 
     @Query("SELECT * FROM child_reports WHERE childId = :childId")
-    fun getReports(childId: String): Flow<List<ChildReportEntity>>
+    fun getReports(childId: UUID): Flow<List<ChildReportEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertReport(report: ChildReportEntity)
@@ -26,5 +27,6 @@ interface ChildReportDao {
     suspend fun insertReports(reports: List<ChildReportEntity>)
 
     @Query("DELETE FROM child_reports WHERE childId = :childId")
-    suspend fun deleteReport(childId: String)
+    suspend fun deleteReport(childId: UUID)
+
 }

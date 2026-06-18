@@ -2,9 +2,11 @@ package com.misterio.core.database.converter
 
 import androidx.room.TypeConverter
 import com.misterio.core.domain.model.AssessmentAnswer
+import com.misterio.core.domain.model.LifePeriodDescription
 import com.misterio.core.domain.model.Question
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.jsonObject
 
 class ListConverter {
 

@@ -8,6 +8,10 @@ android {
     namespace = "com.misterio.core.data"
     compileSdk = 37
 
+    testOptions {
+        unitTests.isReturnDefaultValues = true
+    }
+
     buildFeatures {
         buildConfig = true
     }
@@ -27,6 +31,8 @@ dependencies {
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
 
+    implementation(libs.kotlinx.serialization.json)
+
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     
@@ -37,4 +43,11 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
 
     implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.hilt.work)
+    ksp(libs.androidx.hilt.compiler)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.mockk)
+    testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.okhttp.mockwebserver)
 }

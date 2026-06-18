@@ -14,12 +14,14 @@ import com.misterio.core.domain.model.LifePeriod
 import com.misterio.core.domain.model.LifePeriodAiReport
 import com.misterio.core.domain.model.Option
 import com.misterio.core.domain.model.Measurement
+import com.misterio.core.domain.model.PeriodReadiness
 import com.misterio.core.domain.usecase.CompleteLifePeriodUseCase
 import com.misterio.core.domain.usecase.GetChildAiReportsUseCase
 import com.misterio.core.domain.usecase.GetChildAssessmentsUseCase
 import com.misterio.core.domain.usecase.GetChildUseCase
 import com.misterio.core.domain.usecase.GetLifePeriodsUseCase
 import com.misterio.core.domain.usecase.GetMeasurementsUseCase
+import com.misterio.core.domain.usecase.GetPeriodReadinessUseCase
 import com.misterio.core.domain.usecase.PollReportStatusUseCase
 import com.misterio.core.domain.usecase.SaveAssessmentDraftUseCase
 import com.misterio.core.domain.usecase.SyncChildAiReportsUseCase
@@ -45,15 +47,18 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.Period
+import java.util.UUID
 import javax.inject.Inject
 import kotlin.math.ceil
 import kotlin.math.max
+import kotlin.math.pow
+import kotlin.time.Duration.Companion.milliseconds
 
 data class AnswerUI(
-    val assessmentId: String?,
-    val questionId: String,
+    val assessmentId: UUID?,
+    val questionId: UUID,
     val option: Option?,
-    val originalOptionId: String? = null
+    val originalOptionId: UUID? = null
 )
 
 data class DevelopmentUiState(
@@ -70,10 +75,24 @@ data class DevelopmentUiState(
     val lifePeriods: List<LifePeriod> = emptyList(),
     val aiReports: List<LifePeriodAiReport> = emptyList(),
     val measurements: List<Measurement> = emptyList(),
-    val pendingAnswers: Map<String, Answer> = emptyMap(),
+    val pendingAnswers: Map<UUID, Answer> = emptyMap(),
     val remainingQuestions: Int = 0,
-    val isMinAnswersRequirementMet: Boolean = false
+    val isMinAnswersRequirementMet: Boolean = false,
+    val readiness: PeriodReadiness? = null,
+    val showAgeTransitionPrompt: Boolean = false,
 )
+
+internal fun getMeasurementValue(m: Measurement, type: GrowthChartType): Double? = when (type) {
+    GrowthChartType.WeightForAge -> m.weight
+    GrowthChartType.HeightForAge -> m.height
+    GrowthChartType.WeightForHeight -> m.weight
+    GrowthChartType.BMI -> if (m.weight != null && m.height != null && m.height!! > 0) {
+        val w = m.weight!!
+        val h = m.height!! / 100.0 // convert cm to meters
+        w / h.pow(2.0)
+    } else null
+    GrowthChartType.HeadCircumference -> m.headCirc
+}
 
 @HiltViewModel
 class DevelopmentViewModel @Inject constructor(
@@ -88,6 +107,7 @@ class DevelopmentViewModel @Inject constructor(
     private val getChildAiReportsUseCase: GetChildAiReportsUseCase,
     private val syncChildAiReportsUseCase: SyncChildAiReportsUseCase,
     private val pollReportStatusUseCase: PollReportStatusUseCase,
+    private val getPeriodReadinessUseCase: GetPeriodReadinessUseCase,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(DevelopmentUiState())
@@ -120,14 +140,9 @@ class DevelopmentViewModel @Inject constructor(
                         Log.d(TAG, "observeData: Child selected ${child.id}, triggering sync")
                         // Trigger sync in background
                         launch {
-                            runCatching {
-                                syncLifePeriodsUseCase()
-                                syncChildAssessmentsUseCase(childId = child.id)
-                                syncChildAiReportsUseCase(childId = child.id)
-                            }.onFailure { e ->
-                                Log.e(TAG, "observeData: Sync error", e)
-                                _uiState.update { it.copy(error = DomainError.fromThrowable(e)) }
-                            }
+                            runCatching { syncLifePeriodsUseCase() }.onFailure { e -> Log.e(TAG, "Sync periods error", e) }
+                            runCatching { syncChildAssessmentsUseCase(childId = child.id) }.onFailure { e -> Log.e(TAG, "Sync assessments error", e) }
+                            runCatching { syncChildAiReportsUseCase(childId = child.id) }.onFailure { e -> Log.e(TAG, "Sync reports error", e) }
                         }
 
                         combine(
@@ -196,6 +211,21 @@ class DevelopmentViewModel @Inject constructor(
 
                         val (remaining, met) = calculateRequirementMet(mergedAnswers, state.pendingAnswers, currentPeriod)
 
+                        // Check age-based transition prompt
+                        val ageInMonths =
+                            Period.between(snapshot.child.birthDate, LocalDate.now())
+                                .toTotalMonths()
+                                .toInt()
+                        
+                        val shouldShowAgePrompt = currentPeriod != null && 
+                                ageInMonths > currentPeriod.maxMonths && 
+                                currentAiReport == null &&
+                                !state.isCompleted
+
+                        if (currentPeriod != null) {
+                            fetchReadiness(snapshot.child.id, currentPeriod.code)
+                        }
+
                         Log.d(TAG, "observeData: Mapping for period ${currentPeriod?.id}")
                         Log.d(TAG, "observeData: found report=${currentAiReport?.id}")
                         if (currentAiReport == null && snapshot.reports.isNotEmpty()) {
@@ -215,10 +245,21 @@ class DevelopmentViewModel @Inject constructor(
                             isLoading = false,
                             isCompleted = currentAiReport != null,
                             remainingQuestions = remaining,
-                            isMinAnswersRequirementMet = met
+                            isMinAnswersRequirementMet = met,
+                            showAgeTransitionPrompt = shouldShowAgePrompt
                         )
                     }
                 }
+        }
+    }
+
+    private fun fetchReadiness(childId: UUID, periodCode: String) {
+        viewModelScope.launch {
+            getPeriodReadinessUseCase(childId, periodCode).onSuccess { readiness ->
+                _uiState.update { it.copy(readiness = readiness) }
+            }.onFailure { e ->
+                Log.e(TAG, "fetchReadiness: Error", e)
+            }
         }
     }
 
@@ -233,7 +274,7 @@ class DevelopmentViewModel @Inject constructor(
     private fun observeAutoSave() {
         viewModelScope.launch {
             _saveTrigger
-                .debounce(1000L)
+                .debounce(1000L.milliseconds)
                 .collectLatest {
                     val childId = selectedChild.value?.id ?: return@collectLatest
                     val state = _uiState.value
@@ -257,6 +298,7 @@ class DevelopmentViewModel @Inject constructor(
                                         pendingAnswers = currentState.pendingAnswers - qId
                                     )
                                 }
+                                fetchReadiness(childId, state.currentPeriod?.code!!)
                             }.onFailure { e ->
                                  _uiState.update { it.copy(error = DomainError.fromThrowable(e)) }
                             }
@@ -273,6 +315,11 @@ class DevelopmentViewModel @Inject constructor(
     fun selectPeriod(period: LifePeriod) {
         _uiState.update { state ->
             val (remaining, met) = calculateRequirementMet(state.answers, state.pendingAnswers, period)
+            
+            selectedChild.value?.let { child ->
+                fetchReadiness(child.id, period.code)
+            }
+
             state.copy(
                 currentPeriod = period,
                 currentAiReport = state.aiReports.find { it.lifePeriodId == period.id },
@@ -282,7 +329,7 @@ class DevelopmentViewModel @Inject constructor(
         }
     }
 
-    fun onAnswerSelected(questionId: String, optionId: String) {
+    fun onAnswerSelected(questionId: UUID, optionId: UUID) {
         val currentState = _uiState.value
         val existingAnswer = currentState.answers.find { it.questionId == questionId }
 
@@ -329,7 +376,7 @@ class DevelopmentViewModel @Inject constructor(
         _saveTrigger.tryEmit(Unit)
     }
 
-    fun onAnswerCleared(questionId: String) {
+    fun onAnswerCleared(questionId: UUID) {
         _uiState.update { state ->
             val newAnswers = state.answers.map {
                 if (it.questionId == questionId) it.copy(option = null) else it
@@ -345,7 +392,7 @@ class DevelopmentViewModel @Inject constructor(
 
     private fun calculateRequirementMet(
         answers: List<AnswerUI>,
-        pendingAnswers: Map<String, Answer>,
+        pendingAnswers: Map<UUID, Answer>,
         period: LifePeriod?
     ): Pair<Int, Boolean> {
         val totalQuestions = period?.questions?.size ?: 0
@@ -356,82 +403,9 @@ class DevelopmentViewModel @Inject constructor(
         return remaining to (remaining == 0)
     }
 
-    private fun validateCompletion(state: DevelopmentUiState): Pair<Boolean, DomainError?> {
-        val period = state.currentPeriod ?: return true to null
-        val totalQuestions = period.questions.size
-        if (totalQuestions == 0) return true to null
-
-        val answeredCount = state.answers.count { it.option != null && (it.assessmentId != null || state.pendingAnswers.containsKey(it.questionId)) }
-        val percent = (answeredCount.toFloat() / totalQuestions.toFloat()) * 100
-
-        val requiredItems = mutableListOf<String>()
-        val recommendations = mutableListOf<String>()
-
-        if (percent < 80) {
-            val targetCount = ceil(totalQuestions * 0.8).toInt()
-            val remaining = targetCount - answeredCount
-
-            if (remaining > 0) {
-                requiredItems.add("відповісти ще хоча б на $remaining питань (мінімум 80%)")
-            }
-        }
-
-        val birthDate = selectedChild.value?.birthDate
-        val periodMeasurements = if (birthDate != null) {
-            state.measurements.filter { m ->
-                val measurementMonths = Period.between(birthDate, m.date.toLocalDate()).toTotalMonths().toInt()
-                measurementMonths >= period.minMonths && measurementMonths <= period.maxMonths
-            }
-        } else {
-            state.measurements
-        }
-
-        val hasWeight = periodMeasurements.any { it.weight != null }
-        val hasHeight = periodMeasurements.any { it.height != null }
-        val hasHeadCirc = periodMeasurements.any { it.headCirc != null }
-
-        if (!hasWeight) recommendations.add("додати замір ваги")
-        if (!hasHeight) recommendations.add("додати замір зросту")
-        if (!hasHeadCirc) recommendations.add("додати замір обхвату голови")
-
-        return when {
-            requiredItems.isNotEmpty() -> {
-                false to DomainError.UnknownError("Необхідно: " + requiredItems.joinToString(", ") + ".")
-            }
-            recommendations.isNotEmpty() -> {
-                true to DomainError.UnknownError("Для кращого аналізу рекомендується: " + recommendations.joinToString(", ") + ".")
-            }
-            else -> {
-                true to null
-            }
-        }
-    }
-
     fun completePeriod(allowEarlyTransition: Boolean = false) {
         val childId = selectedChild.value?.id ?: return
         val period = _uiState.value.currentPeriod ?: return
-
-        val (isValid, validationError) = validateCompletion(_uiState.value)
-
-        if (!isValid) {
-            _uiState.update {
-                it.copy(
-                    error = validationError,
-                    showEarlyTransitionDialog = false
-                )
-            }
-            return
-        }
-
-        if (!allowEarlyTransition && validationError != null) {
-            _uiState.update {
-                it.copy(
-                    error = validationError,
-                    showEarlyTransitionDialog = true
-                )
-            }
-            return
-        }
 
         viewModelScope.launch {
             _uiState.update {
@@ -441,7 +415,24 @@ class DevelopmentViewModel @Inject constructor(
                     showEarlyTransitionDialog = false
                 )
             }
-            // ... (rest of the code)
+
+            // Final Guard: Check readiness one last time before actual completion
+            val readinessResult = getPeriodReadinessUseCase(childId, period.code)
+            val readiness = readinessResult.getOrNull()
+
+            if (readiness != null) {
+                _uiState.update { it.copy(readiness = readiness) }
+                if (!readiness.isReady && !allowEarlyTransition) {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            showEarlyTransitionDialog = true,
+                            error = DomainError.UnknownError(readiness.reasons.joinToString(", "))
+                        )
+                    }
+                    return@launch
+                }
+            }
 
             // Final save if pending
             val state = _uiState.value
@@ -485,7 +476,7 @@ class DevelopmentViewModel @Inject constructor(
         }
     }
 
-    private fun waitForReport(reportId: String, childId: String) {
+    private fun waitForReport(reportId: UUID, childId: UUID) {
         viewModelScope.launch {
             _uiState.update { it.copy(isPollingReport = true) }
             pollReportStatusUseCase(reportId).collect { result ->

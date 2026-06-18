@@ -1,0 +1,14 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="80dp"
+    android:viewportWidth="200"
+    android:viewportHeight="80">
+    <!-- Це заглушка для тексту "CuraKid".
+         В Android SplashScreen API Branding Image має бути Drawable.
+         Найкраще використовувати SVG/Vector з назвою. -->
+    <group android:translateX="20" android:translateY="20">
+        <path
+            android:fillColor="#FFFFFF"
+            android:pathData="M10,40 L10,10 L30,10 L30,15 L15,15 L15,22 L28,22 L28,27 L15,27 L15,40 Z" /> <!-- Буква C (спрощена) -->
+    </group>
+</vector>

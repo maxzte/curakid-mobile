@@ -3,37 +3,34 @@
 package com.misterio.core.data.repository
 
 import android.util.Log
+import com.misterio.core.data.mapper.toDomain
+import com.misterio.core.data.mapper.toEntity
+import com.misterio.core.data.util.SyncManager
 import com.misterio.core.data.util.safeApiCall
-import androidx.room.withTransaction
-import com.misterio.curakid.core.common.AppDataStore
-import com.misterio.core.database.AppDatabase
 import com.misterio.core.database.dao.ChildDao
 import com.misterio.core.database.entity.ChildEntity
 import com.misterio.core.domain.model.Child
 import com.misterio.core.domain.model.Gender
 import com.misterio.core.domain.repository.ChildRepository
 import com.misterio.core.network.api.ChildApi
-import com.misterio.core.network.dto.ChildResponse
-import com.misterio.core.network.dto.CreateChildRequest
+import com.misterio.curakid.core.common.AppDataStore
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
 import java.time.Instant
-import java.time.LocalDate
 import java.time.ZoneId
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.coroutines.cancellation.CancellationException
 
 @Singleton
 class ChildRepositoryImpl @Inject constructor(
     private val childApi: ChildApi,
     private val childDao: ChildDao,
     private val appDataStore: AppDataStore,
-    private val database: AppDatabase,
+    private val syncManager: SyncManager,
 ) : ChildRepository {
 
     override fun getChildren(): Flow<List<Child>> {
@@ -43,7 +40,7 @@ class ChildRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getChild(childId: String): Flow<Child?> {
+    override fun getChild(childId: UUID): Flow<Child?> {
         return childDao.getChildByIdFlow(childId).map {
             Log.d(TAG, "getChild from DAO for $childId: ${it?.id}")
             it?.toDomain()
@@ -73,18 +70,19 @@ class ChildRepositoryImpl @Inject constructor(
         birthDate: Long,
         gender: Gender,
         isPremature: Boolean,
+        gestationalWeeks: Int?,
         allergies: List<String>,
         chronicDiseases: List<String>,
         pastDiseases: List<String>,
         specialFeatures: List<String>
-    ): Result<String> {
-        val tempId = UUID.randomUUID().toString()
+    ): Result<UUID> {
+        val id = UUID.randomUUID()
         val birthDateLocal = Instant.ofEpochMilli(birthDate)
             .atZone(ZoneId.systemDefault())
             .toLocalDate()
 
         val tempEntity = ChildEntity(
-            id = tempId,
+            id = id,
             name = name,
             birthDate = birthDateLocal,
             gender = gender.name,
@@ -93,109 +91,36 @@ class ChildRepositoryImpl @Inject constructor(
             chronicDiseases = chronicDiseases,
             pastDiseases = pastDiseases,
             specialFeatures = specialFeatures,
+            isSynced = false,
         )
 
-        // 1. Optimistic insert
+        // 1. Save locally first
         childDao.insertChild(tempEntity)
+        appDataStore.setOnboardingCompleted(true)
+        syncManager.scheduleSync()
 
-        val dto = CreateChildRequest(
-            name = name,
-            birthDate = birthDateLocal.toString(),
-            gender = gender.name,
-            isPremature = isPremature,
-            allergies = allergies,
-            chronicDiseases = chronicDiseases,
-            pastDiseases = pastDiseases,
-            specialFeatures = specialFeatures,
-        )
-
-        return safeApiCall { childApi.createChild(dto) }.map { createdChild ->
-            appDataStore.setOnboardingCompleted(true)
-            // 2. Replace with real ID and data atomically
-            database.withTransaction {
-                childDao.deleteChild(tempEntity)
-                childDao.insertChild(createdChild.toEntity())
-            }
-            createdChild.id
-        }
+        return Result.success(id)
     }
 
     override suspend fun updateChild(child: Child): Result<Unit> {
-        val originalEntity = childDao.getChildById(child.id)
-
         // 1. Optimistic update
-        childDao.insertChild(child.toEntity())
+        childDao.insertChild(child.toEntity().copy(isSynced = false))
+        syncManager.scheduleSync()
 
-        val dto = ChildResponse(
-            id = child.id,
-            name = child.name,
-            birthDate = child.birthDate.toString(),
-            gender = child.gender.name,
-            isPremature = child.isPremature,
-            allergies = child.allergies,
-            chronicDiseases = child.chronicDiseases,
-            pastDiseases = child.pastDiseases,
-            specialFeatures = child.specialFeatures,
-        )
-
-        return safeApiCall { childApi.updateChild(child.id, dto) }
-            .onSuccess { body ->
-                childDao.insertChild(body.toEntity())
-            }
-            .onFailure {
-                // Rollback on failure
-                originalEntity?.let { childDao.insertChild(it) }
-            }
-            .map { Unit }
+        return Result.success(Unit)
     }
 
     override fun getSelectedChild(): Flow<Child?> {
         return appDataStore.selectedChildId.flatMapLatest { id ->
             id?.let {
-                childDao.getChildByIdFlow(it).map { entity -> entity?.toDomain() }
+                childDao.getChildByIdFlow(UUID.fromString(it)).map { entity -> entity?.toDomain() }
             } ?: childDao.getAllChildren().map { entities -> entities.firstOrNull()?.toDomain() }
         }
     }
 
-    override suspend fun setSelectedChildId(id: String?) {
-        appDataStore.saveSelectedChildId(id)
+    override suspend fun setSelectedChildId(id: UUID) {
+        appDataStore.saveSelectedChildId(id.toString())
     }
-
-    private fun ChildEntity.toDomain() = Child(
-        id = id,
-        name = name,
-        birthDate = birthDate,
-        gender = Gender.valueOf(gender),
-        isPremature = isPremature,
-        allergies = allergies,
-        chronicDiseases = chronicDiseases,
-        pastDiseases = pastDiseases,
-        specialFeatures = specialFeatures,
-    )
-
-    private fun ChildResponse.toEntity() = ChildEntity(
-        id = id,
-        name = name,
-        birthDate = LocalDate.parse(birthDate),
-        gender = gender,
-        isPremature = isPremature,
-        allergies = allergies,
-        chronicDiseases = chronicDiseases,
-        pastDiseases = pastDiseases,
-        specialFeatures = specialFeatures,
-    )
-
-    private fun Child.toEntity() = ChildEntity(
-        id = id,
-        name = name,
-        birthDate = birthDate,
-        gender = gender.name,
-        isPremature = isPremature,
-        allergies = allergies,
-        chronicDiseases = chronicDiseases,
-        pastDiseases = pastDiseases,
-        specialFeatures = specialFeatures,
-    )
 
     private companion object {
         private const val TAG = "ChildRepository"

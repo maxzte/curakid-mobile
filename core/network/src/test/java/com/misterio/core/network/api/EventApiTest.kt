@@ -33,16 +33,18 @@ class EventApiTest : BaseApiTest<EventApi>() {
 
     @Test
     fun `createEvent sends correct body`() = runTest {
+        val id = UUID.randomUUID()
         val childId = UUID.randomUUID()
         val eventRequest = EventRequest(
+            id = id,
+            childId = childId,
             title = "Vaccine",
             type = EventType.VACCINE,
             date = "2024-01-01T10:00:00",
-            childId = childId.toString()
         )
         
         enqueueResponse("""
-            {"id": "${UUID.randomUUID()}", "title": "Vaccine", "childId": "$childId", "type": "VACCINE", "date": "2024-01-01T10:00:00", "status": "SCHEDULED"}
+            {"id": "$id", "title": "Vaccine", "childId": "$childId", "type": "VACCINE", "date": "2024-01-01T10:00:00", "status": "SCHEDULED"}
         """.trimIndent())
 
         val response = api.createEvent(childId, eventRequest)

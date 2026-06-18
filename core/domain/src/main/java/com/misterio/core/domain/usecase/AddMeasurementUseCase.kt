@@ -1,13 +1,14 @@
 package com.misterio.core.domain.usecase
 
 import com.misterio.core.domain.repository.MeasurementRepository
+import java.util.UUID
 import javax.inject.Inject
 
 class AddMeasurementUseCase @Inject constructor(
     private val repository: MeasurementRepository
 ) {
     suspend operator fun invoke(
-        childId: String,
+        childId: UUID,
         weight: Double?,
         height: Double?,
         headCirc: Double?,

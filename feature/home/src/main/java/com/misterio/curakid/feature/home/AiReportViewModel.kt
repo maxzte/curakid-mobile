@@ -16,16 +16,17 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import java.util.UUID
 
 @HiltViewModel(assistedFactory = AiReportViewModel.Factory::class)
 class AiReportViewModel @AssistedInject constructor(
-    @Assisted private val reportId: String,
+    @Assisted private val reportId: UUID,
     private val getAiReportByIdUseCase: GetAiReportByIdUseCase,
 ) : ViewModel() {
 
     @AssistedFactory
     interface Factory {
-        fun create(reportId: String): AiReportViewModel
+        fun create(reportId: UUID): AiReportViewModel
     }
 
     val uiState = getAiReportByIdUseCase(reportId)

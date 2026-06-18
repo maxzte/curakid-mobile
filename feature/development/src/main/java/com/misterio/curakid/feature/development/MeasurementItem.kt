@@ -17,7 +17,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.misterio.core.domain.model.Measurement
 import com.misterio.core.ui.theme.CurakidTheme
-import com.misterio.feature.development.R
 import java.time.format.DateTimeFormatter
 
 @Composable

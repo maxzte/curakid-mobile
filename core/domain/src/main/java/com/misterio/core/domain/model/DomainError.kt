@@ -7,6 +7,7 @@ sealed class DomainError(message: String, cause: Throwable? = null) : Throwable(
     class ServerError(message: String = "Помилка сервера. Спробуйте пізніше", cause: Throwable? = null) : DomainError(message, cause)
     class AuthenticationError(message: String = "Сесія закінчилася", cause: Throwable? = null) : DomainError(message, cause)
     class NotFoundError(message: String = "Ресурс не знайдено", cause: Throwable? = null) : DomainError(message, cause)
+    class BadRequestError(message: String = "Некоректний запит", cause: Throwable? = null) : DomainError(message, cause)
     class UnknownError(message: String = "Виникла непередбачувана помилка", cause: Throwable? = null) : DomainError(message, cause)
 
     companion object {

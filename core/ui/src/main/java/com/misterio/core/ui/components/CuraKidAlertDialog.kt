@@ -18,6 +18,32 @@ fun CuraKidAlertDialog(
     dismissButtonText: String = "Скасувати",
     confirmButtonColor: Color = Color(0xFF6200EE)
 ) {
+    CuraKidAlertDialog(
+        onDismissRequest = onDismissRequest,
+        onConfirm = onConfirm,
+        title = title,
+        confirmButtonText = confirmButtonText,
+        dismissButtonText = dismissButtonText,
+        confirmButtonColor = confirmButtonColor,
+        content = {
+            Text(
+                text = text,
+                style = MaterialTheme.typography.bodyMedium
+            )
+        }
+    )
+}
+
+@Composable
+fun CuraKidAlertDialog(
+    onDismissRequest: () -> Unit,
+    onConfirm: () -> Unit,
+    title: String,
+    confirmButtonText: String = "Підтвердити",
+    dismissButtonText: String = "Скасувати",
+    confirmButtonColor: Color = Color(0xFF6200EE),
+    content: @Composable () -> Unit
+) {
     AlertDialog(
         onDismissRequest = onDismissRequest,
         title = {
@@ -26,12 +52,7 @@ fun CuraKidAlertDialog(
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
             )
         },
-        text = {
-            Text(
-                text = text,
-                style = MaterialTheme.typography.bodyMedium
-            )
-        },
+        text = content,
         confirmButton = {
             TextButton(onClick = onConfirm) {
                 Text(

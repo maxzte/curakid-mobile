@@ -16,30 +16,31 @@ interface EventApi {
     suspend fun getEvents(@Path("childId") childId: UUID): Response<List<EventResponse>>
 
     @GET("$prefix/vaccines")
-    suspend fun getVaccineEventsFor(@Path("childId") childId: String): Response<List<VaccineEventResponse>>
+    suspend fun getVaccineEventsFor(@Path("childId") childId: UUID): Response<List<VaccineEventResponse>>
 
     @GET("$prefix/{eventId}")
     suspend fun getEvent(
         @Path("childId") childId: UUID,
-        @Path("eventId") eventId: UUID
+        @Path("eventId") eventId: UUID,
     ): Response<EventResponse>
 
     @POST(prefix)
     suspend fun createEvent(
         @Path("childId") childId: UUID,
-        @Body event: EventRequest
+        @Body event: EventRequest,
     ): Response<EventResponse>
 
     @POST("$prefix/batch")
     suspend fun createEvents(
-        @Path("childId") childId: UUID, @Body events: List<EventRequest>
+        @Path("childId") childId: UUID,
+        @Body events: List<EventRequest>,
     ): Response<List<EventResponse>>
 
     @PUT("$prefix/{eventId}")
     suspend fun updateEvent(
         @Path("childId") childId: UUID,
         @Path("eventId") eventId: UUID,
-        @Body event: UpdateEventRequest
+        @Body event: UpdateEventRequest,
     ): Response<EventResponse>
 
     @DELETE("$prefix/{eventId}")

@@ -3,6 +3,7 @@ package com.misterio.core.network.dto
 import java.util.UUID
 
 data class ChatRequest(
+    val id: UUID,
     val childId: UUID,
     val text: String
 )

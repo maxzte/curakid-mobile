@@ -1,6 +1,6 @@
 package com.misterio.core.domain.model
 
-enum class ChartType { WFA, HFA, BMI, HCFA, WFH }
+enum class ChartType { WFA, HFA, BMI, HCFA, WFH, WFL }
 
 data class ChartNormPoint(
     val x: Double, // age in days OR height in cm (for WFH)

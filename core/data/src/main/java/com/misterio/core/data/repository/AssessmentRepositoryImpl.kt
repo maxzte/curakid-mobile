@@ -1,9 +1,10 @@
 package com.misterio.core.data.repository
 
 import android.util.Log
-import com.misterio.core.data.util.safeApiCall
 import com.misterio.core.data.mapper.toDomain
 import com.misterio.core.data.mapper.toEntity
+import com.misterio.core.data.util.SyncManager
+import com.misterio.core.data.util.safeApiCall
 import com.misterio.core.database.dao.AssessmentDao
 import com.misterio.core.database.dao.LifePeriodDao
 import com.misterio.core.database.entity.ChildSkillAssessmentEntity
@@ -11,6 +12,7 @@ import com.misterio.core.domain.model.Answer
 import com.misterio.core.domain.model.AssessmentAnswer
 import com.misterio.core.domain.model.ChildAssessment
 import com.misterio.core.domain.model.CompletePeriodResult
+import com.misterio.core.domain.model.PeriodReadiness
 import com.misterio.core.domain.repository.AssessmentRepository
 import com.misterio.core.network.api.AssessmentApi
 import com.misterio.core.network.dto.AnswerRequest
@@ -19,29 +21,28 @@ import com.misterio.core.network.dto.SaveAnswersRequest
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
-import java.time.LocalDate
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.time.Clock
-import kotlin.time.Instant
 
 @Singleton
 class AssessmentRepositoryImpl @Inject constructor(
     private val api: AssessmentApi,
     private val dao: AssessmentDao,
     private val lifePeriodDao: LifePeriodDao,
+    private val syncManager: SyncManager,
 ) : AssessmentRepository {
 
     override fun getChildAssessments(
-        childId: String
+        childId: UUID
     ): Flow<List<ChildAssessment>> {
         return dao.getChildAssessments(childId).map { entities ->
             entities.map { it.toDomain() }
         }
     }
 
-    override suspend fun syncChildAssessments(childId: String): Result<Unit> {
+    override suspend fun syncChildAssessments(childId: UUID): Result<Unit> {
         return safeApiCall { api.getAssessments(childId) }.map { body ->
             Log.d(TAG, "Syncing $body assessments for child $childId")
             if (body.isNotEmpty()) {
@@ -54,9 +55,16 @@ class AssessmentRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun getPeriodReadiness(
+        childId: UUID,
+        periodCode: String
+    ): Result<PeriodReadiness> {
+        return safeApiCall { api.getReadiness(childId, periodCode) }.map { it.toDomain() }
+    }
+
     override suspend fun saveAnswerForChild(
-        periodId: String,
-        childId: String,
+        periodId: UUID,
+        childId: UUID,
         answer: Answer
     ): Result<ChildAssessment> {
         // 1. Try to reconstruct answers to avoid flickering
@@ -64,7 +72,7 @@ class AssessmentRepositoryImpl @Inject constructor(
             list.find { it.id == periodId }
         }.firstOrNull()
 
-        val lifePeriodEntity = lifePeriodDao.getLifePeriodByCode(periodId).firstOrNull()
+        val lifePeriodEntity = lifePeriodDao.getLifePeriodById(periodId).firstOrNull()
         val lifePeriod = lifePeriodEntity?.toDomain()
 
         val tempAnswers = existingAssessment?.answers?.toMutableList() ?: mutableListOf()
@@ -75,7 +83,7 @@ class AssessmentRepositoryImpl @Inject constructor(
             tempAnswers.removeAll { it.question?.id == answer.questionId }
             tempAnswers.add(
                 AssessmentAnswer(
-                    id = UUID.randomUUID().toString(),
+                    id = UUID.randomUUID(),
                     question = question,
                     selectedOption = option,
                     answeredAt = Clock.System.now()
@@ -92,6 +100,7 @@ class AssessmentRepositoryImpl @Inject constructor(
             isSynced = false
         )
         dao.insertChildAssessment(tempEntity)
+        syncManager.scheduleSync()
 
         return safeApiCall {
             val request = SaveAnswersRequest(answers = listOf(answer.toDto()))
@@ -100,20 +109,23 @@ class AssessmentRepositoryImpl @Inject constructor(
             val savedDto = body.last()
             dao.insertChildAssessment(savedDto.toEntity())
             savedDto.toDomain()
+        }.recover {
+            tempEntity.toDomain()
         }
     }
 
     override suspend fun updateAnswerForChild(
-        childId: String,
-        skillAssessmentId: String,
+        childId: UUID,
+        skillAssessmentId: UUID,
         answer: Answer
     ): Result<ChildAssessment> {
         val originalEntity = dao.getChildAssessmentById(skillAssessmentId)
         
         // Optimistic update
+        var tempAssessment: ChildAssessment? = null
         originalEntity?.let { entity ->
             val updatedAnswers = entity.answers.toMutableList()
-            val lifePeriodEntity = lifePeriodDao.getLifePeriodByCode(entity.id).firstOrNull()
+            val lifePeriodEntity = lifePeriodDao.getLifePeriodById(entity.id).firstOrNull()
             val lifePeriod = lifePeriodEntity?.toDomain()
             val question = lifePeriod?.questions?.find { it.id == answer.questionId }
             val option = question?.options?.find { it.id == answer.selectedOptionId }
@@ -122,13 +134,16 @@ class AssessmentRepositoryImpl @Inject constructor(
                 updatedAnswers.removeAll { it.question?.id == answer.questionId }
                 updatedAnswers.add(
                     AssessmentAnswer(
-                        id = UUID.randomUUID().toString(),
+                        id = UUID.randomUUID(),
                         question = question,
                         selectedOption = option,
                         answeredAt = Clock.System.now()
                     )
                 )
-                dao.insertChildAssessment(entity.copy(answers = updatedAnswers, isSynced = false))
+                val updatedEntity = entity.copy(answers = updatedAnswers, isSynced = false)
+                dao.insertChildAssessment(updatedEntity)
+                tempAssessment = updatedEntity.toDomain()
+                syncManager.scheduleSync()
             }
         }
 
@@ -137,13 +152,17 @@ class AssessmentRepositoryImpl @Inject constructor(
                 dao.insertChildAssessment(updatedDto.toEntity())
             }
             .onFailure {
-                originalEntity?.let { dao.insertChildAssessment(it) }
+                // If it's a real failure (not offline), maybe rollback or keep as unsynced
+                // For now, we keep it as unsynced locally
             }
             .map { it.toDomain() }
+            .recover {
+                tempAssessment ?: throw it
+            }
     }
 
     override suspend fun completePeriod(
-        childId: String,
+        childId: UUID,
         periodCode: String,
         allowEarlyTransition: Boolean
     ): Result<CompletePeriodResult> {

@@ -45,7 +45,6 @@ fun SettingsScreen(
 ) {
     val context = LocalContext.current
     val viewModel: SettingsViewModel = hiltViewModel()
-    val isAppEnabled by viewModel.isAppEnabled.collectAsState()
     val isNotificationsEnabled by viewModel.isNotificationsEnabled.collectAsState()
     val isPasscodeEnabled by viewModel.isPasscodeEnabled.collectAsState()
     val showDeleteDialog by viewModel.showDeleteDialog.collectAsState()
@@ -118,32 +117,6 @@ fun SettingsScreen(
                 )
             }
 
-            HorizontalDivider(thickness = 0.5.dp, color = CurakidTheme.colors.outlineVariant)
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "Активність застосунку",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium
-                    )
-                    Text(
-                        text = "Призупиняє аналіз розвитку та персоналізовані поради",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Switch(
-                    checked = isAppEnabled,
-                    onCheckedChange = { viewModel.setAppEnabled(it) }
-                )
-            }
-            
             HorizontalDivider(thickness = 0.5.dp, color = CurakidTheme.colors.outlineVariant)
 
             Row(

@@ -1,17 +1,18 @@
 package com.misterio.curakid.feature.calendar.worker
 
 import android.content.Context
-import androidx.work.Data
+import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
-import com.misterio.curakid.core.common.SettingsManager
 import com.misterio.core.domain.model.Event
 import com.misterio.core.domain.util.EventNotificationScheduler
+import com.misterio.curakid.core.common.SettingsManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.first
 import java.time.Duration
 import java.time.LocalDateTime
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -22,7 +23,7 @@ class EventNotificationSchedulerImpl @Inject constructor(
 ) : EventNotificationScheduler {
     override suspend fun schedule(event: Event) {
         val isEnabled = settingsManager.isNotificationsEnabled.first()
-        if (isEnabled == false) return
+        if (!isEnabled) return
 
         val eventDateTime = event.date
         val delay = Duration.between(LocalDateTime.now(), eventDateTime)
@@ -32,17 +33,20 @@ class EventNotificationSchedulerImpl @Inject constructor(
         val workRequest = OneTimeWorkRequestBuilder<EventNotificationWorker>()
             .setInitialDelay(delay)
             .setInputData(
-                Data.Builder()
-                    .putString(EventNotificationWorker.KEY_EVENT_TITLE, event.title)
-                    .putString(
-                        EventNotificationWorker.KEY_EVENT_DESCRIPTION,
-                        event.description ?: ""
-                    )
-                    .build()
+                workDataOf(
+                    EventNotificationWorker.KEY_EVENT_TITLE to event.title,
+                    EventNotificationWorker.KEY_EVENT_ID to event.id.toString(),
+                    EventNotificationWorker.KEY_EVENT_DESCRIPTION to (event.description ?: "")
+                )
             )
+            .addTag("event_${event.id}")
             .build()
 
-        WorkManager.getInstance(context).enqueue(workRequest)
+        WorkManager.getInstance(context).enqueueUniqueWork(
+            "event_notification_${event.id}",
+            ExistingWorkPolicy.REPLACE,
+            workRequest
+        )
     }
 
     override suspend fun schedule(events: List<Event>) {
@@ -52,34 +56,37 @@ class EventNotificationSchedulerImpl @Inject constructor(
         val now = LocalDateTime.now()
         val workManager = WorkManager.getInstance(context)
 
-        val workRequests = events.mapNotNull { event ->
+        events.forEach { event ->
             val delay = Duration.between(now, event.date)
 
             // Пропускаємо події, що вже минули
-            if (delay.isNegative) return@mapNotNull null
+            if (delay.isNegative) return@forEach
 
-            OneTimeWorkRequestBuilder<EventNotificationWorker>()
+            val workRequest = OneTimeWorkRequestBuilder<EventNotificationWorker>()
                 .setInitialDelay(delay)
                 .setInputData(
                     workDataOf(
                         EventNotificationWorker.KEY_EVENT_TITLE to event.title,
+                        EventNotificationWorker.KEY_EVENT_ID to event.id.toString(),
                         EventNotificationWorker.KEY_EVENT_DESCRIPTION to (event.description ?: "")
                     )
                 )
                 .addTag("event_${event.id}")
                 .build()
-        }
 
-        if (workRequests.isNotEmpty()) {
-            workManager.enqueue(workRequests)
+            workManager.enqueueUniqueWork(
+                "event_notification_${event.id}",
+                ExistingWorkPolicy.REPLACE,
+                workRequest
+            )
         }
     }
 
-    override suspend fun cancel(eventId: String) {
+    override suspend fun cancel(eventId: UUID) {
         WorkManager.getInstance(context).cancelAllWorkByTag("event_$eventId")
     }
 
-    override suspend fun cancelAll(childId: String) {
+    override suspend fun cancelAll(childId: UUID) {
         // У цьому випадку ми можемо або додавати тег дитини до всіх воркерів, 
         // або скасувати всі за тегами івентів. Але зазвичай достатньо скасувати конкретні.
         // Якщо потрібно скасувати все для дитини, варто було б додавати тег childId при плануванні.

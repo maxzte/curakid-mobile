@@ -31,8 +31,9 @@ class ChatApiTest : BaseApiTest<ChatApi>() {
 
     @Test
     fun `streamChat sends correct POST body`() = runTest {
+        val id = UUID.randomUUID()
         val childId = UUID.randomUUID()
-        val chatRequest = ChatRequest(childId, "My question")
+        val chatRequest = ChatRequest(id, childId, "My question")
         
         enqueueResponse("streaming response")
 

@@ -5,20 +5,21 @@ import com.misterio.core.domain.model.ChartType
 import com.misterio.core.domain.model.Gender
 import com.misterio.core.domain.model.Measurement
 import kotlinx.coroutines.flow.Flow
+import java.util.UUID
 
 interface MeasurementRepository {
 
-    fun getMeasurementsForChild(childId: String): Flow<List<Measurement>>
+    fun getMeasurementsForChild(childId: UUID): Flow<List<Measurement>>
 
     suspend fun getMeasurementNorms(
         chartType: ChartType,
         gender: Gender
     ): Result<List<ChartNormPoint>>
 
-    suspend fun syncMeasurementsForChild(childId: String, force: Boolean = false): Result<Unit>
+    suspend fun syncMeasurementsForChild(childId: UUID, force: Boolean = false): Result<Unit>
 
     suspend fun addMeasurement(
-        childId: String,
+        childId: UUID,
         weight: Double?,
         height: Double?,
         headCirc: Double?,

@@ -1,6 +1,7 @@
 package com.misterio.core.domain.util
 
 import com.misterio.core.domain.model.Event
+import java.util.UUID
 
 interface EventNotificationScheduler {
 
@@ -8,8 +9,8 @@ interface EventNotificationScheduler {
 
     suspend fun schedule(events: List<Event>)
 
-    suspend fun cancel(eventId: String)
+    suspend fun cancel(eventId: UUID)
 
-    suspend fun cancelAll(childId: String)
+    suspend fun cancelAll(childId: UUID)
 
 }

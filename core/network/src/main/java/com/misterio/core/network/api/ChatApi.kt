@@ -4,6 +4,7 @@ import com.misterio.core.network.dto.ChatMessageResponse
 import com.misterio.core.network.dto.ChatRequest
 import okhttp3.ResponseBody
 import retrofit2.Call
+import retrofit2.Response
 import retrofit2.http.Body
 import retrofit2.http.GET
 import retrofit2.http.POST
@@ -18,18 +19,18 @@ interface ChatApi {
      */
     @GET("/api/chat/history/{childId}")
     suspend fun getChatHistory(
-        @Path("childId") childId: UUID
-    ): List<ChatMessageResponse>
+        @Path("childId") childId: UUID,
+    ): Response<List<ChatMessageResponse>>
+
     /**
      * Відправка повідомлення та отримання відповіді у форматі Server-Sent Events (SSE).
      * Анотація @Streaming важлива, щоб OkHttp не намагався завантажити всю відповідь
      * у пам'ять до її завершення.
      */
-
     @Streaming
     @POST("/api/chat/stream")
     fun streamChat(
-        @Body request: ChatRequest
+        @Body request: ChatRequest,
     ): Call<ResponseBody>
 
 }

@@ -48,10 +48,11 @@ import com.misterio.core.ui.components.LoadingScreen
 import com.misterio.core.ui.components.rememberListContentPadding
 import com.misterio.core.ui.theme.CurakidTheme
 import com.misterio.core.ui.toFormatted
+import java.util.UUID
 
 @Composable
 fun VaccinationDetailScreen(
-    vaccineEventId: String,
+    vaccineEventId: UUID,
     onBack: () -> Unit,
 ) {
     val viewModel: VaccineDetailsViewModel =

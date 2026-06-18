@@ -70,6 +70,7 @@ import com.misterio.core.ui.theme.CuraKidColors
 import com.misterio.core.ui.theme.CurakidTheme
 import com.misterio.core.ui.toFormatted
 import kotlinx.coroutines.launch
+import java.util.UUID
 
 
 data class Exercise(
@@ -124,11 +125,11 @@ fun sampleTips() = listOf(
 
 @Composable
 fun HomeScreen(
-    onEventClick: (eventId: String) -> Unit,
-    onVaccinationClick: (vaccinationId: String) -> Unit,
+    onEventClick: (eventId: UUID) -> Unit,
+    onVaccinationClick: (vaccinationId: UUID) -> Unit,
     onShowAllUpcoming: () -> Unit,
     onChatClick: () -> Unit,
-    onAiReportClick: (reportId: String) -> Unit,
+    onAiReportClick: (reportId: UUID) -> Unit,
 ) {
     val viewModel: HomeViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsState()
@@ -168,11 +169,11 @@ private fun HomeContent(
     upcomingList: List<Event> = emptyList(),
     aiReports: List<LifePeriodAiReport> = emptyList(),
     onItemClick: (Event) -> Unit = {},
-    onEventClick: (eventId: String) -> Unit,
-    onVaccinationClick: (String) -> Unit,
+    onEventClick: (eventId: UUID) -> Unit,
+    onVaccinationClick: (UUID) -> Unit,
     onShowAllUpcoming: () -> Unit,
     onChatClick: () -> Unit = {},
-    onAiReportClick: (String) -> Unit = {},
+    onAiReportClick: (UUID) -> Unit = {},
 ) {
     val owner = LocalViewModelStoreOwner.current
 
@@ -252,8 +253,8 @@ fun HomePreview() {
 private fun HeroCardsPager(
     vaccination: Event.Vaccine?,
     doctorVisit: Event?,
-    onVaccinationClick: (String) -> Unit,
-    onDoctorVisitClick: (String) -> Unit
+    onVaccinationClick: (UUID) -> Unit,
+    onDoctorVisitClick: (UUID) -> Unit
 ) {
     val items = listOfNotNull(vaccination, doctorVisit)
     if (items.isEmpty()) return
@@ -674,7 +675,7 @@ private fun ExerciseCard(exercise: Exercise, onClick: () -> Unit) {
 }
 
 @Composable
-private fun AiReportsRow(reports: List<LifePeriodAiReport>, onItemClick: (String) -> Unit) {
+private fun AiReportsRow(reports: List<LifePeriodAiReport>, onItemClick: (UUID) -> Unit) {
     LazyRow(
         horizontalArrangement = Arrangement.spacedBy(CurakidTheme.paddings.small),
         contentPadding = PaddingValues(horizontal = CurakidTheme.paddings.medium)

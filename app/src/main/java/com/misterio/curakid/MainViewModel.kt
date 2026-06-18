@@ -5,23 +5,23 @@ package com.misterio.curakid
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.misterio.core.domain.repository.ConnectivityRepository
 import com.misterio.curakid.core.common.AppDataStore
 import com.misterio.curakid.core.common.PasscodeMode
 import com.misterio.curakid.core.common.SecurityManager
 import com.misterio.curakid.core.common.TokenManager
 import com.misterio.curakid.core.common.TokenState
-import com.misterio.core.domain.repository.ConnectivityRepository
-import com.misterio.core.domain.usecase.RefreshTokenUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
@@ -35,6 +35,23 @@ class MainViewModel @Inject constructor(
     val isConnected = connectivityRepository.isConnected
 
     private val passcodeUnlocked = MutableStateFlow(false)
+
+    private val _pendingEventId = MutableStateFlow<UUID?>(null)
+    val pendingEventId = _pendingEventId.asStateFlow()
+
+    fun setPendingEventId(eventId: String?) {
+        eventId?.let {
+            try {
+                _pendingEventId.value = UUID.fromString(it)
+            } catch (e: Exception) {
+                Log.e(TAG, "Invalid eventId: $it", e)
+            }
+        }
+    }
+
+    fun clearPendingEventId() {
+        _pendingEventId.value = null
+    }
 
     val startDestination: StateFlow<Route?> =
         combine(

@@ -43,7 +43,7 @@ import java.util.UUID
 
 @HiltViewModel(assistedFactory = CalendarViewModel.Factory::class)
 class CalendarViewModel @AssistedInject constructor(
-    @Assisted("eventId") private val eventId: String?,
+    @Assisted("eventId") private val eventId: UUID?,
     getChildUseCase: GetChildUseCase,
     private val syncEventsUseCase: SyncEventsUseCase,
     private val getEventsUseCase: GetEventsUseCase,
@@ -89,7 +89,7 @@ class CalendarViewModel @AssistedInject constructor(
 
     @AssistedFactory
     interface Factory {
-        fun create(@Assisted("eventId") eventId: String?): CalendarViewModel
+        fun create(@Assisted("eventId") eventId: UUID?): CalendarViewModel
     }
 
     init {
@@ -113,11 +113,17 @@ class CalendarViewModel @AssistedInject constructor(
         }
     }
 
-    fun loadAndEditEvent(eventId: String) {
+    fun loadAndEditEvent(eventId: UUID) {
         viewModelScope.launch {
             allEvents.collectLatest { events ->
                 if (eventIdHandled) return@collectLatest
-                events.find { it.id == eventId }?.let { onEditEvent(it) }
+                events.find { it.id == eventId }?.let { event ->
+                    eventIdHandled = true
+                    val eventDate = event.date.toLocalDate()
+                    _selectedDate.update { eventDate }
+                    _selectedMonth.update { eventDate.withDayOfMonth(1) }
+                    onEditEvent(event)
+                }
             }
         }
     }
@@ -265,7 +271,7 @@ class CalendarViewModel @AssistedInject constructor(
             }
 
         val event = Event.General(
-            id = form.id ?: UUID.randomUUID().toString(),
+            id = form.id ?: UUID.randomUUID(),
             title = form.title,
             type = form.type,
             date = form.date,

@@ -3,27 +3,26 @@ package com.misterio.curakid.navigation
 import androidx.navigation3.runtime.EntryProviderScope
 import androidx.navigation3.runtime.NavKey
 import com.misterio.curakid.Route
+import com.misterio.curakid.core.common.PasscodeMode
 import com.misterio.curakid.feature.calendar.CalendarScreen
+import com.misterio.curakid.feature.chat.ChatScreen
 import com.misterio.curakid.feature.development.ChildDetailsScreen
 import com.misterio.curakid.feature.development.DevelopmentScreen
+import com.misterio.curakid.feature.home.AiReportScreen
 import com.misterio.curakid.feature.home.HomeScreen
 import com.misterio.curakid.feature.home.UpcomingEventsScreen
 import com.misterio.curakid.feature.home.VaccinationDetailScreen
 import com.misterio.curakid.feature.profile.AddChildScreen
 import com.misterio.curakid.feature.profile.ProfileScreen
 import com.misterio.curakid.feature.profile.SettingsScreen
-import com.misterio.curakid.feature.home.AiReportScreen
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
-import com.misterio.curakid.core.common.PasscodeMode
-import com.misterio.curakid.feature.home.ChatScreen
-import com.misterio.curakid.feature.home.HomeViewModel
+import java.util.UUID
 
 fun EntryProviderScope<NavKey>.homeEntry(
-    onEventClick: (String) -> Unit,
-    onVaccinationClick: (String) -> Unit,
+    onEventClick: (UUID) -> Unit,
+    onVaccinationClick: (UUID) -> Unit,
     onShowAllUpcoming: () -> Unit,
     onChatClick: () -> Unit,
-    onAiReportClick: (String) -> Unit,
+    onAiReportClick: (UUID) -> Unit,
     onBack: () -> Unit,
 ) {
     entry<Route.HomeRoot> {
@@ -48,17 +47,15 @@ fun EntryProviderScope<NavKey>.homeEntry(
         )
     }
     entry<Route.UpcomingEvents> {
-        val viewModel: HomeViewModel = hiltViewModel()
         UpcomingEventsScreen(
             onEventClick = onEventClick,
             onBack = onBack,
-            viewModel = viewModel
         )
     }
 }
 
 fun EntryProviderScope<NavKey>.calendarEntry(
-    onVaccinationClick: (String) -> Unit,
+    onVaccinationClick: (UUID) -> Unit,
     onChatClick: () -> Unit,
 ) {
     entry<Route.CalendarRoot> {

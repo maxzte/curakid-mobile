@@ -1,10 +1,12 @@
 package com.misterio.core.domain.model
 
+import com.misterio.core.domain.util.UUIDSerializer
 import kotlinx.serialization.Serializable
+import java.util.UUID
 
 @Serializable
 data class Question(
-    val id: String,
+    @Serializable(UUIDSerializer::class) val id: UUID,
     val text: String,
     val domain: String,
     val weight: Double,
@@ -13,7 +15,7 @@ data class Question(
 
 @Serializable
 data class Option(
-    val id: String,
+    @Serializable(UUIDSerializer::class) val id: UUID,
     val text: String,
     val value: Double,
     val displayOrder: Int,

@@ -36,19 +36,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.misterio.core.domain.UiState
 import com.misterio.core.domain.model.Event
 import com.misterio.core.domain.model.EventType
 import com.misterio.core.ui.components.LoadingScreen
 import com.misterio.core.ui.theme.CurakidTheme
 import com.misterio.core.ui.toFormatted
+import java.util.UUID
 
 @Composable
 fun UpcomingEventsScreen(
-    onEventClick: (String) -> Unit,
+    onEventClick: (UUID) -> Unit,
     onBack: () -> Unit,
-    viewModel: HomeViewModel
 ) {
+    val viewModel: HomeViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
@@ -91,7 +93,7 @@ fun UpcomingEventsScreen(
 @Composable
 private fun UpcomingEventsContent(
     events: List<Event>,
-    onEventClick: (String) -> Unit,
+    onEventClick: (UUID) -> Unit,
     modifier: Modifier = Modifier
 ) {
     LazyColumn(

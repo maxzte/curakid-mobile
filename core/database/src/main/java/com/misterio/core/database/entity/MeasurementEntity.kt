@@ -6,6 +6,7 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.util.UUID
 
 @Entity(
     tableName = "measurements",
@@ -20,10 +21,10 @@ import java.time.LocalDateTime
     indices = [Index(value = ["childId"])]
 )
 data class MeasurementEntity(
-    @PrimaryKey val id: String,
-    val childId: String,
+    @PrimaryKey val id: UUID,
+    val childId: UUID,
     val measurementDate: LocalDateTime,
-    val aiReportId: String?,
+    val aiReportId: UUID?,
 
     val weightKg: Double?,
     val heightCm: Double?,

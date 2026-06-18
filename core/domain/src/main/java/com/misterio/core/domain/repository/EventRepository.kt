@@ -3,23 +3,24 @@ package com.misterio.core.domain.repository
 import com.misterio.core.domain.model.Event
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDateTime
+import java.util.UUID
 
 interface EventRepository {
 
-    fun getEvents(childId: String): Flow<List<Event>>
+    fun getEvents(childId: UUID): Flow<List<Event>>
 
-    fun getEventById(eventId: String): Flow<Event?>
+    fun getEventById(eventId: UUID): Flow<Event?>
 
-    fun getEventsByDate(childId: String, date: LocalDateTime): Flow<List<Event>>
+    fun getEventsByDate(childId: UUID, date: LocalDateTime): Flow<List<Event>>
 
-    suspend fun addEvent(childId: String, event: Event): Result<Unit>
+    suspend fun addEvent(childId: UUID, event: Event): Result<Unit>
 
-    suspend fun addEvents(childId: String, events: List<Event>): Result<Unit>
+    suspend fun addEvents(childId: UUID, events: List<Event>): Result<Unit>
 
-    suspend fun updateEvent(childId: String, event: Event): Result<Unit>
+    suspend fun updateEvent(childId: UUID, event: Event): Result<Unit>
 
-    suspend fun deleteEvent(eventId: String): Result<Unit>
+    suspend fun deleteEvent(eventId: UUID): Result<Unit>
 
-    suspend fun syncEvents(childId: String): Result<Unit>
+    suspend fun syncEvents(childId: UUID): Result<Unit>
 
 }

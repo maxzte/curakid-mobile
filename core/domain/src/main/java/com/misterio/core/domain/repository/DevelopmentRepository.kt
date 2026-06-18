@@ -7,8 +7,6 @@ interface DevelopmentRepository {
 
     fun getLifePeriods(): Flow<List<LifePeriod>>
 
-    fun getLifePeriod(code: String): Flow<LifePeriod?>
-
     suspend fun syncLifePeriods(): Result<Unit>
 
 }

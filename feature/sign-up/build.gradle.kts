@@ -8,7 +8,7 @@ plugins {
 }
 
 android {
-    namespace = "com.misterio.feature.signup"
+    namespace = "com.misterio.curakid.feature.signup"
     compileSdk = 37
 
     buildFeatures {

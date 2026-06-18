@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.misterio.feature.home"
+    namespace = "com.misterio.curakid.feature.home"
     compileSdk = 37
 
     defaultConfig {

@@ -90,7 +90,6 @@ import com.misterio.core.ui.components.ScreenHeader
 import com.misterio.core.ui.components.SectionHeader
 import com.misterio.core.ui.components.rememberListContentPadding
 import com.misterio.core.ui.theme.CurakidTheme
-import com.misterio.feature.calendar.R
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -100,11 +99,12 @@ import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
+import java.util.UUID
 
 @Composable
 fun CalendarScreen(
-    eventId: String? = null,
-    onVaccinationClick: (String) -> Unit = {},
+    eventId: UUID? = null,
+    onVaccinationClick: (UUID) -> Unit = {},
     onChatClick: () -> Unit = {},
 ) {
     val viewModelKey = "$eventId"
@@ -342,6 +342,10 @@ private fun CalendarScreenContent(
                     }
                 }
             }
+        }
+
+        item {
+            Spacer(Modifier.height(80.dp))
         }
     }
 }

@@ -23,7 +23,6 @@ import com.misterio.core.domain.model.Child
 import com.misterio.core.ui.components.CuraKidAlertDialog
 import com.misterio.core.ui.components.CuraKidButton
 import com.misterio.core.ui.components.RulerSlider
-import com.misterio.feature.development.R
 import java.util.Locale
 import kotlin.math.floor
 import kotlin.math.round
@@ -36,7 +35,6 @@ fun MeasurementActionSelectionSheet(
 ) {
     ModalBottomSheet(
         onDismissRequest = onDismiss,
-        containerColor = Color.White
     ) {
         Column(
             modifier = Modifier
@@ -50,21 +48,22 @@ fun MeasurementActionSelectionSheet(
             )
 
             ListItem(
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                 headlineContent = { Text("Вага та зріст") },
                 leadingContent = {
                     Icon(
                         Icons.Default.MonitorWeight,
                         contentDescription = null,
-                        tint = Color(0xFF6200EE)
                     )
                 },
                 modifier = Modifier.clickable { onWeightHeightClick() }
             )
 
             ListItem(
+                colors = ListItemDefaults.colors(containerColor = Color.Transparent),
                 headlineContent = { Text("Обвід голови") },
                 leadingContent = {
-                    Icon(Icons.Default.Face, contentDescription = null, tint = Color(0xFF6200EE))
+                    Icon(Icons.Default.Face, contentDescription = null)
                 },
                 modifier = Modifier.clickable { onHeadCircClick() }
             )
@@ -123,7 +122,6 @@ fun AddMeasurementBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = Color.White
     ) {
         Column(
             modifier = Modifier
@@ -273,7 +271,6 @@ fun AddHeadCircBottomSheet(
     ModalBottomSheet(
         onDismissRequest = onDismiss,
         sheetState = sheetState,
-        containerColor = Color.White
     ) {
         Column(
             modifier = Modifier

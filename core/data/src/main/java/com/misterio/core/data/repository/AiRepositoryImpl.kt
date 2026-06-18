@@ -1,21 +1,20 @@
 package com.misterio.core.data.repository
 
+import com.misterio.core.data.mapper.toDomain
+import com.misterio.core.data.mapper.toEntity
 import com.misterio.core.data.util.safeApiCall
 import com.misterio.core.database.dao.ChildReportDao
-import com.misterio.core.database.entity.ChildReportEntity
 import com.misterio.core.domain.model.LifePeriodAiReport
 import com.misterio.core.domain.model.MeasurementAiReport
 import com.misterio.core.domain.repository.AiRepository
 import com.misterio.core.network.api.AiApi
-import com.misterio.core.network.dto.ReportResponse
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import java.time.Instant
-import java.time.ZoneId
+import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -25,7 +24,7 @@ class AiRepositoryImpl @Inject constructor(
     private val childReportDao: ChildReportDao
 ) : AiRepository {
 
-    override fun getReportBy(id: String): Flow<MeasurementAiReport> {
+    override fun getReportBy(id: UUID): Flow<MeasurementAiReport> {
         return childReportDao.getReportById(id).map { entity ->
             MeasurementAiReport(
                 text = entity?.reportText ?: "",
@@ -34,11 +33,11 @@ class AiRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getReports(childId: String): Flow<List<LifePeriodAiReport>> {
+    override fun getReports(childId: UUID): Flow<List<LifePeriodAiReport>> {
         return childReportDao.getReports(childId).map { entities -> entities.map { it.toDomain() } }
     }
 
-    override fun pollReportStatus(reportId: String): Flow<Result<Boolean>> = flow {
+    override fun pollReportStatus(reportId: UUID): Flow<Result<Boolean>> = flow {
         var attempts = 0
         val maxAttempts = 20 // 20 * 3s = 1 minute timeout
 
@@ -62,7 +61,7 @@ class AiRepositoryImpl @Inject constructor(
         }
     }.flowOn(Dispatchers.IO)
 
-    override suspend fun syncReports(childId: String): Result<Unit> {
+    override suspend fun syncReports(childId: UUID): Result<Unit> {
         return safeApiCall { aiApi.getChildReports(childId) }.map { body ->
             childReportDao.insertReports(body.map { it.toEntity() })
             Unit
@@ -73,26 +72,3 @@ class AiRepositoryImpl @Inject constructor(
         private const val TAG = "AiRepository"
     }
 }
-
-private fun ReportResponse.toEntity() = ChildReportEntity(
-    id = id,
-    childId = childId,
-    lifePeriodId = lifePeriodId,
-    triggerMeasurementId = triggerMeasurementId,
-    reportText = reportText,
-    recommendations = recommendations,
-    isFallback = isFallback,
-    urgencyScore = urgencyScore,
-    createdAt = Instant.parse(createdAt).atZone(ZoneId.systemDefault()).toLocalDateTime(),
-)
-
-private fun ChildReportEntity.toDomain() = LifePeriodAiReport(
-    id = id,
-    childId = childId,
-    lifePeriodId = lifePeriodId,
-    triggerMeasurementId = triggerMeasurementId,
-    reportText = reportText,
-    recommendations = recommendations,
-    isFallback = isFallback,
-    urgencyScore = urgencyScore
-)

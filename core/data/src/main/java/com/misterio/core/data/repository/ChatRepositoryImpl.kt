@@ -1,8 +1,12 @@
 package com.misterio.core.data.repository
 
-import com.misterio.curakid.core.common.TokenManager
+import com.misterio.core.data.mapper.toDomain
+import com.misterio.core.data.util.safeApiCall
+import com.misterio.core.domain.model.ChatMessage
 import com.misterio.core.domain.repository.ChatRepository
-import com.misterio.core.network.SseClient
+import com.misterio.core.network.di.BASE_URL
+import com.misterio.core.network.di.SseClient
+import com.misterio.core.network.api.ChatApi
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -18,17 +22,28 @@ import java.util.UUID
 import javax.inject.Inject
 
 class ChatRepositoryImpl @Inject constructor(
+    private val chatApi: ChatApi,
     @param:SseClient private val okHttpClient: OkHttpClient,
-    private val tokenManager: TokenManager,
 ) : ChatRepository {
 
-    override fun startChatStream(childId: UUID, text: String): Flow<String> = callbackFlow {
-        val json = """{"childId":"$childId","text":"$text"}"""
+    override suspend fun getChatHistory(childId: UUID): Result<List<ChatMessage>> {
+        return safeApiCall {
+            chatApi.getChatHistory(childId)
+        }.map { body ->
+            body.map { it.toDomain() }
+        }
+    }
+
+    override fun startChatStream(
+        id: UUID,
+        childId: UUID,
+        text: String,
+    ): Flow<String> = callbackFlow {
+        val json = """{"id":"$id","childId":"$childId","text":"$text"}"""
         val requestBody = json.toRequestBody("application/json".toMediaType())
 
         val request = Request.Builder()
-            .url("http://192.168.1.5:8080/api/chat/stream")
-//            .header("Authorization", "Bearer ${tokenManager.currentToken}")
+            .url("${BASE_URL}api/chat/stream")
             .post(requestBody)
             .build()
 
@@ -39,7 +54,12 @@ class ChatRepositoryImpl @Inject constructor(
                 // можна перевірити response.code(), щоб упевнитись у 200 OK
             }
 
-            override fun onEvent(eventSource: EventSource, id: String?, type: String?, data: String) {
+            override fun onEvent(
+                eventSource: EventSource,
+                id: String?,
+                type: String?,
+                data: String
+            ) {
                 trySend(data)   // кожен chunk – окремий рядок у Flow
             }
 

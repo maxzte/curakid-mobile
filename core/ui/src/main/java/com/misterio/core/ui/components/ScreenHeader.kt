@@ -12,6 +12,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -47,19 +48,10 @@ fun ScreenHeader(
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .clip(CircleShape)
-                    .background(CurakidTheme.colors.surfaceVariant)
-                    .clickable { onChatClick() },
-                contentAlignment = Alignment.Center
-            ) {
+            IconButton(onClick = onChatClick) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.Chat,
                     contentDescription = "Chat",
-                    tint = CurakidTheme.colors.onSurfaceVariant,
-                    modifier = Modifier.size(20.dp)
                 )
             }
 

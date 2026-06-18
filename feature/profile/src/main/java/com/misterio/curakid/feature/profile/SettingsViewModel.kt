@@ -31,13 +31,6 @@ class SettingsViewModel @Inject constructor(
     private val _showDeleteDialog = MutableStateFlow(false)
     val showDeleteDialog: StateFlow<Boolean> = _showDeleteDialog.asStateFlow()
 
-    val isAppEnabled: StateFlow<Boolean> = settingsManager.isAppEnabled
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = true
-        )
-
     val isNotificationsEnabled: StateFlow<Boolean> = settingsManager.isNotificationsEnabled
         .stateIn(
             scope = viewModelScope,
@@ -51,12 +44,6 @@ class SettingsViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = false
         )
-
-    fun setAppEnabled(enabled: Boolean) {
-        viewModelScope.launch {
-            settingsManager.saveAppEnabled(enabled)
-        }
-    }
 
     fun setNotificationsEnabled(enabled: Boolean) {
         viewModelScope.launch {

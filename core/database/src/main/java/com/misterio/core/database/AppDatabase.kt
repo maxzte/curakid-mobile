@@ -4,6 +4,7 @@ import androidx.room.Database
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import com.misterio.core.database.converter.DateConverters
+import com.misterio.core.database.converter.DescriptionConverter
 import com.misterio.core.database.converter.ListConverter
 import com.misterio.core.database.dao.AssessmentDao
 import com.misterio.core.database.dao.ChartNormDao
@@ -35,7 +36,7 @@ import com.misterio.core.database.entity.MeasurementEntity
     version = 1,
     exportSchema = false
 )
-@TypeConverters(DateConverters::class, ListConverter::class)
+@TypeConverters(DateConverters::class, ListConverter::class, DescriptionConverter::class)
 abstract class AppDatabase : RoomDatabase() {
 
     abstract fun lifePeriodDao() : LifePeriodDao

@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.misterio.feature.calendar"
+    namespace = "com.misterio.curakid.feature.calendar"
     compileSdk = 37
 
     defaultConfig {

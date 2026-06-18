@@ -18,14 +18,17 @@ import com.misterio.core.domain.usecase.SelectChildUseCase
 import com.misterio.core.domain.usecase.SyncChildrenUseCase
 import com.misterio.core.domain.usecase.UpdateChildUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
@@ -49,6 +52,13 @@ class ProfileViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<UiState<String>>(UiState.Initial)
     val uiState: StateFlow<UiState<String>> = _uiState.asStateFlow()
 
+    private val _uiEvent = Channel<UiEvent>()
+    val uiEvent = _uiEvent.receiveAsFlow()
+
+    sealed interface UiEvent {
+        object NavigateBack : UiEvent
+    }
+
     val children: StateFlow<List<Child>> = getChildrenUseCase()
         .stateIn(
             scope = viewModelScope,
@@ -63,7 +73,7 @@ class ProfileViewModel @Inject constructor(
             initialValue = null
         )
 
-    fun onChildSelected(id: String) {
+    fun onChildSelected(id: UUID) {
         viewModelScope.launch {
             selectChildUseCase(id)
         }
@@ -74,6 +84,7 @@ class ProfileViewModel @Inject constructor(
         birthDate: Long,
         gender: Gender,
         isPremature: Boolean = false,
+        gestationalWeeks: Int? = null,
         allergies: List<String> = emptyList(),
         chronicDiseases: List<String> = emptyList(),
         pastDiseases: List<String> = emptyList(),
@@ -86,14 +97,14 @@ class ProfileViewModel @Inject constructor(
                 birthDate,
                 gender,
                 isPremature,
+                gestationalWeeks,
                 allergies,
                 chronicDiseases,
                 pastDiseases,
                 specialFeatures
             )
                 .onSuccess {
-                    _uiState.value = UiState.Success("Child added")
-                    _uiState.value = UiState.Initial
+                    _uiEvent.send(UiEvent.NavigateBack)
                 }
                 .onFailure { error ->
                     val domainError = (error as? DomainError) ?: DomainError.UnknownError(error.message ?: "Failed to add child", error)

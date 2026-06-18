@@ -1,12 +1,13 @@
 package com.misterio.core.domain.model
 
 import java.time.LocalDateTime
+import java.util.UUID
 
 data class Measurement(
-    val id: String,
-    val childId: String,
+    val id: UUID,
+    val childId: UUID,
     val date: LocalDateTime,
-    val aiReportId: String?,
+    val aiReportId: UUID?,
 
     val weight: Double?,
     val height: Double?,

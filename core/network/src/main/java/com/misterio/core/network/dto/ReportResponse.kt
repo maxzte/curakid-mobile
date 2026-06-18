@@ -1,10 +1,12 @@
 package com.misterio.core.network.dto
 
+import java.util.UUID
+
 data class ReportResponse(
-    val id: String,
-    val childId: String,
-    val lifePeriodId: String?,
-    val triggerMeasurementId: String?,
+    val id: UUID,
+    val childId: UUID,
+    val lifePeriodId: UUID?,
+    val triggerMeasurementId: UUID?,
     val reportText: String?,
     val recommendations: String?,
     val isFallback: Boolean,

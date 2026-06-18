@@ -9,12 +9,14 @@ import java.time.ZoneId
 import java.util.UUID
 
 data class EventRequest(
+    val id: UUID,
+    val childId: UUID,
     val title: String,
     val type: EventType,
     val date: String,
     val location: String? = null,
     val description: String? = null,
-    val childId: String,
+    val status: EventStatus,
 )
 
 data class UpdateEventRequest(
@@ -27,8 +29,8 @@ data class UpdateEventRequest(
 )
 
 data class EventResponse(
-    val childId: UUID,
     val id: UUID,
+    val childId: UUID,
     val type: EventType,
     val date: String,
     val status: EventStatus,
@@ -38,8 +40,8 @@ data class EventResponse(
 )
 
 data class VaccineEventResponse(
-    val childId: String,
-    val id: String,
+    val childId: UUID,
+    val id: UUID,
     val type: EventType,
     val date: String,
     val status: EventStatus,
@@ -56,7 +58,7 @@ data class VaccineEventResponse(
 )
 
 fun EventResponse.toDomain() = Event.General(
-    id = id.toString(),
+    id = id,
     title = title,
     type = type,
     date = Instant.parse(date).atZone(ZoneId.systemDefault()).toLocalDateTime(),
@@ -82,11 +84,22 @@ fun VaccineEventResponse.toDomain() = Event.Vaccine(
     notes = notes
 )
 
-fun Event.toRequest(childId: String) = EventRequest(
+fun Event.toRequest(childId: UUID) = EventRequest(
+    id = id,
+    childId = childId,
     title = title,
     type = type,
     date = date.atZone(ZoneId.systemDefault()).toInstant().toString(),
     location = if (this is Event.General) location else null,
     description = description,
-    childId = childId
+    status = status,
+)
+
+fun Event.toUpdateRequest() = UpdateEventRequest(
+    title = title,
+    type = type,
+    date = date.atZone(ZoneId.systemDefault()).toInstant().toString(),
+    location = if (this is Event.General) location else null,
+    description = description,
+    status = status
 )

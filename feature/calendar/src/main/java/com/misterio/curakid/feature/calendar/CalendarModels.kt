@@ -5,6 +5,7 @@ import com.misterio.core.domain.model.EventStatus
 import com.misterio.core.domain.model.EventType
 import java.time.LocalDate
 import java.time.LocalDateTime
+import java.util.UUID
 
 data class CalendarUiState(
     val selectedMonth: LocalDate = LocalDate.now().withDayOfMonth(1),
@@ -21,7 +22,7 @@ data class CalendarUiState(
 )
 
 data class EventFormState(
-    val id: String? = null,
+    val id: UUID? = null,
     val title: String = "",
     val type: EventType = EventType.USER,
     val date: LocalDateTime = LocalDateTime.now(),

@@ -10,6 +10,7 @@ import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -44,12 +45,15 @@ import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Remove
+import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
@@ -73,17 +77,24 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.misterio.core.domain.model.Child
 import com.misterio.core.domain.model.LifePeriod
+import com.misterio.core.domain.model.LifePeriodDescription
+import com.misterio.core.domain.model.PeriodReadiness
 import com.misterio.core.domain.model.Question
+import com.misterio.core.ui.LocalScaffoldController
 import com.misterio.core.ui.TrackFab
 import com.misterio.core.ui.components.AiReportCard
 import com.misterio.core.ui.components.CuraKidAlertDialog
+import com.misterio.core.ui.components.CuraKidButton
 import com.misterio.core.ui.components.ErrorView
 import com.misterio.core.ui.components.ScreenHeader
 import com.misterio.core.ui.components.itemWrapper
 import com.misterio.core.ui.components.rememberListContentPadding
 import com.misterio.core.ui.theme.CuraKidColors
 import com.misterio.core.ui.theme.CurakidTheme
+import java.util.UUID
+import kotlin.math.abs
 
 
 // ─── Models ──────────────────────────────────────────────────────────────────
@@ -96,14 +107,18 @@ enum class MilestoneCategory(
     MOTOR(label = "Моторика", iconBg = CuraKidColors.Blue95, iconTint = CuraKidColors.Blue40),
     SPEECH(label = "Мовлення", iconBg = CuraKidColors.Purple90, iconTint = CuraKidColors.Purple30),
     COGNITION(label = "Когніція", iconBg = CuraKidColors.Teal90, iconTint = CuraKidColors.Teal30),
-    SOCIAL(label = "Соціальний", iconBg = CuraKidColors.Amber90, iconTint = CuraKidColors.Amber30);
+    SOCIAL(label = "Соціальний", iconBg = CuraKidColors.Amber90, iconTint = CuraKidColors.Amber30),
+    SENSORY(label = "Сенсорика", iconBg = CuraKidColors.Red90, iconTint = CuraKidColors.Red30),
+    SELF_CARE(label = "Самообслуговування", iconBg = CuraKidColors.Teal90, iconTint = CuraKidColors.Teal30);
 
     companion object {
         fun fromDomain(domain: String): MilestoneCategory = when (domain.uppercase()) {
-            "MOTOR", "GROSS_MOTOR", "FINE_MOTOR" -> MOTOR
-            "SPEECH", "LANGUAGE" -> SPEECH
-            "COGNITION", "COGNITIVE" -> COGNITION
-            "SOCIAL" -> SOCIAL
+            "MOTOR_GROSS", "MOTOR_FINE" -> MOTOR
+            "SPEECH" -> SPEECH
+            "COGNITIVE" -> COGNITION
+            "SOCIAL_EMOTIONAL" -> SOCIAL
+            "SENSORY" -> SENSORY
+            "SELF_CARE" -> SELF_CARE
             else -> MOTOR
         }
     }
@@ -128,7 +143,7 @@ fun DevelopmentScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val selectedChild by viewModel.selectedChild.collectAsStateWithLifecycle()
 
-    val scaffoldController = com.misterio.core.ui.LocalScaffoldController.current
+    val scaffoldController = LocalScaffoldController.current
     val snackbarHostState = scaffoldController.snackbarHostState
 
     LaunchedEffect(uiState.error) {
@@ -180,24 +195,67 @@ fun DevelopmentScreen(
         }
     }
 
+    if (uiState.showAgeTransitionPrompt) {
+        CuraKidAlertDialog(
+            onDismissRequest = { /* Maybe mark as shown to avoid nagging */ },
+            onConfirm = { viewModel.completePeriod() },
+            title = "Новий етап!",
+            confirmButtonText = "Завершити",
+            dismissButtonText = "Дозаповнити",
+            confirmButtonColor = CuraKidColors.Blue40
+        ) {
+            val readiness = uiState.readiness
+            if (readiness != null) {
+                TransitionReadinessContent(
+                    readiness = readiness,
+                    message = if (readiness.isReady)
+                        "Ваша дитина вже на новому етапі розвитку! Бажаєте завершити поточний період та отримати звіт?"
+                    else
+                        "Ваша дитина вже на новому етапі, але даних за минулий період ще недостатньо для точного аналізу."
+                )
+            } else {
+                Text(
+                    text = "Ваша дитина вже на новому етапі розвитку! Бажаєте завершити поточний період та отримати звіт?",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+    }
+
     if (uiState.showEarlyTransitionDialog) {
+        val canTransitionEarly = uiState.readiness?.canTransitionEarly ?: false
+        
         CuraKidAlertDialog(
             onDismissRequest = { viewModel.dismissEarlyTransitionDialog() },
-            onConfirm = { viewModel.completePeriod(allowEarlyTransition = true) },
-            title = "Ранній перехід",
-            text = uiState.error?.message
-                ?: "Ви ще не досягли необхідного віку або не відповіли на всі питання. Бажаєте продовжити?",
-            confirmButtonText = "Так, продовжити",
-            dismissButtonText = "Скасувати",
+            onConfirm = { if (canTransitionEarly) viewModel.completePeriod(allowEarlyTransition = true) else viewModel.dismissEarlyTransitionDialog() },
+            title = if (canTransitionEarly) "Ранній перехід" else "Недостатньо даних",
+            confirmButtonText = if (canTransitionEarly) "Так, продовжити" else "Зрозуміло",
+            dismissButtonText = if (canTransitionEarly) "Скасувати" else "",
             confirmButtonColor = CuraKidColors.Blue40
-        )
+        ) {
+            val readiness = uiState.readiness
+            if (readiness != null) {
+                TransitionReadinessContent(
+                    readiness = readiness,
+                    message = if (canTransitionEarly) 
+                        "Ви ще не досягли необхідного віку або не відповіли на всі питання. Бажаєте продовжити?"
+                    else
+                        "Даних ще занадто мало для проведення аналізу. Будь ласка, дайте відповіді на більше запитань, щоб отримати звіт."
+                )
+            } else {
+                Text(
+                    text = "Ви ще не досягли необхідного віку або не відповіли на всі питання. Бажаєте продовжити?",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
     }
 }
 
 @Composable
 private fun DevelopmentContent(
     uiState: DevelopmentUiState,
-    selectedChild: com.misterio.core.domain.model.Child?,
+    selectedChild: Child?,
     viewModel: DevelopmentViewModel,
     onAddMeasurements: (List<String>) -> Unit,
     onChatClick: () -> Unit
@@ -216,17 +274,17 @@ private fun DevelopmentContent(
         contentPadding = rememberListContentPadding(),
         verticalArrangement = Arrangement.spacedBy(CurakidTheme.paddings.medium)
     ) {
-        if (uiState.isLoading) {
-            item {
-                LinearProgressIndicator(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(2.dp),
-                    color = CurakidTheme.colors.primary,
-                    trackColor = CurakidTheme.colors.surfaceVariant
-                )
-            }
-        }
+//        if (uiState.isLoading) {
+//            item {
+//                LinearProgressIndicator(
+//                    modifier = Modifier
+//                        .fillMaxWidth()
+//                        .height(2.dp),
+//                    color = CurakidTheme.colors.primary,
+//                    trackColor = CurakidTheme.colors.surfaceVariant
+//                )
+//            }
+//        }
         // ... (rest of the items from previous LazyColumn)
 
         itemWrapper {
@@ -240,20 +298,25 @@ private fun DevelopmentContent(
         item {
             PeriodTimeline(
                 periods = uiState.lifePeriods,
-                selectedId = currentPeriod?.id ?: "",
+                selectedId = currentPeriod?.id ?: UUID.randomUUID(),
                 onSelect = { code ->
                     viewModel.selectPeriod(code)
                 }
             )
         }
 
-        if (currentPeriod != null) {
-            itemWrapper {
-                PeriodProgressRow(
-                    periodLabel = currentPeriod.label + " місяць",
-                    summary = summary
-                )
-            }
+//        if (currentPeriod != null) {
+//            itemWrapper {
+//                PeriodProgressRow(
+//                    periodLabel = currentPeriod.label + " місяць",
+//                    summary = summary,
+//                    readiness = uiState.readiness
+//                )
+//            }
+//        }
+
+        itemWrapper {
+            PeriodDescriptionCard(description = uiState.currentPeriod?.about)
         }
 
         // itemWrapper {
@@ -329,15 +392,17 @@ private fun DevelopmentContent(
 
         if (!uiState.isCompleted) {
             itemWrapper {
-                Button(
-                    onClick = { viewModel.completePeriod() },
-                    modifier = Modifier.fillMaxWidth(),
-                    enabled = !uiState.isLoading,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (uiState.isMinAnswersRequirementMet) CurakidTheme.colors.primary else CuraKidColors.Neutral80
+                val readiness = uiState.readiness
+                val isMinMet = readiness?.isReady ?: uiState.isMinAnswersRequirementMet
+                
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    CuraKidButton(
+                        onClick = { viewModel.completePeriod() },
+                        modifier = Modifier.fillMaxWidth(),
+                        text = if (readiness != null) "Завершити (${readiness.completionPercent}%)" else "Завершити період",
+                        loading = uiState.isLoading,
+                        containerColor = if (isMinMet) CurakidTheme.colors.primary else CuraKidColors.Neutral80
                     )
-                ) {
-                    Text("Завершити період")
                 }
             }
         }
@@ -347,24 +412,67 @@ private fun DevelopmentContent(
         }
     }
 
+    if (uiState.showAgeTransitionPrompt) {
+        CuraKidAlertDialog(
+            onDismissRequest = { /* Maybe mark as shown to avoid nagging */ },
+            onConfirm = { viewModel.completePeriod() },
+            title = "Новий етап!",
+            confirmButtonText = "Завершити",
+            dismissButtonText = "Дозаповнити",
+            confirmButtonColor = CuraKidColors.Blue40
+        ) {
+            val readiness = uiState.readiness
+            if (readiness != null) {
+                TransitionReadinessContent(
+                    readiness = readiness,
+                    message = if (readiness.isReady)
+                        "Ваша дитина вже на новому етапі розвитку! Бажаєте завершити поточний період та отримати звіт?"
+                    else
+                        "Ваша дитина вже на новому етапі, але даних за минулий період ще недостатньо для точного аналізу."
+                )
+            } else {
+                Text(
+                    text = "Ваша дитина вже на новому етапі розвитку! Бажаєте завершити поточний період та отримати звіт?",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+    }
+
     if (uiState.showEarlyTransitionDialog) {
+        val canTransitionEarly = uiState.readiness?.canTransitionEarly ?: false
+        
         CuraKidAlertDialog(
             onDismissRequest = { viewModel.dismissEarlyTransitionDialog() },
-            onConfirm = { viewModel.completePeriod(allowEarlyTransition = true) },
-            title = "Ранній перехід",
-            text = uiState.error?.message
-                ?: "Ви ще не досягли необхідного віку або не відповіли на всі питання. Бажаєте продовжити?",
-            confirmButtonText = "Так, продовжити",
-            dismissButtonText = "Скасувати",
+            onConfirm = { if (canTransitionEarly) viewModel.completePeriod(allowEarlyTransition = true) else viewModel.dismissEarlyTransitionDialog() },
+            title = if (canTransitionEarly) "Ранній перехід" else "Недостатньо даних",
+            confirmButtonText = if (canTransitionEarly) "Так, продовжити" else "Зрозуміло",
+            dismissButtonText = if (canTransitionEarly) "Скасувати" else "",
             confirmButtonColor = CuraKidColors.Blue40
-        )
+        ) {
+            val readiness = uiState.readiness
+            if (readiness != null) {
+                TransitionReadinessContent(
+                    readiness = readiness,
+                    message = if (canTransitionEarly) 
+                        "Ви ще не досягли необхідного віку або не відповіли на всі питання. Бажаєте продовжити?"
+                    else
+                        "Даних ще занадто мало для проведення аналізу. Будь ласка, дайте відповіді на більше запитань, щоб отримати звіт."
+                )
+            } else {
+                Text(
+                    text = "Ви ще не досягли необхідного віку або не відповіли на всі питання. Бажаєте продовжити?",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
     }
 }
 
 @Composable
 private fun PeriodTimeline(
     periods: List<LifePeriod>,
-    selectedId: String,
+    selectedId: UUID,
     onSelect: (LifePeriod) -> Unit
 ) {
     LazyRow(
@@ -421,10 +529,12 @@ private fun PeriodItem(
 @Composable
 private fun PeriodProgressRow(
     periodLabel: String,
-    summary: MilestoneSummary
+    summary: MilestoneSummary,
+    readiness: PeriodReadiness?
 ) {
+    val progressValue = readiness?.completionPercent?.toFloat()?.div(100f) ?: summary.progressFraction
     val animatedProgress by animateFloatAsState(
-        targetValue = summary.progressFraction,
+        targetValue = progressValue,
         animationSpec = tween(600),
         label = "period_progress"
     )
@@ -439,7 +549,7 @@ private fun PeriodProgressRow(
                 style = CurakidTheme.typography.titleMedium.copy(color = CuraKidColors.Blue30)
             )
             Text(
-                text = "${summary.completed} / ${summary.totalQuestions} виконано",
+                text = if (readiness != null) "${readiness.completionPercent}%" else "${summary.completed} / ${summary.totalQuestions} виконано",
                 style = CurakidTheme.typography.bodySmall
             )
         }
@@ -452,13 +562,130 @@ private fun PeriodProgressRow(
                 .fillMaxWidth()
                 .height(4.dp)
                 .clip(RoundedCornerShape(2.dp)),
-            color = CuraKidColors.Blue40,
+            color = if (readiness?.isReady == true) CuraKidColors.Teal40 else CuraKidColors.Blue40,
             trackColor = CuraKidColors.Blue90,
             strokeCap = StrokeCap.Round
         )
     }
 }
 
+@Composable
+private fun PeriodDescriptionCard(
+    description: LifePeriodDescription?,
+) {
+    if (description == null) return
+
+    Column(
+        verticalArrangement = Arrangement.spacedBy(CurakidTheme.paddings.small)
+    ) {
+        Text(
+            text = description.title,
+            style = CurakidTheme.typography.titleMedium.copy(
+                color = CuraKidColors.Blue30,
+                fontWeight = FontWeight.Bold
+            )
+        )
+        Text(
+            text = description.subtitle,
+            style = CurakidTheme.typography.bodyMedium.copy(
+                color = CuraKidColors.Neutral40,
+                lineHeight = 20.sp
+            )
+        )
+
+        Spacer(Modifier.height(4.dp))
+
+        MilestoneItem(
+            icon = Icons.AutoMirrored.Filled.DirectionsRun,
+            label = "Рух",
+            text = description.milestones.movement
+        )
+        MilestoneItem(
+            icon = Icons.Default.RecordVoiceOver,
+            label = "Мовлення",
+            text = description.milestones.speech
+        )
+        MilestoneItem(
+            icon = Icons.Default.Psychology,
+            label = "Мислення",
+            text = description.milestones.cognition
+        )
+
+        if (description.tips.isNotEmpty()) {
+            Spacer(Modifier.height(4.dp))
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(CurakidTheme.Radius.md)
+                    .background(CuraKidColors.Amber90.copy(alpha = 0.5f))
+                    .padding(CurakidTheme.paddings.small),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                description.tips.forEach { tip ->
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.Top
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Lightbulb,
+                            contentDescription = null,
+                            tint = CuraKidColors.Amber30,
+                            modifier = Modifier
+                                .size(16.dp)
+                                .padding(top = 2.dp)
+                        )
+                        Text(
+                            text = tip,
+                            style = CurakidTheme.typography.bodySmall.copy(
+                                color = CuraKidColors.Amber30,
+                                lineHeight = 18.sp
+                            )
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun MilestoneItem(icon: ImageVector, label: String, text: String) {
+    Row(
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Box(
+            modifier = Modifier
+                .size(32.dp)
+                .clip(CurakidTheme.Radius.sm)
+                .background(CuraKidColors.Blue90.copy(alpha = 0.5f))
+            ,
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = CuraKidColors.Blue40,
+                modifier = Modifier.size(18.dp)
+            )
+        }
+        Column {
+            Text(
+                text = label,
+                style = CurakidTheme.typography.labelMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                )
+            )
+            Text(
+                text = text,
+                style = CurakidTheme.typography.bodySmall.copy(
+                    lineHeight = 18.sp
+                )
+            )
+        }
+    }
+}
 
 @Composable
 private fun QuizCard(
@@ -539,9 +766,9 @@ private fun QuizCard(
                         activeColor = CuraKidColors.Teal40,
                         activeBg = CuraKidColors.Teal90,
                         activeBorder = CuraKidColors.Teal40,
-                        isSelected = selectedOptionValue == 1.0,
+                        isSelected = abs((selectedOptionValue ?: -1.0) - 100.0) < 0.1,
                         modifier = Modifier.weight(1f),
-                        onClick = { onAnswerChange(1.0) }
+                        onClick = { onAnswerChange(100.0) }
                     )
                     AnswerOption(
                         label = "Частково",
@@ -549,9 +776,9 @@ private fun QuizCard(
                         activeColor = CuraKidColors.Amber30,
                         activeBg = CuraKidColors.Amber90,
                         activeBorder = CuraKidColors.Amber30,
-                        isSelected = selectedOptionValue == 0.5,
+                        isSelected = abs((selectedOptionValue ?: -1.0) - 50.0) < 0.1,
                         modifier = Modifier.weight(1f),
-                        onClick = { onAnswerChange(0.5) }
+                        onClick = { onAnswerChange(50.0) }
                     )
                     AnswerOption(
                         label = "Ні",
@@ -559,7 +786,7 @@ private fun QuizCard(
                         activeColor = CuraKidColors.Red30,
                         activeBg = CuraKidColors.Red90,
                         activeBorder = CuraKidColors.Red30,
-                        isSelected = selectedOptionValue == 0.0,
+                        isSelected = abs((selectedOptionValue ?: -1.0) - 0.0) < 0.1,
                         modifier = Modifier.weight(1f),
                         onClick = { onAnswerChange(0.0) }
                     )
@@ -612,14 +839,14 @@ private fun AnswerOption(
 @Composable
 private fun AnswerBadge(optionValue: Double) {
     val (bg, color, icon, text) = when (optionValue) {
-        1.0 -> Quadruple(
+        100.0 -> Quadruple(
             CuraKidColors.Teal90,
             CuraKidColors.Teal40,
             Icons.Default.Check,
             "Виконує"
         )
 
-        0.5 -> Quadruple(
+        50.0 -> Quadruple(
             CuraKidColors.Amber90,
             CuraKidColors.Amber30,
             Icons.Default.Remove,
@@ -744,18 +971,123 @@ private fun SummaryStatChip(count: Int, label: String, bg: Color, color: Color) 
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
+@Composable
+private fun TransitionReadinessContent(
+    readiness: PeriodReadiness,
+    message: String
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        Text(
+            text = message,
+            style = MaterialTheme.typography.bodyMedium
+        )
+
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Загальний прогрес",
+                    style = CurakidTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold)
+                )
+                Text(
+                    text = "${readiness.completionPercent}% / ${readiness.requiredPercent}%",
+                    style = CurakidTheme.typography.labelSmall
+                )
+            }
+
+            LinearProgressIndicator(
+                progress = { readiness.completionPercent.toFloat() / 100f },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(8.dp)
+                    .clip(RoundedCornerShape(4.dp)),
+                color = if (readiness.isReady) CuraKidColors.Teal40 else CuraKidColors.Blue40,
+                trackColor = CuraKidColors.Blue90,
+                strokeCap = StrokeCap.Round
+            )
+        }
+
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            val groupedStatus = readiness.domainStatus
+                .groupBy { MilestoneCategory.fromDomain(it.domain) }
+
+            groupedStatus.forEach { (category, domains) ->
+                val avgCompletion = domains.map { it.completionPercent }.average().toInt()
+                val allReady = domains.all { it.isReady }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(24.dp)
+                            .clip(CurakidTheme.Radius.sm)
+                            .background(category.iconBg),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = category.icon,
+                            contentDescription = null,
+                            tint = category.iconTint,
+                            modifier = Modifier.size(14.dp)
+                        )
+                    }
+
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = category.label,
+                            style = CurakidTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold)
+                        )
+                        LinearProgressIndicator(
+                            progress = { avgCompletion.toFloat() / 100f },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(4.dp)
+                                .clip(RoundedCornerShape(2.dp)),
+                            color = if (allReady) CuraKidColors.Teal40 else category.iconTint,
+                            trackColor = category.iconBg,
+                            strokeCap = StrokeCap.Round
+                        )
+                    }
+
+                    if (allReady) {
+                        Icon(
+                            imageVector = Icons.Default.Check,
+                            contentDescription = null,
+                            tint = CuraKidColors.Teal40,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    } else {
+                        Text(
+                            text = "$avgCompletion%",
+                            style = CurakidTheme.typography.labelSmall.copy(color = CuraKidColors.Neutral40)
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
 private val MilestoneCategory.icon
     get() = when (this) {
         MilestoneCategory.MOTOR -> Icons.AutoMirrored.Filled.DirectionsRun
         MilestoneCategory.SPEECH -> Icons.Default.RecordVoiceOver
         MilestoneCategory.COGNITION -> Icons.Default.Psychology
         MilestoneCategory.SOCIAL -> Icons.Default.People
+        MilestoneCategory.SENSORY -> Icons.Default.Lightbulb
+        MilestoneCategory.SELF_CARE -> Icons.Default.Check
     }
 
 private fun List<Question>.toSummary(answers: List<AnswerUI>) = MilestoneSummary(
     totalQuestions = size,
-    answeredYes = count { q -> answers.any { it.questionId == q.id && (it.option?.value == 1.0) } },
-    answeredPartial = count { q -> answers.any { it.questionId == q.id && (it.option?.value == 0.5) } },
+    answeredYes = count { q -> answers.any { it.questionId == q.id && (it.option?.value == 100.0) } },
+    answeredPartial = count { q -> answers.any { it.questionId == q.id && (it.option?.value == 50.0) } },
     answeredNo = count { q -> answers.any { it.questionId == q.id && (it.option?.value == 0.0) } }
 )
 

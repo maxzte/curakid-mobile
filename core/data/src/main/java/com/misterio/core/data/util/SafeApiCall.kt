@@ -26,6 +26,7 @@ suspend fun <T> safeApiCall(call: suspend () -> Response<T>): Result<T> {
 
 private fun <T> mapToDomainError(response: Response<T>): DomainError {
     return when (response.code()) {
+        400 -> DomainError.BadRequestError(cause = Exception("HTTP ${response.code()}"))
         401 -> DomainError.AuthenticationError(cause = Exception("HTTP ${response.code()}"))
         404 -> DomainError.NotFoundError(cause = Exception("HTTP ${response.code()}"))
         in 500..599 -> DomainError.ServerError(cause = Exception("HTTP ${response.code()}"))

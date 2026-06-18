@@ -31,7 +31,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -60,6 +59,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -86,9 +86,9 @@ import com.misterio.core.ui.components.CuraKidButton
 import com.misterio.core.ui.components.itemWrapper
 import com.misterio.core.ui.components.rememberListContentPadding
 import com.misterio.core.ui.theme.CurakidTheme
-import com.misterio.feature.profile.R
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import java.util.UUID
 
 enum class MedicalCategory(
     val title: String,
@@ -280,17 +280,17 @@ fun ProfileScreen(
                 text = "Вийти",
                 onClick = { viewModel.logout(context) },
                 icon = Icons.AutoMirrored.Filled.Logout,
-                containerColor = CurakidTheme.colors.errorContainer
             )
         }
-        item { Spacer(Modifier.height(24.dp)) }
     }
 }
 
 @Composable
 private fun ProfileHeader(onAction: () -> Unit, onChatClick: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 4.dp, vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -301,16 +301,10 @@ private fun ProfileHeader(onAction: () -> Unit, onChatClick: () -> Unit) {
             fontWeight = FontWeight.Medium
         )
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconButton(
-                onClick = onChatClick
-            ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Chat,
-                    contentDescription = "chat icon"
-                )
-            }
-            
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             IconButton(
                 onClick = onAction
             ) {
@@ -326,8 +320,8 @@ private fun ProfileHeader(onAction: () -> Unit, onChatClick: () -> Unit) {
 @Composable
 private fun ChildSwitcher(
     children: List<Child>,
-    selectedId: String?,
-    onSelect: (String) -> Unit,
+    selectedId: UUID?,
+    onSelect: (UUID) -> Unit,
     onAddChild: () -> Unit
 ) {
     LazyRow(
@@ -548,7 +542,7 @@ fun MedicalSection(
     onRemove: (String) -> Unit,
     onAddClick: () -> Unit
 ) {
-    var expanded by remember { mutableStateOf(items.isNotEmpty()) }
+    var expanded by rememberSaveable { mutableStateOf(items.isNotEmpty()) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -613,7 +607,6 @@ fun MedicalSection(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .background(CurakidTheme.colors.surfaceContainerLow)
                         .padding(start = 14.dp, end = 14.dp, bottom = 14.dp)
                 ) {
                     HorizontalDivider(
@@ -626,7 +619,6 @@ fun MedicalSection(
                         Text(
                             "Не вказано",
                             fontSize = 12.sp,
-                            color = CurakidTheme.colors.outline,
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
                     }

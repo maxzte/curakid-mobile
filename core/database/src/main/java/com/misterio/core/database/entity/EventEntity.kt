@@ -3,18 +3,20 @@ package com.misterio.core.database.entity
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import java.time.LocalDateTime
+import java.util.UUID
 
 @Entity(tableName = "events")
 data class EventEntity(
     @PrimaryKey
-    val id: String,
-    val childId: String,
+    val id: UUID,
+    val childId: UUID,
     val title: String,
     val type: String,
     val date: LocalDateTime,
     val description: String?,
     val status: String,
     val isSynced: Boolean,
+    val isDeleted: Boolean = false,
     
     // General event fields
     val location: String? = null,

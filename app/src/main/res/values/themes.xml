@@ -2,4 +2,9 @@
 <resources>
 
     <style name="Theme.Curakid" parent="android:Theme.Material.Light.NoActionBar" />
+    <style name="Theme.CuraKid.Splash" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#4353FF</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_logo</item>
+        <item name="postSplashScreenTheme">@style/Theme.Curakid</item>
+    </style>
 </resources>

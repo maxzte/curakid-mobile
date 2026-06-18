@@ -35,6 +35,9 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.time.LocalDate
+import java.time.temporal.ChronoUnit
+import java.util.UUID
 import javax.inject.Inject
 
 @HiltViewModel
@@ -58,15 +61,13 @@ class ChildDetailsViewModel @Inject constructor(
     private val _normsCache = MutableStateFlow<Map<GrowthChartType, List<ChartNormPoint>>>(emptyMap())
     val normsCache = _normsCache.asStateFlow()
 
-    private var polledReportId: String? = null
-
-    private val _norms = MutableStateFlow<List<ChartNormPoint>>(emptyList())
-    val norms = _norms.asStateFlow()
+    private var polledReportId: UUID? = null
 
     private val childFlow = getChildUseCase()
-        .distinctUntilChanged()
+        .distinctUntilChanged { old, new -> old?.id == new?.id }
         .onEach { child ->
             child?.let {
+                polledReportId = null // Reset polling state for new child
                 runCatching {
                     measurementRepository.syncMeasurementsForChild(it.id)
                 }
@@ -77,16 +78,19 @@ class ChildDetailsViewModel @Inject constructor(
 
     private fun prefetchNorms(child: Child) {
         viewModelScope.launch {
-            val typesToFetch = listOf(
+            val ageInMonths = ChronoUnit.DAYS.between(child.birthDate, LocalDate.now()).toDouble() / 30.44
+            
+            val typesToFetch = mutableListOf(
                 GrowthChartType.WeightForAge,
                 GrowthChartType.HeightForAge,
-                GrowthChartType.HeadCircumference
+                GrowthChartType.HeadCircumference,
+                GrowthChartType.WeightForHeight
             )
             
             typesToFetch.forEach { type ->
                 if (!_normsCache.value.containsKey(type)) {
                     val res = getMeasurementNormsUseCase(
-                        chartType = type.toDomain(),
+                        chartType = type.toDomain(ageInMonths),
                         gender = child.gender
                     )
                     res.getOrNull()?.let { norms ->
@@ -106,8 +110,10 @@ class ChildDetailsViewModel @Inject constructor(
             return@combine cache[type]!!
         }
 
+        val ageInMonths = ChronoUnit.DAYS.between(child.birthDate, LocalDate.now()).toDouble() / 30.44
+
         val res = getMeasurementNormsUseCase(
-            chartType = type.toDomain(),
+            chartType = type.toDomain(ageInMonths),
             gender = child.gender
         )
         val norms = if (res.isSuccess) res.getOrThrow() else emptyList()
@@ -148,7 +154,7 @@ class ChildDetailsViewModel @Inject constructor(
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    private fun triggerReportPolling(reportId: String) {
+    private fun triggerReportPolling(reportId: UUID) {
         if (polledReportId == reportId) return
         polledReportId = reportId
 
@@ -183,10 +189,10 @@ class ChildDetailsViewModel @Inject constructor(
         _selectedChartType.value = type
     }
 
-    private fun GrowthChartType.toDomain() = when (this) {
+    private fun GrowthChartType.toDomain(ageInMonths: Double = 0.0) = when (this) {
         GrowthChartType.WeightForAge -> ChartType.WFA
         GrowthChartType.HeightForAge -> ChartType.HFA
-        GrowthChartType.WeightForHeight -> ChartType.WFH
+        GrowthChartType.WeightForHeight -> if (ageInMonths < 24.0) ChartType.WFL else ChartType.WFH
         GrowthChartType.BMI -> ChartType.BMI
         GrowthChartType.HeadCircumference -> ChartType.HCFA
     }

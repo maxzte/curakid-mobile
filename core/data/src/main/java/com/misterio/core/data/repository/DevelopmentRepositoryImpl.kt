@@ -1,13 +1,18 @@
 package com.misterio.core.data.repository
 
-import com.misterio.core.data.util.safeApiCall
+import android.util.Log
 import com.misterio.core.data.mapper.toDomain
+import com.misterio.core.data.util.safeApiCall
 import com.misterio.core.database.dao.LifePeriodDao
 import com.misterio.core.database.entity.LifePeriodEntity
 import com.misterio.core.domain.model.LifePeriod
+import com.misterio.core.domain.model.LifePeriodDescription
+import com.misterio.core.domain.model.Milestones
 import com.misterio.core.domain.repository.DevelopmentRepository
 import com.misterio.core.network.api.DevelopmentApi
 import com.misterio.core.network.dto.LifePeriodResponse
+import com.misterio.core.network.dto.LifePeriodMilestonesResponse
+import com.misterio.core.network.dto.LifePeriodDescriptionResponse
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
@@ -25,15 +30,10 @@ class DevelopmentRepositoryImpl @Inject constructor(
         }
     }
 
-    override fun getLifePeriod(code: String): Flow<LifePeriod?> {
-        return dao.getLifePeriodByCode(code).map { it?.toDomain() }
-    }
-
     override suspend fun syncLifePeriods(): Result<Unit> {
         return safeApiCall { developmentApi.getLifePeriods() }.map { body ->
-            android.util.Log.d(TAG, "Syncing ${body.size} periods from network")
+            Log.d(TAG, "Syncing ${body.size} periods from network")
             dao.insertLifePeriods(body.map { it.toEntity() })
-            Unit
         }
     }
 
@@ -41,20 +41,11 @@ class DevelopmentRepositoryImpl @Inject constructor(
         id = id,
         code = code,
         label = label,
-        about = description,
+        about = description.toDomain(),
+        // Better to parse here so Entity stores the domain model (if TypeConverter is set up)
         minMonths = minMonths,
         maxMonths = maxMonths,
         questions = questions.map { it.toDomain() }
-    )
-
-    private fun LifePeriodEntity.toDomain() = LifePeriod(
-        id = id,
-        code = code,
-        label = label,
-        about = about,
-        minMonths = minMonths,
-        maxMonths = maxMonths,
-        questions = questions
     )
 
     private companion object {
@@ -62,3 +53,16 @@ class DevelopmentRepositoryImpl @Inject constructor(
     }
 
 }
+
+private fun LifePeriodDescriptionResponse.toDomain() = LifePeriodDescription(
+    title = title,
+    subtitle = subtitle,
+    milestones = milestones.toDomain(),
+    tips = tips
+)
+
+private fun LifePeriodMilestonesResponse.toDomain() = Milestones(
+    movement = movement,
+    speech = speech,
+    cognition = cognition,
+)

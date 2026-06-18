@@ -6,7 +6,7 @@ plugins {
 }
 
 android {
-    namespace = "com.misterio.feature.development"
+    namespace = "com.misterio.curakid.feature.development"
     compileSdk = 37
 
     defaultConfig {
@@ -31,6 +31,8 @@ dependencies {
     implementation(libs.hilt.navigation.compose)
     implementation(libs.hilt.android)
     ksp(libs.hilt.compiler)
+
+    implementation(libs.kotlinx.serialization.json)
 
     implementation(libs.vico.compose)
     implementation(libs.vico.compose.m3)

@@ -16,19 +16,13 @@ import javax.inject.Singleton
 class SettingsManager @Inject constructor(
     @param:Named("SettingsDataStore") private val dataStore: DataStore<Preferences>
 ) {
-    private val isAppEnabledKey = booleanPreferencesKey("is_app_enabled")
     private val isNotificationsEnabledKey = booleanPreferencesKey("is_notifications_enabled")
 
-    val isAppEnabled: Flow<Boolean> = dataStore.data.map { it[isAppEnabledKey] ?: true }
     val isNotificationsEnabled: Flow<Boolean> =
         dataStore.data.map { it[isNotificationsEnabledKey] ?: true }
 
     suspend fun saveNotificationsEnabled(enabled: Boolean) {
         dataStore.edit { it[isNotificationsEnabledKey] = enabled }
-    }
-
-    suspend fun saveAppEnabled(enabled: Boolean) {
-        dataStore.edit { it[isAppEnabledKey] = enabled }
     }
 
     suspend fun clear() {

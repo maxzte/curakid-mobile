@@ -7,8 +7,10 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Timeline
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.navigation3.runtime.NavKey
+import com.misterio.core.domain.util.UUIDSerializer
 import com.misterio.curakid.core.common.PasscodeMode
 import kotlinx.serialization.Serializable
+import java.util.UUID
 
 
 @Serializable
@@ -35,7 +37,7 @@ sealed interface Route : NavKey {
 
     @Serializable
     data class CalendarRoot(
-        val eventId: String? = null
+        @Serializable(UUIDSerializer::class) val eventId: UUID? = null
     ) : Route {
         companion object {
             val DEFAULT = CalendarRoot()
@@ -44,7 +46,7 @@ sealed interface Route : NavKey {
 
     @Serializable
     data class CalendarFromHome(
-        val eventId: String? = null
+        @Serializable(UUIDSerializer::class) val eventId: UUID? = null
     ) : Route
 
     @Serializable
@@ -57,7 +59,7 @@ sealed interface Route : NavKey {
     data object Settings : Route
 
     @Serializable
-    data class VaccinationDetail(val id: String) : Route
+    data class VaccinationDetail(@Serializable(UUIDSerializer::class) val id: UUID) : Route
 
     @Serializable
     data object UpcomingEvents : Route
@@ -70,7 +72,7 @@ sealed interface Route : NavKey {
     data class ChildDetails(val lifePeriods: List<String>) : Route
 
     @Serializable
-    data class AiReport(val reportId: String) : Route
+    data class AiReport(@Serializable(UUIDSerializer::class) val reportId: UUID) : Route
 
     @Serializable
     data object Chat : Route
