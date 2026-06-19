@@ -20,7 +20,8 @@ class ChatApiTest : BaseApiTest<ChatApi>() {
             ]
         """.trimIndent())
 
-        val history = api.getChatHistory(childId)
+        val response = api.getChatHistory(childId)
+        val history = response.body()!!
         val request = mockWebServer.takeRequest()
 
         assertEquals("/api/chat/history/$childId", request.path)
