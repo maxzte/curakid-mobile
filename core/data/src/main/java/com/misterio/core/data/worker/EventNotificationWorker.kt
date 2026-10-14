@@ -28,14 +28,12 @@ class EventNotificationWorker(
     private fun showNotification(title: String, message: String, eventId: String?) {
         val notificationManager = applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(
-                CHANNEL_ID,
-                "Нагадування про події",
-                NotificationManager.IMPORTANCE_DEFAULT
-            )
-            notificationManager.createNotificationChannel(channel)
-        }
+        val channel = NotificationChannel(
+            CHANNEL_ID,
+            "Нагадування про події",
+            NotificationManager.IMPORTANCE_DEFAULT
+        )
+        notificationManager.createNotificationChannel(channel)
 
         val intent = applicationContext.packageManager.getLaunchIntentForPackage(applicationContext.packageName)?.apply {
             putExtra(EXTRA_EVENT_ID, eventId)
@@ -62,7 +60,18 @@ class EventNotificationWorker(
             .setContentIntent(pendingIntent)
             .build()
 
-        notificationManager.notify(eventId?.hashCode() ?: System.currentTimeMillis().toInt(), notification)
+        try {
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                androidx.core.content.ContextCompat.checkSelfPermission(
+                    applicationContext,
+                    android.Manifest.permission.POST_NOTIFICATIONS
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+            ) {
+                notificationManager.notify(eventId?.hashCode() ?: System.currentTimeMillis().toInt(), notification)
+            }
+        } catch (e: SecurityException) {
+            // Notification permission revoked or not yet granted by user
+        }
     }
 
     companion object {
