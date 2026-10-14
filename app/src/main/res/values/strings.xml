@@ -1,4 +1,6 @@
 <resources>
     <string name="app_name">Curakid</string>
     <string name="profile">Профіль</string>
+    <string name="offline_mode">Немає інтернет-з\'єднання</string>
+    <string name="offline_mode_desc">Дані зберігаються локально та синхронізуються при появі мережі</string>
 </resources>

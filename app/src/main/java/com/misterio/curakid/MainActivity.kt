@@ -48,6 +48,7 @@ import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -431,15 +432,27 @@ private fun OfflineIndicator(isConnected: Boolean) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(Color.Red.copy(alpha = 0.8f))
-                .padding(vertical = 4.dp),
+                .background(CurakidTheme.colors.errorContainer)
+                .padding(horizontal = 16.dp, vertical = 6.dp),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                text = "No Internet Connection",
-                color = Color.White,
-                style = CurakidTheme.typography.labelSmall
-            )
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.CloudOff,
+                    contentDescription = null,
+                    tint = CurakidTheme.colors.onErrorContainer,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = androidx.compose.ui.res.stringResource(R.string.offline_mode),
+                    color = CurakidTheme.colors.onErrorContainer,
+                    style = CurakidTheme.typography.labelSmall
+                )
+            }
         }
     }
 }
