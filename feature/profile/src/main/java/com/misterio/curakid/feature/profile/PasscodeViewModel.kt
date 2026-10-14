@@ -57,6 +57,14 @@ class PasscodeViewModel(
     private val _events = Channel<PasscodeEvent>(Channel.BUFFERED)
     val events = _events.receiveAsFlow()
 
+    fun onBiometricSuccess() {
+        if (_uiState.value.isLockedOut) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(failedAttempts = 0) }
+            _events.send(PasscodeEvent.Success)
+        }
+    }
+
     fun onDigitClick(digit: String) {
         if (_uiState.value.isLockedOut) return
         if (_uiState.value.passcode.length >= 4) return

@@ -117,4 +117,15 @@ class PasscodeViewModelTest {
         assertTrue(viewModel.uiState.value.isLockedOut)
         assertEquals(30, viewModel.uiState.value.lockoutSecondsRemaining)
     }
+
+    @Test
+    fun `UNLOCK mode - biometric success sends Success event and resets failed attempts`() = runTest(testDispatcher) {
+        val viewModel = PasscodeViewModel(PasscodeMode.UNLOCK, securityManager, testDispatcher)
+
+        viewModel.onBiometricSuccess()
+        testScheduler.advanceUntilIdle()
+
+        assertEquals(0, viewModel.uiState.value.failedAttempts)
+        assertFalse(viewModel.uiState.value.isLockedOut)
+    }
 }

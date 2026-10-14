@@ -18,7 +18,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Backspace
+import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
@@ -66,6 +68,25 @@ fun PasscodeScreen(
         PasscodeMode.SETUP -> if (uiState.isConfirming) stringResource(R.string.passcode_confirm_title) else stringResource(R.string.passcode_create_title)
         PasscodeMode.UNLOCK -> stringResource(R.string.passcode_unlock_title)
         PasscodeMode.DISABLE -> stringResource(R.string.passcode_unlock_title)
+    }
+
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val activity = remember(context) { BiometricHelper.findActivity(context) }
+    val isBiometricAvailable = remember(context) { BiometricHelper.isBiometricAvailable(context) }
+
+    fun triggerBiometrics() {
+        activity?.let {
+            BiometricHelper.showBiometricPrompt(
+                activity = it,
+                onSuccess = viewModel::onBiometricSuccess
+            )
+        }
+    }
+
+    LaunchedEffect(mode, isBiometricAvailable) {
+        if (mode == PasscodeMode.UNLOCK && isBiometricAvailable) {
+            triggerBiometrics()
+        }
     }
 
     LaunchedEffect(viewModel) {
@@ -132,7 +153,9 @@ fun PasscodeScreen(
 
         Keypad(
             onDigitClick = viewModel::onDigitClick,
-            onDeleteClick = viewModel::onDeleteClick
+            onDeleteClick = viewModel::onDeleteClick,
+            showBiometric = mode == PasscodeMode.UNLOCK && isBiometricAvailable,
+            onBiometricClick = ::triggerBiometrics
         )
 
         if (mode == PasscodeMode.UNLOCK) {
@@ -174,14 +197,16 @@ fun PasscodeScreen(
 @Composable
 fun Keypad(
     onDigitClick: (String) -> Unit,
-    onDeleteClick: () -> Unit
+    onDeleteClick: () -> Unit,
+    showBiometric: Boolean = false,
+    onBiometricClick: () -> Unit = {}
 ) {
-    val digits = remember {
+    val digits = remember(showBiometric) {
         listOf(
             listOf("1", "2", "3"),
             listOf("4", "5", "6"),
             listOf("7", "8", "9"),
-            listOf(null, "0", "delete")
+            listOf(if (showBiometric) "biometric" else null, "0", "delete")
         )
     }
 
@@ -203,6 +228,19 @@ fun Keypad(
                     ) {
                         when (item) {
                             null -> Spacer(modifier = Modifier.size(64.dp))
+                            "biometric" -> {
+                                IconButton(
+                                    onClick = onBiometricClick,
+                                    modifier = Modifier.size(64.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Fingerprint,
+                                        contentDescription = "Biometric Unlock",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                }
+                            }
                             "delete" -> {
                                 IconButton(
                                     onClick = onDeleteClick,

@@ -99,10 +99,11 @@ import com.misterio.curakid.navigation.growthEntry
 import com.misterio.curakid.navigation.homeEntry
 import com.misterio.curakid.navigation.profileEntry
 import com.misterio.curakid.navigation.rememberNavigationState
+import androidx.fragment.app.FragmentActivity
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
-class MainActivity : ComponentActivity() {
+class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         val splashScreen = installSplashScreen()
 

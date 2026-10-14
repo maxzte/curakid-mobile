@@ -32,12 +32,21 @@ open class SecurityManager @Inject constructor(
     @param:Named("SecurityDataStore") private val dataStore: DataStore<Preferences>
 ) {
     private val passcodeKey = stringPreferencesKey("encrypted_passcode")
+    private val biometricsEnabledKey = androidx.datastore.preferences.core.booleanPreferencesKey("biometrics_enabled")
     private val alias = "passcode_key"
     private val transformation = "AES/GCM/NoPadding"
     private val provider = "AndroidKeyStore"
 
     val isPasscodeEnabled: Flow<Boolean> = dataStore.data.map {
         !it[passcodeKey].isNullOrEmpty()
+    }
+
+    val isBiometricsEnabled: Flow<Boolean> = dataStore.data.map {
+        it[biometricsEnabledKey] ?: true // enabled by default if hardware supports
+    }
+
+    suspend fun setBiometricsEnabled(enabled: Boolean) {
+        dataStore.edit { it[biometricsEnabledKey] = enabled }
     }
 
     suspend fun savePasscode(passcode: String) {
