@@ -24,7 +24,9 @@ import javax.inject.Named
 import javax.inject.Qualifier
 import javax.inject.Singleton
 
-const val BASE_URL = "http://192.168.1.5:8080/"
+import com.misterio.core.network.BuildConfig
+
+val BASE_URL = BuildConfig.BASE_URL
 
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
@@ -39,7 +41,11 @@ object NetworkModule {
     @Singleton
     fun provideHttpLoggingInterceptor(): HttpLoggingInterceptor {
         return HttpLoggingInterceptor().apply {
-            level = HttpLoggingInterceptor.Level.BODY
+            level = if (BuildConfig.DEBUG) {
+                HttpLoggingInterceptor.Level.BODY
+            } else {
+                HttpLoggingInterceptor.Level.NONE
+            }
         }
     }
 

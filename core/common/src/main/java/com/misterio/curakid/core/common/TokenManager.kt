@@ -82,12 +82,7 @@ class TokenManager @Inject constructor(
                         scope.launch { clearTokens() }
                         null
                     }
-                    Log.d(
-                        TAG,
-                        "init: Loaded tokens. Access: ${currentToken?.take(10)}..., Refresh: ${
-                            decryptedRt?.take(10)
-                        }..."
-                    )
+                    Log.d(TAG, "init: Tokens state updated (hasRefreshToken=${decryptedRt != null})")
                     _refreshToken.value = decryptedRt
                     _isInitialized.value = true
 
@@ -111,7 +106,7 @@ class TokenManager @Inject constructor(
     }
 
     suspend fun save(accessToken: String, refreshToken: String) {
-        Log.i(TAG, "saving tokens: $accessToken\n$refreshToken")
+        Log.d(TAG, "Tokens saved securely")
         _accessToken.value = accessToken
 
         val encryptedRt = securityManager.encrypt(refreshToken)

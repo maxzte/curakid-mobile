@@ -11,6 +11,12 @@ android {
 
     defaultConfig {
         minSdk = 26
+        val defaultBaseUrl = providers.gradleProperty("API_BASE_URL").getOrElse("http://192.168.1.5:8080/")
+        buildConfigField("String", "BASE_URL", "\"$defaultBaseUrl\"")
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     testOptions {
