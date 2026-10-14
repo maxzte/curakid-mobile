@@ -84,7 +84,7 @@ import com.misterio.core.ui.ScaffoldController
 import com.misterio.core.ui.TopBarConfiguration
 import com.misterio.core.ui.theme.CurakidTheme
 import com.misterio.curakid.core.common.SecurityManager
-import com.misterio.curakid.feature.calendar.worker.EventNotificationWorker
+import com.misterio.core.data.worker.EventNotificationWorker
 import com.misterio.curakid.feature.profile.AddChildScreen
 import com.misterio.curakid.feature.profile.PasscodeScreen
 import com.misterio.curakid.feature.signup.ForgotPasswordScreen
@@ -154,7 +154,6 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun MainNavigation(
     viewModel: MainViewModel,
-    securityManager: SecurityManager = viewModel.securityManager,
     onExit: () -> Unit = {}
 ) {
     val startDestination by viewModel.startDestination.collectAsStateWithLifecycle()
@@ -254,7 +253,6 @@ fun MainNavigation(
         entry<Route.Passcode> {
             PasscodeScreen(
                 mode = it.mode,
-                securityManager = securityManager,
                 onSuccess = {
                     navigator.goBack()
                 },
@@ -274,7 +272,6 @@ fun MainNavigation(
                 is Route.Passcode -> {
                     PasscodeScreen(
                         mode = destination.mode,
-                        securityManager = securityManager,
                         onSuccess = {
                             viewModel.onPasscodeSuccess()
                         },

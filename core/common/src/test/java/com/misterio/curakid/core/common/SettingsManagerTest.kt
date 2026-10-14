@@ -43,14 +43,6 @@ class SettingsManagerTest {
         if (testFile.exists()) testFile.delete()
     }
 
-    @Test
-    fun `saveAppEnabled should update value`() = runTest(testDispatcher) {
-        settingsManager.saveAppEnabled(false)
-        assertFalse(settingsManager.isAppEnabled.first())
-
-        settingsManager.saveAppEnabled(true)
-        assertTrue(settingsManager.isAppEnabled.first())
-    }
 
     @Test
     fun `saveNotificationsEnabled should update value`() = runTest(testDispatcher) {

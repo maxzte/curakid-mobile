@@ -6,23 +6,26 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import retrofit2.Retrofit
 
+import java.util.UUID
+
 class AiApiTest : BaseApiTest<AiApi>() {
 
     override fun createApi(retrofit: Retrofit): AiApi = retrofit.create(AiApi::class.java)
 
     @Test
     fun `getChildReports sends correct request`() = runTest {
+        val childId = UUID.randomUUID()
         enqueueResponse("""
             [
-                {"id": "r1", "reportText": "Normal development"},
-                {"id": "r2", "reportText": "Growing fast"}
+                {"id": "${UUID.randomUUID()}", "reportText": "Normal development"},
+                {"id": "${UUID.randomUUID()}", "reportText": "Growing fast"}
             ]
         """.trimIndent())
 
-        val response = api.getChildReports("c123")
+        val response = api.getChildReports(childId)
         val request = mockWebServer.takeRequest()
 
-        assertEquals("/api/children/c123/reports", request.path)
+        assertEquals("/api/children/$childId/reports", request.path)
         assertEquals("GET", request.method)
         assertTrue(response.isSuccessful)
         assertEquals(2, response.body()?.size)
@@ -30,12 +33,13 @@ class AiApiTest : BaseApiTest<AiApi>() {
 
     @Test
     fun `getReportStatus sends correct request`() = runTest {
+        val reportId = UUID.randomUUID()
         enqueueResponse("true")
 
-        val response = api.getReportStatus("r123")
+        val response = api.getReportStatus(reportId)
         val request = mockWebServer.takeRequest()
 
-        assertEquals("/reports/r123/status", request.path)
+        assertEquals("/api/reports/$reportId/status", request.path)
         assertEquals("GET", request.method)
         assertEquals(true, response.body())
     }

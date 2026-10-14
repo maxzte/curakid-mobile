@@ -29,7 +29,7 @@ class MainViewModel @Inject constructor(
     private val appDataStore: AppDataStore,
     private val tokenManager: TokenManager,
     connectivityRepository: ConnectivityRepository,
-    val securityManager: SecurityManager,
+    private val securityManager: SecurityManager,
 ) : ViewModel() {
 
     val isConnected = connectivityRepository.isConnected

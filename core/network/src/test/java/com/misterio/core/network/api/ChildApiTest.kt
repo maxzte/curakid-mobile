@@ -7,16 +7,20 @@ import org.junit.Assert.assertTrue
 import org.junit.Test
 import retrofit2.Retrofit
 
+import java.util.UUID
+
 class ChildApiTest : BaseApiTest<ChildApi>() {
 
     override fun createApi(retrofit: Retrofit): ChildApi = retrofit.create(ChildApi::class.java)
 
     @Test
     fun `getChildren sends correct request and parses list`() = runTest {
+        val id1 = UUID.randomUUID()
+        val id2 = UUID.randomUUID()
         enqueueResponse("""
             [
-                {"id": "1", "name": "Child 1", "birthDate": "2023-01-01", "gender": "MALE", "premature": false},
-                {"id": "2", "name": "Child 2", "birthDate": "2023-05-01", "gender": "FEMALE", "premature": true}
+                {"id": "$id1", "name": "Child 1", "birthDate": "2023-01-01", "gender": "MALE", "premature": false},
+                {"id": "$id2", "name": "Child 2", "birthDate": "2023-05-01", "gender": "FEMALE", "premature": true}
             ]
         """.trimIndent())
 
@@ -32,29 +36,33 @@ class ChildApiTest : BaseApiTest<ChildApi>() {
 
     @Test
     fun `getChild sends correct request with path parameter`() = runTest {
+        val childId = UUID.randomUUID()
         enqueueResponse("""
-            {"id": "123", "name": "Test Child", "birthDate": "2023-01-01", "gender": "MALE", "premature": false}
+            {"id": "$childId", "name": "Test Child", "birthDate": "2023-01-01", "gender": "MALE", "premature": false}
         """.trimIndent())
 
-        val response = api.getChild("123")
+        val response = api.getChild(childId)
         val request = mockWebServer.takeRequest()
 
-        assertEquals("/api/children/123", request.path)
+        assertEquals("/api/children/$childId", request.path)
         assertEquals("GET", request.method)
         assertEquals("Test Child", response.body()?.name)
     }
 
     @Test
     fun `createChild sends correct request body`() = runTest {
+        val newId = UUID.randomUUID()
         enqueueResponse("""
-            {"id": "new-id", "name": "New Child", "birthDate": "2024-01-01", "gender": "FEMALE", "premature": false}
+            {"id": "$newId", "name": "New Child", "birthDate": "2024-01-01", "gender": "FEMALE", "premature": false}
         """.trimIndent())
 
         val createRequest = CreateChildRequest(
+            id = newId,
             name = "New Child",
             birthDate = "2024-01-01",
             gender = "FEMALE",
             isPremature = false,
+            gestationalWeeks = null,
             allergies = emptyList(),
             chronicDiseases = emptyList(),
             pastDiseases = emptyList(),
@@ -66,6 +74,6 @@ class ChildApiTest : BaseApiTest<ChildApi>() {
         assertEquals("/api/children", request.path)
         assertEquals("POST", request.method)
         assertTrue(response.isSuccessful)
-        assertEquals("new-id", response.body()?.id)
+        assertEquals(newId, response.body()?.id)
     }
 }

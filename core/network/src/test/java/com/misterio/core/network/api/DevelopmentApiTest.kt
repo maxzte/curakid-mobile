@@ -12,9 +12,10 @@ class DevelopmentApiTest : BaseApiTest<DevelopmentApi>() {
 
     @Test
     fun `getLifePeriods sends correct request`() = runTest {
+        val periodId = java.util.UUID.randomUUID()
         enqueueResponse("""
             [
-                {"id": "p1", "code": "MONTH_1", "startAgeDays": 0, "endAgeDays": 30}
+                {"id": "$periodId", "code": "MONTH_1", "startAgeDays": 0, "endAgeDays": 30}
             ]
         """.trimIndent())
 

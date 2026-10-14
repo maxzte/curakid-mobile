@@ -1,7 +1,5 @@
 package com.misterio.curakid.feature.profile
 
-import android.content.Context
-import android.content.Intent
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -129,16 +127,9 @@ class ProfileViewModel @Inject constructor(
         }
     }
 
-    fun logout(context: Context) {
+    fun logout() {
         viewModelScope.launch {
             logoutUseCase()
-
-            val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-            val componentName = intent?.component
-            val mainIntent = Intent.makeRestartActivityTask(componentName)
-            context.startActivity(mainIntent)
-
-            Runtime.getRuntime().exit(0)
         }
     }
 }

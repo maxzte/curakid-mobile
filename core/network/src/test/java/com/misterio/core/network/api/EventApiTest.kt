@@ -41,10 +41,11 @@ class EventApiTest : BaseApiTest<EventApi>() {
             title = "Vaccine",
             type = EventType.VACCINE,
             date = "2024-01-01T10:00:00",
+            status = com.misterio.core.domain.model.EventStatus.PLANNED
         )
         
         enqueueResponse("""
-            {"id": "$id", "title": "Vaccine", "childId": "$childId", "type": "VACCINE", "date": "2024-01-01T10:00:00", "status": "SCHEDULED"}
+            {"id": "$id", "title": "Vaccine", "childId": "$childId", "type": "VACCINE", "date": "2024-01-01T10:00:00", "status": "PLANNED"}
         """.trimIndent())
 
         val response = api.createEvent(childId, eventRequest)

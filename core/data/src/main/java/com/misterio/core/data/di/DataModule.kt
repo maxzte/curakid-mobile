@@ -98,4 +98,11 @@ abstract class DataModule {
         legalDocumentRepositoryImpl: LegalDocumentRepositoryImpl
     ): LegalDocumentRepository
 
+    @Binds
+    @Singleton
+    abstract fun bindEventNotificationScheduler(
+        impl: com.misterio.core.data.worker.EventNotificationSchedulerImpl
+    ): com.misterio.core.domain.util.EventNotificationScheduler
+
 }
+

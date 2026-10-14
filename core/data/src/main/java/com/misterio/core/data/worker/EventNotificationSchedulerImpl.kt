@@ -1,4 +1,4 @@
-package com.misterio.curakid.feature.calendar.worker
+package com.misterio.core.data.worker
 
 import android.content.Context
 import androidx.work.ExistingWorkPolicy
@@ -59,7 +59,6 @@ class EventNotificationSchedulerImpl @Inject constructor(
         events.forEach { event ->
             val delay = Duration.between(now, event.date)
 
-            // Пропускаємо події, що вже минули
             if (delay.isNegative) return@forEach
 
             val workRequest = OneTimeWorkRequestBuilder<EventNotificationWorker>()
@@ -87,8 +86,6 @@ class EventNotificationSchedulerImpl @Inject constructor(
     }
 
     override suspend fun cancelAll(childId: UUID) {
-        // У цьому випадку ми можемо або додавати тег дитини до всіх воркерів, 
-        // або скасувати всі за тегами івентів. Але зазвичай достатньо скасувати конкретні.
-        // Якщо потрібно скасувати все для дитини, варто було б додавати тег childId при плануванні.
+        WorkManager.getInstance(context).cancelAllWorkByTag("child_$childId")
     }
 }

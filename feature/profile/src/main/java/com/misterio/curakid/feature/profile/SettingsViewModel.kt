@@ -1,7 +1,5 @@
 package com.misterio.curakid.feature.profile
 
-import android.content.Context
-import android.content.Intent
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.misterio.core.domain.UiState
@@ -55,27 +53,17 @@ class SettingsViewModel @Inject constructor(
         _showDeleteDialog.value = show
     }
 
-    fun deleteAccount(context: Context) {
+    fun deleteAccount() {
         viewModelScope.launch {
             _deleteState.value = UiState.Loading
             deleteProfileUseCase()
                 .onSuccess {
                     _deleteState.value = UiState.Success(Unit)
-                    restartApp(context)
                 }
                 .onFailure { error ->
                     val domainError = (error as? DomainError) ?: DomainError.UnknownError(error.message ?: "Failed to delete account", error)
                     _deleteState.value = UiState.Error(domainError)
                 }
         }
-    }
-
-    private fun restartApp(context: Context) {
-        val intent = context.packageManager.getLaunchIntentForPackage(context.packageName)
-        val componentName = intent?.component
-        val mainIntent = Intent.makeRestartActivityTask(componentName)
-        context.startActivity(mainIntent)
-
-        Runtime.getRuntime().exit(0)
     }
 }

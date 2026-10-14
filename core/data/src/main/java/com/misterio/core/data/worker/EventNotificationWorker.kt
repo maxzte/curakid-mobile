@@ -1,4 +1,4 @@
-package com.misterio.curakid.feature.calendar.worker
+package com.misterio.core.data.worker
 
 import android.app.NotificationChannel
 import android.app.NotificationManager
@@ -9,7 +9,6 @@ import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
-import com.misterio.curakid.feature.calendar.R
 
 class EventNotificationWorker(
     context: Context,
@@ -50,11 +49,14 @@ class EventNotificationWorker(
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val smallIcon = applicationContext.applicationInfo.icon.takeIf { it != 0 }
+            ?: android.R.drawable.ic_dialog_info
+
         val notification = NotificationCompat.Builder(applicationContext, CHANNEL_ID)
             .setContentTitle(title)
             .setContentText(message)
-            .setSmallIcon(R.drawable.ic_event_notification)
-            .setColor(0xFF4CAF50.toInt()) // CuraKid Primary Color (Greenish)
+            .setSmallIcon(smallIcon)
+            .setColor(0xFF4CAF50.toInt())
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)
