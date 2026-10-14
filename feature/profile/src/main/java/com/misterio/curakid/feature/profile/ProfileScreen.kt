@@ -68,6 +68,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import com.misterio.core.ui.theme.CuraKidColors
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
@@ -112,10 +113,10 @@ enum class MedicalCategory(
     ),
     CHRONIC(
         title = "Хронічні хвороби",
-        getIconBg = { Color(0xFFFAEEDA) }, // AmberBg
-        getIconTint = { Color(0xFF633806) }, // AmberText
-        getChipBg = { Color(0xFFFAEEDA) },
-        getChipText = { Color(0xFF633806) },
+        getIconBg = { CuraKidColors.Amber90 },
+        getIconTint = { CuraKidColors.Amber30 },
+        getChipBg = { CuraKidColors.Amber90 },
+        getChipText = { CuraKidColors.Amber30 },
         suggestions = listOf(
             "Бронхіальна астма", "Цукровий діабет 1 типу",
             "Атопічний дерматит", "Епілепсія",
@@ -137,10 +138,10 @@ enum class MedicalCategory(
     ),
     FEATURES(
         title = "Особливості",
-        getIconBg = { Color(0xFFEEEDFE) }, // PurpleBg
-        getIconTint = { Color(0xFF3C3489) }, // PurpleText
-        getChipBg = { Color(0xFFEEEDFE) },
-        getChipText = { Color(0xFF3C3489) },
+        getIconBg = { CuraKidColors.Purple90 },
+        getIconTint = { CuraKidColors.Purple30 },
+        getChipBg = { CuraKidColors.Purple90 },
+        getChipText = { CuraKidColors.Purple30 },
         suggestions = listOf(
             "Недоношена/ний", "Носить окуляри",
             "Слуховий апарат", "Вегетаріанець",

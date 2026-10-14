@@ -187,7 +187,7 @@ fun DayCell(
                 eventTypes.take(3).forEach { type ->
                     val color = when (type) {
                         EventType.VACCINE -> CuraKidColors.Blue40
-                        EventType.DOCTOR -> Color(0xFF9C27B0)
+                        EventType.DOCTOR -> CuraKidColors.Purple30
                         EventType.USER -> CuraKidColors.Teal40
                     }
                     Box(
@@ -296,10 +296,10 @@ fun EventCard(
         )
         EventType.DOCTOR -> Quintuple(
             Icons.Default.Favorite,
-            Color(0xFF9C27B0), // Purple for doctor
+            CuraKidColors.Purple30,
             "DOCTOR",
-            Color(0xFFF3E5F5),
-            Color(0xFF9C27B0)
+            CuraKidColors.Purple90,
+            CuraKidColors.Purple30
         )
         EventType.USER -> Quintuple(
             Icons.Default.CalendarMonth,

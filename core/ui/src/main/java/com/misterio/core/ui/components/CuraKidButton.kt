@@ -35,17 +35,21 @@ fun CuraKidButton(
     enabled: Boolean = true,
     loading: Boolean = false,
     containerColor: Color? = null,
-    contentColor: Color? = null
+    contentColor: Color? = null,
+    shape: androidx.compose.ui.graphics.Shape = CurakidTheme.Radius.md
 ) {
     Button(
         onClick = onClick,
         modifier = modifier
             .fillMaxWidth()
             .height(56.dp),
+        shape = shape,
         enabled = enabled && !loading,
         colors = ButtonDefaults.buttonColors(
             containerColor = containerColor ?: CurakidTheme.colors.primary,
-            contentColor = contentColor ?: CurakidTheme.colors.onPrimary
+            contentColor = contentColor ?: CurakidTheme.colors.onPrimary,
+            disabledContainerColor = CurakidTheme.colors.inversePrimary,
+            disabledContentColor = CurakidTheme.colors.onSurfaceVariant
         )
     ) {
         if (loading) {

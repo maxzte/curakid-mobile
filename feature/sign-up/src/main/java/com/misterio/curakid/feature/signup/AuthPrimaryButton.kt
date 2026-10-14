@@ -14,6 +14,8 @@ import androidx.compose.ui.unit.sp
 import com.misterio.core.ui.theme.CuraKidColors
 import com.misterio.core.ui.theme.CurakidTheme
 
+import com.misterio.core.ui.components.CuraKidButton
+
 @Composable
 internal fun AuthPrimaryButton(
     text: String,
@@ -21,32 +23,10 @@ internal fun AuthPrimaryButton(
     enabled: Boolean = true,
     onClick: () -> Unit
 ) {
-    Button(
+    CuraKidButton(
+        text = text,
         onClick = onClick,
-        enabled = !isLoading && enabled,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(52.dp),
-        shape = CurakidTheme.Radius.md,
-        colors = ButtonDefaults.buttonColors(
-            containerColor = CurakidTheme.colors.primary,
-            disabledContainerColor = CurakidTheme.colors.inversePrimary
-        )
-    ) {
-        if (isLoading) {
-            CircularProgressIndicator(
-                modifier = Modifier.size(20.dp),
-                color = CuraKidColors.White,
-                strokeWidth = 2.dp
-            )
-        } else {
-            Text(
-                text = text,
-                style = CurakidTheme.typography.bodyMedium.copy(
-                    color = CuraKidColors.White,
-                    fontSize = 15.sp
-                )
-            )
-        }
-    }
+        loading = isLoading,
+        enabled = enabled
+    )
 }

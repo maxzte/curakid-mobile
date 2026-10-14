@@ -165,7 +165,7 @@ private fun VaccinationDetailContent(
                     EventStatus.PLANNED -> "Заплановано"
                     EventStatus.SKIPPED -> "Пропущено"
                 },
-                valueColor = if (vaccination.status == EventStatus.DONE) Color(0xFF4CAF50) else CurakidTheme.colors.primary
+                valueColor = if (vaccination.status == EventStatus.DONE) CurakidTheme.colors.tertiary else CurakidTheme.colors.primary
             )
         }
     }
