@@ -11,7 +11,7 @@ fun ChildEntity.toDomain() = Child(
     id = id,
     name = name,
     birthDate = birthDate,
-    gender = Gender.valueOf(gender),
+    gender = Gender.entries.find { it.name.equals(gender, ignoreCase = true) } ?: Gender.MALE,
     isPremature = isPremature,
     gestationalWeeks = gestationalWeeks,
     allergies = allergies,

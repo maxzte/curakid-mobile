@@ -1,6 +1,7 @@
 package com.misterio.curakid.feature.home
 
 import android.util.Log
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
@@ -132,7 +133,7 @@ fun HomeScreen(
     onAiReportClick: (reportId: UUID) -> Unit,
 ) {
     val viewModel: HomeViewModel = hiltViewModel()
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     when (val state = uiState) {
         is UiState.Loading, UiState.Initial -> LoadingScreen()

@@ -22,6 +22,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
@@ -52,6 +53,14 @@ class HomeViewModel @Inject constructor(
 
     init {
         Log.d(TAG, "INIT")
+        viewModelScope.launch {
+            selectedChild.collectLatest { child ->
+                if (child != null) {
+                    launch { runCatching { syncEventsUseCase(child.id) } }
+                    launch { runCatching { syncChildAiReportsUseCase(child.id) } }
+                }
+            }
+        }
     }
 
     private val selectedChild = getChildUseCase()
@@ -70,11 +79,6 @@ class HomeViewModel @Inject constructor(
     private val events = selectedChild
         .flatMapLatest { child ->
             if (child != null) {
-                viewModelScope.launch {
-                    runCatching {
-                        syncEventsUseCase(child.id)
-                    }
-                }
                 getEventsUseCase(child.id)
             } else {
                 flowOf(emptyList())
@@ -84,11 +88,6 @@ class HomeViewModel @Inject constructor(
     private val aiReports = selectedChild
         .flatMapLatest { child ->
             if (child != null) {
-                viewModelScope.launch {
-                    runCatching {
-                        syncChildAiReportsUseCase(child.id)
-                    }
-                }
                 getChildAiReportsUseCase(child.id)
             } else {
                 flowOf(emptyList())

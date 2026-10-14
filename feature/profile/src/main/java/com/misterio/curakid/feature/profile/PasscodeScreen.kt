@@ -44,70 +44,34 @@ import com.misterio.curakid.core.common.PasscodeMode
 import com.misterio.curakid.core.common.SecurityManager
 import kotlinx.coroutines.delay
 
+import androidx.compose.ui.res.stringResource
+import com.misterio.curakid.feature.profile.R
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 @Composable
 fun PasscodeScreen(
     mode: PasscodeMode,
-    securityManager: SecurityManager,
     onSuccess: () -> Unit,
     onForgotPasscode: () -> Unit = {},
-    onBack: () -> Unit = {}
+    onBack: () -> Unit = {},
+    viewModel: PasscodeViewModel = hiltViewModel(
+        creationCallback = { factory: PasscodeViewModel.Factory -> factory.create(mode) }
+    )
 ) {
-    var passcode by remember { mutableStateOf("") }
-    var confirmPasscode by remember { mutableStateOf("") }
-    var isConfirming by remember { mutableStateOf(false) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var showResetDialog by remember { mutableStateOf(false) }
-    val scope = rememberCoroutineScope()
 
     val title = when (mode) {
-        PasscodeMode.SETUP -> if (isConfirming) "Підтвердіть ПІН-код" else "Встановіть ПІН-код"
-        PasscodeMode.UNLOCK -> "Введіть ПІН-код"
-        PasscodeMode.DISABLE -> "Введіть ПІН-код для вимкнення"
+        PasscodeMode.SETUP -> if (uiState.isConfirming) stringResource(R.string.passcode_confirm_title) else stringResource(R.string.passcode_create_title)
+        PasscodeMode.UNLOCK -> stringResource(R.string.passcode_unlock_title)
+        PasscodeMode.DISABLE -> stringResource(R.string.passcode_unlock_title)
     }
 
-    LaunchedEffect(passcode) {
-        if (passcode.length == 4) {
-            when (mode) {
-                PasscodeMode.SETUP -> {
-                    if (!isConfirming) {
-                        confirmPasscode = passcode
-                        passcode = ""
-                        isConfirming = true
-                    } else {
-                        if (passcode == confirmPasscode) {
-                            securityManager.savePasscode(passcode)
-                            onSuccess()
-                        } else {
-                            errorMessage = "Коди не збігаються"
-                            delay(1000)
-                            passcode = ""
-                            confirmPasscode = ""
-                            isConfirming = false
-                            errorMessage = null
-                        }
-                    }
-                }
-                PasscodeMode.UNLOCK -> {
-                    if (securityManager.verifyPasscode(passcode)) {
-                        onSuccess()
-                    } else {
-                        errorMessage = "Неправильний ПІН-код"
-                        delay(1000)
-                        passcode = ""
-                        errorMessage = null
-                    }
-                }
-                PasscodeMode.DISABLE -> {
-                    if (securityManager.verifyPasscode(passcode)) {
-                        securityManager.clearPasscode()
-                        onSuccess()
-                    } else {
-                        errorMessage = "Неправильний ПІН-код"
-                        delay(1000)
-                        passcode = ""
-                        errorMessage = null
-                    }
-                }
+    LaunchedEffect(viewModel) {
+        viewModel.events.collect { event ->
+            when (event) {
+                is PasscodeEvent.Success -> onSuccess()
             }
         }
     }
@@ -134,7 +98,7 @@ fun PasscodeScreen(
             modifier = Modifier.padding(vertical = 16.dp)
         ) {
             repeat(4) { index ->
-                val isFilled = index < passcode.length
+                val isFilled = index < uiState.passcode.length
                 Box(
                     modifier = Modifier
                         .size(16.dp)
@@ -148,7 +112,7 @@ fun PasscodeScreen(
         }
 
         AnimatedContent(
-            targetState = errorMessage,
+            targetState = uiState.errorMessage,
             transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(300)) },
             label = "error_message"
         ) { msg ->
@@ -167,14 +131,14 @@ fun PasscodeScreen(
         Spacer(modifier = Modifier.height(48.dp))
 
         Keypad(
-            onDigitClick = { if (passcode.length < 4) passcode += it },
-            onDeleteClick = { if (passcode.isNotEmpty()) passcode = passcode.dropLast(1) }
+            onDigitClick = viewModel::onDigitClick,
+            onDeleteClick = viewModel::onDeleteClick
         )
 
         if (mode == PasscodeMode.UNLOCK) {
             Spacer(modifier = Modifier.height(32.dp))
             Text(
-                text = "Забули ПІН-код?",
+                text = stringResource(R.string.passcode_forgot),
                 color = MaterialTheme.colorScheme.primary,
                 fontSize = 14.sp,
                 textDecoration = TextDecoration.Underline,
@@ -212,12 +176,14 @@ fun Keypad(
     onDigitClick: (String) -> Unit,
     onDeleteClick: () -> Unit
 ) {
-    val digits = listOf(
-        listOf("1", "2", "3"),
-        listOf("4", "5", "6"),
-        listOf("7", "8", "9"),
-        listOf(null, "0", "delete")
-    )
+    val digits = remember {
+        listOf(
+            listOf("1", "2", "3"),
+            listOf("4", "5", "6"),
+            listOf("7", "8", "9"),
+            listOf(null, "0", "delete")
+        )
+    }
 
     Column(
         verticalArrangement = Arrangement.spacedBy(16.dp),

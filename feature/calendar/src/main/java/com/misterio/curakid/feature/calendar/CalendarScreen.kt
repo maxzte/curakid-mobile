@@ -101,6 +101,8 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.UUID
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 @Composable
 fun CalendarScreen(
     eventId: UUID? = null,
@@ -113,7 +115,7 @@ fun CalendarScreen(
     ) { factory ->
         factory.create(eventId)
     }
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {

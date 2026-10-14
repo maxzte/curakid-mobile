@@ -23,6 +23,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.halilibo.richtext.commonmark.Markdown
 import com.halilibo.richtext.ui.BasicRichText
 import com.misterio.core.domain.UiState
@@ -35,7 +36,7 @@ fun LegalDocumentScreen(
     onBack: () -> Unit,
     viewModel: SignUpViewModel
 ) {
-    val documentContent by viewModel.documentContent.collectAsState()
+    val documentContent by viewModel.documentContent.collectAsStateWithLifecycle()
 
     LaunchedEffect(url) {
         viewModel.downloadDocument(url)

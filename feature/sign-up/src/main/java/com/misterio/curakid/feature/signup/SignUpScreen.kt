@@ -38,6 +38,8 @@ import com.misterio.core.ui.components.CuraKidTextField
 import com.misterio.core.ui.theme.CuraKidColors
 import com.misterio.curakid.core.common.util.ValidationUtils
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 @Composable
 fun SignUpScreen(
     onNavigateToLogIn: () -> Unit,
@@ -48,8 +50,8 @@ fun SignUpScreen(
     passwordError: String? = null,
     viewModel: SignUpViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val legalDocs by viewModel.legalDocuments.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val legalDocs by viewModel.legalDocuments.collectAsStateWithLifecycle()
 
     var name by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }

@@ -55,7 +55,7 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -157,10 +157,9 @@ fun ProfileScreen(
     onChatClick: () -> Unit = {},
 ) {
     val viewModel: ProfileViewModel = hiltViewModel()
-    val children by viewModel.children.collectAsState()
-    val selectedChild by viewModel.selectedChild.collectAsState()
+    val children by viewModel.children.collectAsStateWithLifecycle()
+    val selectedChild by viewModel.selectedChild.collectAsStateWithLifecycle()
 
-    val context = LocalContext.current
     var activeModal by remember { mutableStateOf<MedicalCategory?>(null) }
 
 //    TrackTopBar(
@@ -278,7 +277,7 @@ fun ProfileScreen(
         itemWrapper {
             CuraKidButton(
                 text = "Вийти",
-                onClick = { viewModel.logout(context) },
+                onClick = { viewModel.logout() },
                 icon = Icons.AutoMirrored.Filled.Logout,
             )
         }

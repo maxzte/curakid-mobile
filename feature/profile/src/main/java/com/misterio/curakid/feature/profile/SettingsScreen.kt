@@ -33,9 +33,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.misterio.core.domain.UiState
 import com.misterio.core.ui.theme.CurakidTheme
 import com.misterio.curakid.core.common.PasscodeMode
+
+import androidx.compose.ui.res.stringResource
+import com.misterio.curakid.feature.profile.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,33 +47,32 @@ fun SettingsScreen(
     onBack: () -> Unit,
     onNavigateToPasscode: (PasscodeMode) -> Unit,
 ) {
-    val context = LocalContext.current
     val viewModel: SettingsViewModel = hiltViewModel()
-    val isNotificationsEnabled by viewModel.isNotificationsEnabled.collectAsState()
-    val isPasscodeEnabled by viewModel.isPasscodeEnabled.collectAsState()
-    val showDeleteDialog by viewModel.showDeleteDialog.collectAsState()
-    val deleteState by viewModel.deleteState.collectAsState()
+    val isNotificationsEnabled by viewModel.isNotificationsEnabled.collectAsStateWithLifecycle()
+    val isPasscodeEnabled by viewModel.isPasscodeEnabled.collectAsStateWithLifecycle()
+    val showDeleteDialog by viewModel.showDeleteDialog.collectAsStateWithLifecycle()
+    val deleteState by viewModel.deleteState.collectAsStateWithLifecycle()
 
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { viewModel.setShowDeleteDialog(false) },
-            title = { Text("Видалити профіль?") },
-            text = { Text("Ця дія видалить усі ваші дані, дані дитини та історію без можливості відновлення.") },
+            title = { Text(stringResource(R.string.delete_profile_title)) },
+            text = { Text(stringResource(R.string.delete_profile_warning)) },
             confirmButton = {
                 TextButton(
                     onClick = {
-                        viewModel.deleteAccount(context)
+                        viewModel.deleteAccount()
                     },
                     colors = ButtonDefaults.textButtonColors(
                         contentColor = MaterialTheme.colorScheme.error
                     )
                 ) {
-                    Text("Видалити")
+                    Text(stringResource(R.string.delete))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { viewModel.setShowDeleteDialog(false) }) {
-                    Text("Скасувати")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -78,10 +81,10 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Налаштування") },
+                title = { Text(stringResource(R.string.settings)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
@@ -101,12 +104,12 @@ fun SettingsScreen(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Сповіщення",
+                        text = stringResource(R.string.notifications),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Medium
                     )
                     Text(
-                        text = "Вимкнути всі сповіщення від застосунку",
+                        text = stringResource(R.string.notifications_description),
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -127,12 +130,12 @@ fun SettingsScreen(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = "Захист ПІН-кодом",
+                        text = stringResource(R.string.passcode_protection),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Medium
                     )
                     Text(
-                        text = "Запитувати ПІН-код при вході в застосунок",
+                        text = stringResource(R.string.passcode_protection_description),
                         fontSize = 12.sp,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -168,7 +171,7 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.error
                     )
                 }
-                Text("Видалити профіль")
+                Text(stringResource(R.string.delete_profile))
             }
             
             Spacer(modifier = Modifier.height(16.dp))

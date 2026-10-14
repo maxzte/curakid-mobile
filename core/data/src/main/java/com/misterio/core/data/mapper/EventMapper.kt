@@ -38,19 +38,21 @@ fun VaccineEventResponse.toDomain() = Event.Vaccine(
 )
 
 fun EventEntity.toDomain(): Event {
-    val type = EventType.valueOf(type)
-    return if (type == EventType.VACCINE) {
+    val eventType = EventType.entries.find { it.name.equals(type, ignoreCase = true) } ?: EventType.USER
+    return if (eventType == EventType.VACCINE) {
         Event.Vaccine(
             id = id,
             title = title,
             date = date,
             description = description,
-            status = EventStatus.valueOf(status),
+            status = EventStatus.entries.find { it.name.equals(status, ignoreCase = true) } ?: EventStatus.PLANNED,
             isSynced = isSynced,
             disease = disease,
             doseNumber = doseNumber,
             totalDoses = totalDoses,
-            vaccineType = vaccineType?.let { VaccineType.valueOf(it) } ?: VaccineType.VACCINATION,
+            vaccineType = vaccineType?.let { vt ->
+                VaccineType.entries.find { it.name.equals(vt, ignoreCase = true) }
+            } ?: VaccineType.VACCINATION,
             scheduledAgeMonths = scheduledAgeMonths,
             scheduledAgeDays = scheduledAgeDays,
             notes = notes,
@@ -60,10 +62,10 @@ fun EventEntity.toDomain(): Event {
         Event.General(
             id = id,
             title = title,
-            type = type,
+            type = eventType,
             date = date,
             description = description,
-            status = EventStatus.valueOf(status),
+            status = EventStatus.entries.find { it.name.equals(status, ignoreCase = true) } ?: EventStatus.PLANNED,
             isSynced = isSynced,
             location = location,
             isDeleted = isDeleted

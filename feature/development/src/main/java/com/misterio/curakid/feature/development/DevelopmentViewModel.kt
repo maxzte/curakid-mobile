@@ -222,19 +222,6 @@ class DevelopmentViewModel @Inject constructor(
                                 currentAiReport == null &&
                                 !state.isCompleted
 
-                        if (currentPeriod != null) {
-                            fetchReadiness(snapshot.child.id, currentPeriod.code)
-                        }
-
-                        Log.d(TAG, "observeData: Mapping for period ${currentPeriod?.id}")
-                        Log.d(TAG, "observeData: found report=${currentAiReport?.id}")
-                        if (currentAiReport == null && snapshot.reports.isNotEmpty()) {
-                            Log.d(
-                                TAG,
-                                "observeData: Available reports: ${snapshot.reports.map { "id=${it.id}, periodId=${it.lifePeriodId}" }}"
-                            )
-                        }
-
                         state.copy(
                             lifePeriods = snapshot.periods,
                             aiReports = snapshot.reports,
@@ -248,6 +235,11 @@ class DevelopmentViewModel @Inject constructor(
                             isMinAnswersRequirementMet = met,
                             showAgeTransitionPrompt = shouldShowAgePrompt
                         )
+                    }
+
+                    val activePeriod = _uiState.value.currentPeriod
+                    if (activePeriod != null) {
+                        fetchReadiness(snapshot.child.id, activePeriod.code)
                     }
                 }
         }

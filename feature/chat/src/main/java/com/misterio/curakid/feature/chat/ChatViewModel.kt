@@ -80,7 +80,11 @@ class ChatViewModel @Inject constructor(
             _isLoading.value = true
             try {
                 val selectedChild = getChildUseCase().first()
-                val history = chatRepository.getChatHistory(selectedChild?.id!!).getOrElse {
+                if (selectedChild == null) {
+                    _isLoading.value = false
+                    return@launch
+                }
+                val history = chatRepository.getChatHistory(selectedChild.id).getOrElse {
                     emptyList()
                 }
 
@@ -151,8 +155,13 @@ class ChatViewModel @Inject constructor(
                         } else {
                             fullText += chunk
                             _messages.update { list ->
-                                list.map { msg ->
-                                    if (msg.id == messageId) msg.copy(aiText = fullText) else msg
+                                if (list.isNotEmpty() && list.last().id == messageId) {
+                                    val last = list.last()
+                                    list.dropLast(1) + last.copy(aiText = fullText)
+                                } else {
+                                    list.map { msg ->
+                                        if (msg.id == messageId) msg.copy(aiText = fullText) else msg
+                                    }
                                 }
                             }
                         }

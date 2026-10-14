@@ -52,7 +52,7 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
@@ -186,8 +186,8 @@ fun MessageList(
     viewModel: ChatViewModel,
     listState: LazyListState
 ) {
-    val messages by viewModel.messages.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
+    val messages by viewModel.messages.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val reversedMessages = remember(messages) { messages.reversed() }
 
     if (isLoading && messages.isEmpty()) {
@@ -257,7 +257,7 @@ fun ChatInputSection(
     viewModel: ChatViewModel
 ) {
     var inputText by rememberSaveable { mutableStateOf("") }
-    val isLoading by viewModel.isLoading.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
 
     ChatInput(
         text = inputText,

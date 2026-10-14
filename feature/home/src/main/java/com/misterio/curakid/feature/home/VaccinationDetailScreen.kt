@@ -50,6 +50,8 @@ import com.misterio.core.ui.theme.CurakidTheme
 import com.misterio.core.ui.toFormatted
 import java.util.UUID
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 @Composable
 fun VaccinationDetailScreen(
     vaccineEventId: UUID,
@@ -59,7 +61,7 @@ fun VaccinationDetailScreen(
         hiltViewModel<VaccineDetailsViewModel, VaccineDetailsViewModel.Factory> { factory ->
             factory.create(vaccineEventId)
         }
-    val details by viewModel.vaccineDetails.collectAsState()
+    val details by viewModel.vaccineDetails.collectAsStateWithLifecycle()
 
     Column(
         modifier = Modifier

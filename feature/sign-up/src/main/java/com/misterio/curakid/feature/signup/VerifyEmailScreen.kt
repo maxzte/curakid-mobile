@@ -16,6 +16,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.misterio.core.domain.UiState
 import com.misterio.core.ui.components.CuraKidTextField
 
@@ -25,7 +26,7 @@ fun VerifyEmailScreen(
     onVerificationSuccess: () -> Unit,
     viewModel: VerifyEmailViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var code by rememberSaveable { mutableStateOf("") }
 
     LaunchedEffect(uiState) {

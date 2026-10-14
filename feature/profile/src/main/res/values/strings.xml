@@ -1,4 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="profile">Профіль</string>
+    <string name="settings">Налаштування</string>
+    <string name="notifications">Сповіщення</string>
+    <string name="notifications_description">Вимкнути всі сповіщення від застосунку</string>
+    <string name="passcode_protection">Захист ПІН-кодом</string>
+    <string name="passcode_protection_description">Запитувати ПІН-код при вході в застосунок</string>
+    <string name="delete_profile">Видалити профіль</string>
+    <string name="delete_profile_title">Видалити профіль?</string>
+    <string name="delete_profile_warning">Ця дія видалить усі ваші дані, дані дитини та історію без можливості відновлення.</string>
+    <string name="delete">Видалити</string>
+    <string name="cancel">Скасувати</string>
+    <string name="back">Назад</string>
+    <string name="passcode_create_title">Встановіть ПІН-код</string>
+    <string name="passcode_confirm_title">Повторіть ПІН-код</string>
+    <string name="passcode_unlock_title">Введіть ПІН-код</string>
+    <string name="passcode_mismatch">ПІН-коди не співпадають</string>
+    <string name="passcode_incorrect">Невірний ПІН-код</string>
+    <string name="passcode_forgot">Забули ПІН-код?</string>
 </resources>

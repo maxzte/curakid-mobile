@@ -42,6 +42,7 @@ import com.misterio.core.domain.model.Event
 import com.misterio.core.domain.model.EventType
 import com.misterio.core.ui.components.LoadingScreen
 import com.misterio.core.ui.theme.CurakidTheme
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.misterio.core.ui.toFormatted
 import java.util.UUID
 
@@ -51,7 +52,7 @@ fun UpcomingEventsScreen(
     onBack: () -> Unit,
 ) {
     val viewModel: HomeViewModel = hiltViewModel()
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
         topBar = {

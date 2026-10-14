@@ -16,6 +16,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.misterio.core.domain.UiState
 import com.misterio.core.ui.components.CuraKidTextField
 
@@ -24,8 +25,8 @@ fun ForgotPasswordScreen(
     onBack: () -> Unit,
     viewModel: ForgotPasswordViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.uiState.collectAsState()
-    val step by viewModel.step.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val step by viewModel.step.collectAsStateWithLifecycle()
 
     var email by rememberSaveable { mutableStateOf("") }
     var code by rememberSaveable { mutableStateOf("") }

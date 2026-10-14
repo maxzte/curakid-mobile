@@ -27,6 +27,8 @@ import com.misterio.core.domain.UiState
 import com.misterio.core.ui.components.CuraKidTextField
 import com.misterio.curakid.core.common.util.ValidationUtils
 
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+
 @Composable
 fun LoginScreen(
     onNavigateToSignUp: () -> Unit = {},
@@ -35,7 +37,7 @@ fun LoginScreen(
     passwordError: String? = null
 ) {
     val viewModel: LoginViewModel = hiltViewModel()
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
 
@@ -46,9 +48,8 @@ fun LoginScreen(
     val passwordFocus = remember { FocusRequester() }
 
     fun submit() {
-        viewModel.login(email, password)
-        if (uiState is UiState.Success) {
-            onNavigateToSignUp()
+        if (isFormValid) {
+            viewModel.login(email, password)
         }
     }
 

@@ -38,7 +38,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -151,13 +151,13 @@ fun ChildDetailsScreen(
 
     val viewModel: ChildDetailsViewModel = hiltViewModel()
 
-    val childState by viewModel.selectedChild.collectAsState()
-    val measurementsState by viewModel.measurements.collectAsState()
-    val lastReport by viewModel.lastAiReport.collectAsState()
-    val reportLoading by viewModel.reportLoading.collectAsState()
-    val normsCache by viewModel.normsCache.collectAsState()
-    val norms by viewModel.n.collectAsState()
-    val selectedChartType by viewModel.selectedChartType.collectAsState()
+    val childState by viewModel.selectedChild.collectAsStateWithLifecycle()
+    val measurementsState by viewModel.measurements.collectAsStateWithLifecycle()
+    val lastReport by viewModel.lastAiReport.collectAsStateWithLifecycle()
+    val reportLoading by viewModel.reportLoading.collectAsStateWithLifecycle()
+    val normsCache by viewModel.normsCache.collectAsStateWithLifecycle()
+    val norms by viewModel.n.collectAsStateWithLifecycle()
+    val selectedChartType by viewModel.selectedChartType.collectAsStateWithLifecycle()
 
     val child = childState.getOrNull()
     val measurements = measurementsState.getOrNull() ?: emptyList()
