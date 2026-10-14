@@ -30,10 +30,22 @@ interface ChildDao {
     @Delete
     suspend fun deleteChild(child: ChildEntity)
 
+    @Query("DELETE FROM children WHERE isSynced = 1 AND id NOT IN (:remainingIds)")
+    suspend fun deleteOldSyncedChildren(remainingIds: List<UUID>)
+
+    @androidx.room.Transaction
+    suspend fun syncWithServer(remoteChildren: List<ChildEntity>) {
+        if (remoteChildren.isNotEmpty()) {
+            deleteOldSyncedChildren(remoteChildren.map { it.id })
+            insertChildren(remoteChildren)
+        } else {
+            deleteOldSyncedChildren(emptyList())
+        }
+    }
+
     @Query("SELECT * FROM children WHERE isSynced = 0")
     suspend fun getUnsyncedChildren(): List<ChildEntity>
 
     @Query("UPDATE children SET isSynced = 1 WHERE id = :id")
     suspend fun markAsSynced(id: UUID)
-
 }

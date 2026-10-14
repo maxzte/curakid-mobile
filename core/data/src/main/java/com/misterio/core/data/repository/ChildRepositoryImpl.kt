@@ -59,8 +59,15 @@ class ChildRepositoryImpl @Inject constructor(
         }
 
         return safeApiCall { childApi.getChildren() }.map { body ->
-            childDao.insertChildren(body.map { it.toEntity() })
+            val remoteEntities = body.map { it.toEntity() }
+            childDao.syncWithServer(remoteEntities)
             appDataStore.setLastChildrenSync(System.currentTimeMillis())
+
+            // Also check for any locally added unsynced children to push to backend
+            val unsynced = childDao.getUnsyncedChildren()
+            if (unsynced.isNotEmpty()) {
+                syncManager.scheduleSync()
+            }
             Unit
         }
     }
