@@ -35,13 +35,13 @@ fun MeasurementItem(measurement: Measurement) {
             Box(
                 modifier = Modifier
                     .size(48.dp)
-                    .background(Color(0xFFF3F4F6), RoundedCornerShape(12.dp)),
+                    .background(CurakidTheme.colors.surfaceVariant, RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     imageVector = Icons.Default.CalendarMonth,
                     contentDescription = null,
-                    tint = Color(0xFF9CA3AF)
+                    tint = CurakidTheme.colors.onSurfaceVariant
                 )
             }
 
@@ -50,7 +50,7 @@ fun MeasurementItem(measurement: Measurement) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = measurement.date.format(DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm")),
-                    style = MaterialTheme.typography.bodySmall.copy(color = Color(0xFF9CA3AF))
+                    style = MaterialTheme.typography.bodySmall.copy(color = CurakidTheme.colors.onSurfaceVariant)
                 )
 
                 Row(
@@ -81,9 +81,9 @@ fun MeasurementItem(measurement: Measurement) {
             if (!measurement.isSynced) {
                 Icon(
                     imageVector = Icons.Default.CloudOff,
-                    contentDescription = "Not synced",
+                    contentDescription = stringResource(R.string.not_synced),
                     modifier = Modifier.size(16.dp),
-                    tint = Color(0xFFEF4444)
+                    tint = CurakidTheme.colors.error
                 )
             }
         }
@@ -103,7 +103,7 @@ private fun MeasurementValue(value: String, label: String) {
         Text(
             text = label,
             style = MaterialTheme.typography.labelSmall.copy(
-                color = Color(0xFF9CA3AF),
+                color = CurakidTheme.colors.onSurfaceVariant,
                 fontSize = 10.sp
             )
         )

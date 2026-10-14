@@ -23,6 +23,7 @@ import com.misterio.core.domain.model.Child
 import com.misterio.core.ui.components.CuraKidAlertDialog
 import com.misterio.core.ui.components.CuraKidButton
 import com.misterio.core.ui.components.RulerSlider
+import com.misterio.core.ui.theme.CurakidTheme
 import java.util.Locale
 import kotlin.math.floor
 import kotlin.math.round
@@ -42,7 +43,7 @@ fun MeasurementActionSelectionSheet(
                 .padding(bottom = 32.dp, start = 24.dp, end = 24.dp)
         ) {
             Text(
-                text = "Що ви хочете внести?",
+                text = stringResource(R.string.what_to_add),
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
                 modifier = Modifier.padding(bottom = 16.dp)
             )
@@ -113,9 +114,9 @@ fun AddMeasurementBottomSheet(
                 )
                 showConfirmationDialog = false
             },
-            title = "Заміри поза нормою",
-            text = "Введені дані (вага або зріст) значно відрізняються від вікових норм. Ви впевнені, що хочете їх зберегти?",
-            confirmButtonColor = Color(0xFFEF5350)
+            title = stringResource(R.string.measurements_out_of_norm_title),
+            text = stringResource(R.string.measurements_out_of_norm_desc),
+            confirmButtonColor = CurakidTheme.colors.error
         )
     }
 
@@ -141,7 +142,7 @@ fun AddMeasurementBottomSheet(
             Text(
                 text = String.format(Locale.US, "%.1f kg", currentWeight),
                 style = MaterialTheme.typography.headlineMedium.copy(
-                    color = Color(0xFF6200EE),
+                    color = CurakidTheme.colors.primary,
                     fontWeight = FontWeight.Bold
                 )
             )
@@ -180,7 +181,7 @@ fun AddMeasurementBottomSheet(
             Text(
                 text = String.format(Locale.US, "%.1f cm", currentHeight),
                 style = MaterialTheme.typography.headlineMedium.copy(
-                    color = Color(0xFF6200EE),
+                    color = CurakidTheme.colors.primary,
                     fontWeight = FontWeight.Bold
                 )
             )
@@ -262,9 +263,9 @@ fun AddHeadCircBottomSheet(
                 onDoneClick(floor(headCircWhole) + headCircDecimal)
                 showConfirmationDialog = false
             },
-            title = "Замір поза нормою",
-            text = "Введений обхват голови значно відрізняється від вікових норм. Ви впевнені, що хочете його зберегти?",
-            confirmButtonColor = Color(0xFFEF5350)
+            title = stringResource(R.string.head_circ_out_of_norm_title),
+            text = stringResource(R.string.head_circ_out_of_norm_desc),
+            confirmButtonColor = CurakidTheme.colors.error
         )
     }
 
@@ -289,7 +290,7 @@ fun AddHeadCircBottomSheet(
             Text(
                 text = String.format(Locale.US, "%.1f cm", currentVal),
                 style = MaterialTheme.typography.headlineMedium.copy(
-                    color = Color(0xFF6200EE),
+                    color = CurakidTheme.colors.primary,
                     fontWeight = FontWeight.Bold
                 )
             )
@@ -345,8 +346,8 @@ fun NormStatus(
     if (normRange == null) return
 
     val isWithinNorm = value in normRange
-    val text = if (isWithinNorm) "В межах норми" else "Поза нормою"
-    val color = if (isWithinNorm) Color(0xFF4CAF50) else Color(0xFFEF5350)
+    val text = if (isWithinNorm) stringResource(R.string.norm_within) else stringResource(R.string.norm_out_of_range)
+    val color = if (isWithinNorm) CurakidTheme.colors.tertiary else CurakidTheme.colors.error
 
     Surface(
         color = color.copy(alpha = 0.1f),

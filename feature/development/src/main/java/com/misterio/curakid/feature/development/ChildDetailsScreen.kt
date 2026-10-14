@@ -69,6 +69,7 @@ import com.misterio.core.ui.components.ScreenHeader
 import com.misterio.core.ui.components.SectionHeader
 import com.misterio.core.ui.components.itemWrapper
 import com.misterio.core.ui.components.rememberListContentPadding
+import com.misterio.core.ui.theme.CuraKidColors
 import com.misterio.core.ui.theme.CurakidTheme
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.Zoom
@@ -277,8 +278,8 @@ private fun ScreenContent(
     val styles = rememberGrowthChartStyles()
     val legend = rememberGrowthChartLegend(
         mainLineColor = CurakidTheme.colors.primary,
-        warningLineColor = Color(0xFFFFC107),
-        criticalLineColor = Color(0xFFEF5350)
+        warningLineColor = CuraKidColors.Amber30,
+        criticalLineColor = CurakidTheme.colors.error
     )
 
     val marker = rememberDefaultCartesianMarker(
@@ -586,14 +587,14 @@ private fun ScreenContent(
                             .fillMaxWidth()
                             .height(chartHeight),
                         shape = RoundedCornerShape(20.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F4FF)),
+                        colors = CardDefaults.cardColors(containerColor = CurakidTheme.colors.primaryContainer),
                     ) {
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .background(
                                     Brush.verticalGradient(
-                                        listOf(Color(0xFFEEF7FF), Color(0xFFFFFFFF))
+                                        listOf(CurakidTheme.colors.surfaceVariant, CurakidTheme.colors.surface)
                                     )
                                 )
                                 .padding(16.dp)

@@ -72,9 +72,9 @@ internal fun TopSummaryRow(
                 else -> "Значне відхилення"
             }
             zScoreColor = when {
-                zValue >= -2.0 && zValue <= 2.0 -> Color(0xFF4CAF50)
-                zValue >= -3.0 && zValue <= 3.0 -> Color(0xFFFFC107)
-                else -> Color(0xFFEF5350)
+                zValue >= -2.0 && zValue <= 2.0 -> CurakidTheme.colors.tertiary
+                zValue >= -3.0 && zValue <= 3.0 -> com.misterio.core.ui.theme.CuraKidColors.Amber30
+                else -> CurakidTheme.colors.error
             }
         }
 
@@ -134,13 +134,13 @@ internal fun TopSummaryRow(
                 delta > 0 -> {
                     trendText = "Зростає"
                     trendIcon = Icons.AutoMirrored.Filled.TrendingUp
-                    trendIconColor = Color(0xFF4CAF50)
+                    trendIconColor = CurakidTheme.colors.tertiary
                 }
 
                 else -> {
                     trendText = "Знижується"
                     trendIcon = Icons.AutoMirrored.Filled.TrendingDown
-                    trendIconColor = Color(0xFFEF5350)
+                    trendIconColor = CurakidTheme.colors.error
                 }
             }
         }

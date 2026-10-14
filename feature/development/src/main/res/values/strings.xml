@@ -17,5 +17,16 @@
     <string name="done">Завершити</string>
     <string name="development">Розвиток</string>
     <string name="observe_development">Стежте за розвитком</string>
-
+    <string name="measurements_out_of_norm_title">Заміри поза нормою</string>
+    <string name="measurements_out_of_norm_desc">Введені дані (вага або зріст) значно відрізняються від вікових норм. Ви впевнені, що хочете їх зберегти?</string>
+    <string name="head_circ_out_of_norm_title">Замір поза нормою</string>
+    <string name="head_circ_out_of_norm_desc">Введений обхват голови значно відрізняється від вікових норм. Ви впевнені, що хочете його зберегти?</string>
+    <string name="norm_within">В межах норми</string>
+    <string name="norm_out_of_range">Поза нормою</string>
+    <string name="what_to_add">Що ви хочете внести?</string>
+    <string name="not_synced">Не синхронізовано</string>
+    <string name="legend_norm">Норма (p15–p85)</string>
+    <string name="legend_attention">Увага (p3–p15, p85–p97)</string>
+    <string name="legend_critical">Критично (&lt;p3 або &gt;p97)</string>
+    <string name="legend_child">Дитина</string>
 </resources>

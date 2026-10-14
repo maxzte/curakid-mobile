@@ -5,6 +5,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.misterio.core.ui.theme.CuraKidColors
 import com.misterio.core.ui.theme.CurakidTheme
 import com.patrykandpatrick.vico.compose.cartesian.CartesianDrawingContext
 import com.patrykandpatrick.vico.compose.cartesian.CartesianMeasuringContext
@@ -33,8 +34,8 @@ internal class GrowthChartStyles(
 internal fun rememberGrowthChartStyles(): GrowthChartStyles {
     val mainLineColor = CurakidTheme.colors.primary
     val normLineColor = Color.LightGray.copy(alpha = 0.5f)
-    val warningLineColor = Color(0xFFFFC107)
-    val criticalLineColor = Color(0xFFEF5350)
+    val warningLineColor = CuraKidColors.Amber30
+    val criticalLineColor = CurakidTheme.colors.error
 
     val mainLineStyle = LineCartesianLayer.rememberLine(
         fill = LineCartesianLayer.LineFill.single(Fill(mainLineColor)),
@@ -131,7 +132,7 @@ internal fun rememberGrowthChartLegend(
         style = CurakidTheme.typography.labelSmall.copy(color = Color.Gray)
     )
     val mainIcon = rememberShapeComponent(fill = Fill(mainLineColor), shape = CircleShape)
-    val normIcon = rememberShapeComponent(fill = Fill(Color(0xFFCCFFDD)), shape = CircleShape)
+    val normIcon = rememberShapeComponent(fill = Fill(CurakidTheme.colors.tertiaryContainer), shape = CircleShape)
     val warnIcon = rememberShapeComponent(
         fill = Fill(warningLineColor.copy(alpha = 0.9f)),
         shape = CircleShape
@@ -141,30 +142,35 @@ internal fun rememberGrowthChartLegend(
         shape = CircleShape
     )
 
+    val normLabel = androidx.compose.ui.res.stringResource(R.string.legend_norm)
+    val warnLabel = androidx.compose.ui.res.stringResource(R.string.legend_attention)
+    val critLabel = androidx.compose.ui.res.stringResource(R.string.legend_critical)
+    val childLabel = androidx.compose.ui.res.stringResource(R.string.legend_child)
+
     return rememberHorizontalLegend<CartesianMeasuringContext, CartesianDrawingContext>(
         items = {
             add(
                 LegendItem(
                     icon = normIcon,
                     labelComponent = labelComponent,
-                    label = "Норма (p15–p85)"
+                    label = normLabel
                 )
             )
             add(
                 LegendItem(
                     icon = warnIcon,
                     labelComponent = labelComponent,
-                    label = "Увага (p3–p15, p85–p97)"
+                    label = warnLabel
                 )
             )
             add(
                 LegendItem(
                     icon = critIcon,
                     labelComponent = labelComponent,
-                    label = "Критично (<p3 або >p97)"
+                    label = critLabel
                 )
             )
-            add(LegendItem(icon = mainIcon, labelComponent = labelComponent, label = "Дитина"))
+            add(LegendItem(icon = mainIcon, labelComponent = labelComponent, label = childLabel))
         },
         padding = Insets(top = 8.dp),
     )

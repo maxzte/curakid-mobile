@@ -173,7 +173,7 @@ fun DevelopmentScreen(
                 onClick = { onAddMeasurements(uiState.lifePeriods.map { it.label }) })
         }
     ) { paddingValues ->
-        Box(modifier = Modifier.padding()) {
+        Box(modifier = Modifier.padding(paddingValues)) {
             if (uiState.isLoading && uiState.lifePeriods.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
