@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Common Auth -->
+    <string name="email_label">Email</string>
+    <string name="password_label">Пароль</string>
+    <string name="back">Назад</string>
+
+    <!-- Login -->
+    <string name="login_welcome">Вітаємо!</string>
+    <string name="login_subtitle">Увійдіть до свого акаунту</string>
+    <string name="login_forgot_password">Забули пароль?</string>
+    <string name="login_button">Увійти</string>
+    <string name="login_no_account">Ще немає акаунту? </string>
+    <string name="login_register_action">Зареєструватись</string>
+
+    <!-- Sign Up -->
+    <string name="signup_title">Реєстрація</string>
+    <string name="signup_subtitle">Створіть акаунт</string>
+    <string name="signup_name_label">Ім\'я та прізвище</string>
+    <string name="signup_agree_prefix">Я погоджуюсь з </string>
+    <string name="signup_terms_action">політикою використання</string>
+    <string name="signup_and_conjunction"> та </string>
+    <string name="signup_privacy_action">конфіденційністю</string>
+    <string name="signup_terms_title">Політика використання</string>
+    <string name="signup_privacy_title">Конфіденційність</string>
+    <string name="signup_button">Зареєструватись</string>
+    <string name="signup_has_account">Вже маєте акаунт? </string>
+    <string name="signup_login_action">Увійти</string>
+
+    <!-- Forgot Password -->
+    <string name="forgot_password_title">Відновлення</string>
+    <string name="forgot_password_step_email">Введіть ваш email для отримання інструкцій</string>
+    <string name="forgot_password_step_reset">Введіть код з пошти та новий пароль</string>
+    <string name="forgot_password_step_success">Пароль успішно змінено!</string>
+    <string name="forgot_password_send_button">Надіслати</string>
+    <string name="forgot_password_code_label">Код підтвердження</string>
+    <string name="forgot_password_new_password_label">Новий пароль</string>
+    <string name="forgot_password_change_button">Змінити пароль</string>
+    <string name="forgot_password_to_login_button">До логіну</string>
+
+    <!-- Verify Email -->
+    <string name="verify_email_title">Підтвердження</string>
+    <string name="verify_email_subtitle">Введіть код, надісланий на %1$s</string>
+    <string name="verify_email_button">Підтвердити</string>
+</resources>

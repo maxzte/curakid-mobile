@@ -17,6 +17,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.res.stringResource
 import com.misterio.core.domain.UiState
 import com.misterio.core.ui.components.CuraKidTextField
 
@@ -34,11 +35,11 @@ fun ForgotPasswordScreen(
 
     AuthScaffold {
         AuthHeader(
-            title = "Відновлення",
+            title = stringResource(R.string.forgot_password_title),
             subtitle = when (step) {
-                ForgotPasswordStep.RequestEmail -> "Введіть ваш email для отримання інструкцій"
-                ForgotPasswordStep.ResetPassword -> "Введіть код з пошти та новий пароль"
-                ForgotPasswordStep.Success -> "Пароль успішно змінено!"
+                ForgotPasswordStep.RequestEmail -> stringResource(R.string.forgot_password_step_email)
+                ForgotPasswordStep.ResetPassword -> stringResource(R.string.forgot_password_step_reset)
+                ForgotPasswordStep.Success -> stringResource(R.string.forgot_password_step_success)
             }
         )
 
@@ -49,7 +50,7 @@ fun ForgotPasswordScreen(
                 CuraKidTextField(
                     value = email,
                     onValueChange = { email = it },
-                    label = "Email",
+                    label = stringResource(R.string.email_label),
                     leadingIcon = Icons.Default.Email,
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Email,
@@ -64,7 +65,7 @@ fun ForgotPasswordScreen(
                 Spacer(Modifier.height(24.dp))
 
                 AuthPrimaryButton(
-                    text = "Надіслати",
+                    text = stringResource(R.string.forgot_password_send_button),
                     isLoading = uiState is UiState.Loading,
                     onClick = { viewModel.requestReset(email) }
                 )
@@ -74,7 +75,7 @@ fun ForgotPasswordScreen(
                 CuraKidTextField(
                     value = code,
                     onValueChange = { code = it },
-                    label = "Код підтвердження",
+                    label = stringResource(R.string.forgot_password_code_label),
                     leadingIcon = Icons.Default.Numbers,
                     keyboardOptions = KeyboardOptions(
                         keyboardType = KeyboardType.Number,
@@ -88,7 +89,7 @@ fun ForgotPasswordScreen(
                 CuraKidTextField(
                     value = newPassword,
                     onValueChange = { newPassword = it },
-                    label = "Новий пароль",
+                    label = stringResource(R.string.forgot_password_new_password_label),
                     leadingIcon = Icons.Default.Lock,
                     isPassword = true,
                     keyboardOptions = KeyboardOptions(
@@ -103,7 +104,7 @@ fun ForgotPasswordScreen(
                 Spacer(Modifier.height(24.dp))
 
                 AuthPrimaryButton(
-                    text = "Змінити пароль",
+                    text = stringResource(R.string.forgot_password_change_button),
                     isLoading = uiState is UiState.Loading,
                     onClick = { viewModel.resetPassword(email, code, newPassword) }
                 )
@@ -111,7 +112,7 @@ fun ForgotPasswordScreen(
 
             ForgotPasswordStep.Success -> {
                 AuthPrimaryButton(
-                    text = "До логіну",
+                    text = stringResource(R.string.forgot_password_to_login_button),
                     isLoading = false,
                     onClick = onBack
                 )

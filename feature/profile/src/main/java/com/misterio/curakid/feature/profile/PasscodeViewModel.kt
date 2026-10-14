@@ -8,6 +8,7 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
@@ -33,10 +34,17 @@ sealed interface PasscodeEvent {
 }
 
 @HiltViewModel(assistedFactory = PasscodeViewModel.Factory::class)
-class PasscodeViewModel @AssistedInject constructor(
-    @Assisted private val mode: PasscodeMode,
+class PasscodeViewModel(
+    private val mode: PasscodeMode,
     private val securityManager: SecurityManager,
+    private val ioDispatcher: CoroutineDispatcher = Dispatchers.IO
 ) : ViewModel() {
+
+    @AssistedInject
+    constructor(
+        @Assisted mode: PasscodeMode,
+        securityManager: SecurityManager
+    ) : this(mode, securityManager, Dispatchers.IO)
 
     @AssistedFactory
     interface Factory {
@@ -76,7 +84,7 @@ class PasscodeViewModel @AssistedInject constructor(
                         _uiState.update { it.copy(confirmPasscode = entered, passcode = "", isConfirming = true) }
                     } else {
                         if (entered == _uiState.value.confirmPasscode) {
-                            withContext(Dispatchers.IO) {
+                            withContext(ioDispatcher) {
                                 securityManager.savePasscode(entered)
                             }
                             _events.send(PasscodeEvent.Success)
@@ -88,7 +96,7 @@ class PasscodeViewModel @AssistedInject constructor(
                     }
                 }
                 PasscodeMode.UNLOCK -> {
-                    val isValid = withContext(Dispatchers.IO) {
+                    val isValid = withContext(ioDispatcher) {
                         securityManager.verifyPasscode(entered)
                     }
                     if (isValid) {
@@ -106,11 +114,11 @@ class PasscodeViewModel @AssistedInject constructor(
                     }
                 }
                 PasscodeMode.DISABLE -> {
-                    val isValid = withContext(Dispatchers.IO) {
+                    val isValid = withContext(ioDispatcher) {
                         securityManager.verifyPasscode(entered)
                     }
                     if (isValid) {
-                        withContext(Dispatchers.IO) {
+                        withContext(ioDispatcher) {
                             securityManager.clearPasscode()
                         }
                         _events.send(PasscodeEvent.Success)

@@ -17,6 +17,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.compose.ui.res.stringResource
 import com.misterio.core.domain.UiState
 import com.misterio.core.ui.components.CuraKidTextField
 
@@ -37,8 +38,8 @@ fun VerifyEmailScreen(
 
     AuthScaffold {
         AuthHeader(
-            title = "Підтвердження",
-            subtitle = "Введіть код, надісланий на $email"
+            title = stringResource(R.string.verify_email_title),
+            subtitle = stringResource(R.string.verify_email_subtitle, email)
         )
 
         Spacer(Modifier.height(32.dp))
@@ -46,7 +47,7 @@ fun VerifyEmailScreen(
         CuraKidTextField(
             value = code,
             onValueChange = { code = it },
-            label = "Код підтвердження",
+            label = stringResource(R.string.verify_email_button),
             leadingIcon = Icons.Default.Numbers,
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Number,
@@ -61,7 +62,7 @@ fun VerifyEmailScreen(
         Spacer(Modifier.height(24.dp))
 
         AuthPrimaryButton(
-            text = "Підтвердити",
+            text = stringResource(R.string.verify_email_button),
             isLoading = uiState is UiState.Loading,
             onClick = { viewModel.verifyEmail(email, code) }
         )

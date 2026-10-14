@@ -4,4 +4,9 @@
     <string name="head">ГОЛОВА</string>
     <string name="add_measurement">Додати заміри</string>
     <string name="next_vaccination">Наступна Вакцинація</string>
+    <string name="next_doctor_visit">Наступний візит до лікаря</string>
+    <string name="upcoming_events">Майбутні події</string>
+    <string name="recommendations">Рекомендації</string>
+    <string name="back">Назад</string>
+    <string name="all_events">Усі події</string>
 </resources>

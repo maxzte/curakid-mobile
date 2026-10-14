@@ -38,6 +38,7 @@ import com.misterio.core.ui.components.CuraKidTextField
 import com.misterio.core.ui.theme.CuraKidColors
 import com.misterio.curakid.core.common.util.ValidationUtils
 
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
@@ -81,8 +82,8 @@ fun SignUpScreen(
 
     AuthScaffold {
         AuthHeader(
-            title = "Реєстрація",
-            subtitle = "Створіть акаунт"
+            title = stringResource(R.string.signup_title),
+            subtitle = stringResource(R.string.signup_subtitle)
         )
 
         Spacer(Modifier.height(32.dp))
@@ -91,7 +92,7 @@ fun SignUpScreen(
         CuraKidTextField(
             value = name,
             onValueChange = { name = it },
-            label = "Ім'я та прізвище",
+            label = stringResource(R.string.signup_name_label),
             leadingIcon = Icons.Default.Person,
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Text,
@@ -109,7 +110,7 @@ fun SignUpScreen(
         CuraKidTextField(
             value = email,
             onValueChange = { email = it },
-            label = "Email",
+            label = stringResource(R.string.email_label),
             leadingIcon = Icons.Default.Email,
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Email,
@@ -128,7 +129,7 @@ fun SignUpScreen(
         CuraKidTextField(
             value = password,
             onValueChange = { password = it },
-            label = "Пароль",
+            label = stringResource(R.string.password_label),
             leadingIcon = Icons.Default.Lock,
             isPassword = true,
             keyboardOptions = KeyboardOptions(
@@ -152,8 +153,15 @@ fun SignUpScreen(
                 checked = isPolicyAccepted,
                 onCheckedChange = { isPolicyAccepted = it }
             )
+            val agreePrefix = stringResource(R.string.signup_agree_prefix)
+            val termsText = stringResource(R.string.signup_terms_action)
+            val andConjunction = stringResource(R.string.signup_and_conjunction)
+            val privacyText = stringResource(R.string.signup_privacy_action)
+            val termsTitle = stringResource(R.string.signup_terms_title)
+            val privacyTitle = stringResource(R.string.signup_privacy_title)
+
             val annotatedString = buildAnnotatedString {
-                append("Я погоджуюсь з ")
+                append(agreePrefix)
                 
                 val linkStyle = SpanStyle(
                     color = CuraKidColors.Blue40,
@@ -167,14 +175,14 @@ fun SignUpScreen(
                         linkInteractionListener = {
                             val url = (legalDocs as? UiState.Success)?.data
                                 ?.find { it.type == ConsentType.TERMS }?.url
-                            url?.let { onShowDocument(it, "Політика використання") }
+                            url?.let { onShowDocument(it, termsTitle) }
                         }
                     )
                 ) {
-                    append("політикою використання")
+                    append(termsText)
                 }
                 
-                append(" та ")
+                append(andConjunction)
                 
                 withLink(
                     LinkAnnotation.Clickable(
@@ -183,11 +191,11 @@ fun SignUpScreen(
                         linkInteractionListener = {
                             val url = (legalDocs as? UiState.Success)?.data
                                 ?.find { it.type == ConsentType.PRIVACY_POLICY }?.url
-                            url?.let { onShowDocument(it, "Конфіденційність") }
+                            url?.let { onShowDocument(it, privacyTitle) }
                         }
                     )
                 ) {
-                    append("конфіденційністю")
+                    append(privacyText)
                 }
             }
             Text(
@@ -200,7 +208,7 @@ fun SignUpScreen(
         Spacer(Modifier.height(24.dp))
 
         AuthPrimaryButton(
-            text = "Зареєструватись",
+            text = stringResource(R.string.signup_button),
             isLoading = uiState is UiState.Loading,
             enabled = isFormValid,
             onClick = ::submit
@@ -217,8 +225,8 @@ fun SignUpScreen(
         Spacer(Modifier.height(32.dp))
 
         AuthSwitchText(
-            text = "Вже є акаунт? ",
-            actionText = "Увійти",
+            text = stringResource(R.string.signup_has_account),
+            actionText = stringResource(R.string.signup_login_action),
             onClick = onNavigateToLogIn
         )
     }

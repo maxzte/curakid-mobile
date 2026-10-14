@@ -52,6 +52,7 @@ import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -170,11 +171,11 @@ fun ChatTopBar(onBack: () -> Unit) {
         IconButton(onClick = onBack) {
             Icon(
                 imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                contentDescription = "Back"
+                contentDescription = stringResource(R.string.chat_back)
             )
         }
         Text(
-            "ШІ-Асистент",
+            stringResource(R.string.chat_title),
             style = CurakidTheme.typography.titleMedium,
             modifier = Modifier.padding(start = 8.dp)
         )
@@ -198,7 +199,7 @@ fun MessageList(
 
     if (messages.isEmpty() && !isLoading) {
         Text(
-            text = "Вітаємо!\nЩо Вас цікавить?",
+            text = stringResource(R.string.chat_welcome_title),
             modifier = Modifier
                 .padding(vertical = 100.dp, horizontal = CurakidTheme.paddings.medium)
         )
@@ -341,7 +342,7 @@ fun ChatInput(
                 value = text,
                 onValueChange = onTextChange,
                 modifier = Modifier.weight(1f),
-                placeholder = { Text("Запитайте щось...") },
+                placeholder = { Text(stringResource(R.string.chat_input_placeholder)) },
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color.Transparent,
                     unfocusedContainerColor = Color.Transparent,
@@ -357,7 +358,7 @@ fun ChatInput(
             ) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.Send,
-                    contentDescription = "Відправити",
+                    contentDescription = stringResource(R.string.chat_send_button),
                     tint = if (text.isNotBlank() && !isLoading) CurakidTheme.colors.primary else Color.Gray
                 )
             }

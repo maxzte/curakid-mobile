@@ -32,9 +32,11 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import com.halilibo.richtext.commonmark.CommonmarkAstNodeParser
 import com.halilibo.richtext.markdown.BasicMarkdown
 import com.halilibo.richtext.ui.BasicRichText
+import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.misterio.core.domain.UiState
 import com.misterio.core.ui.theme.CurakidTheme
+import com.misterio.curakid.feature.home.R
 import java.util.UUID
 
 @Composable
@@ -52,10 +54,10 @@ fun AiReportScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Рекомендації") },
+                title = { Text(stringResource(R.string.recommendations)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )

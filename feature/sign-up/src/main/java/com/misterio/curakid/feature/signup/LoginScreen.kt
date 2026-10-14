@@ -9,7 +9,6 @@ import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -18,16 +17,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.misterio.core.domain.UiState
 import com.misterio.core.ui.components.CuraKidTextField
 import com.misterio.curakid.core.common.util.ValidationUtils
-
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun LoginScreen(
@@ -56,8 +55,8 @@ fun LoginScreen(
     AuthScaffold {
         // Logo + title
         AuthHeader(
-            title = "Вітаємо!",
-            subtitle = "Увійдіть до свого акаунту"
+            title = stringResource(R.string.login_welcome),
+            subtitle = stringResource(R.string.login_subtitle)
         )
 
         Spacer(Modifier.height(32.dp))
@@ -66,7 +65,7 @@ fun LoginScreen(
         CuraKidTextField(
             value = email,
             onValueChange = { email = it },
-            label = "Email",
+            label = stringResource(R.string.email_label),
             leadingIcon = Icons.Default.Email,
             keyboardOptions = KeyboardOptions(
                 keyboardType = KeyboardType.Email,
@@ -84,7 +83,7 @@ fun LoginScreen(
         CuraKidTextField(
             value = password,
             onValueChange = { password = it },
-            label = "Пароль",
+            label = stringResource(R.string.password_label),
             leadingIcon = Icons.Default.Lock,
             isPassword = true,
             keyboardOptions = KeyboardOptions(
@@ -102,7 +101,7 @@ fun LoginScreen(
 
         AuthSwitchText(
             text = "",
-            actionText = "Забули пароль?",
+            actionText = stringResource(R.string.login_forgot_password),
             onClick = onNavigateToForgotPassword,
         )
 
@@ -110,7 +109,7 @@ fun LoginScreen(
 
         // Login button
         AuthPrimaryButton(
-            text = "Увійти",
+            text = stringResource(R.string.login_button),
             isLoading = uiState is UiState.Loading,
             enabled = isFormValid,
             onClick = ::submit
@@ -129,8 +128,8 @@ fun LoginScreen(
 
         // Navigate to register
         AuthSwitchText(
-            text = "Ще немає акаунту? ",
-            actionText = "Зареєструватись",
+            text = stringResource(R.string.login_no_account),
+            actionText = stringResource(R.string.login_register_action),
             onClick = onNavigateToSignUp,
         )
     }

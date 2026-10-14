@@ -46,6 +46,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.misterio.core.ui.toFormatted
 import java.util.UUID
 
+import androidx.compose.ui.res.stringResource
+import com.misterio.curakid.feature.home.R
+
 @Composable
 fun UpcomingEventsScreen(
     onEventClick: (UUID) -> Unit,
@@ -57,10 +60,10 @@ fun UpcomingEventsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Майбутні події") },
+                title = { Text(stringResource(R.string.upcoming_events)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 }
             )
