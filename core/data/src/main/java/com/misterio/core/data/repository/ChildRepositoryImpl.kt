@@ -94,6 +94,7 @@ class ChildRepositoryImpl @Inject constructor(
             birthDate = birthDateLocal,
             gender = gender.name,
             isPremature = isPremature,
+            gestationalWeeks = gestationalWeeks,
             allergies = allergies,
             chronicDiseases = chronicDiseases,
             pastDiseases = pastDiseases,

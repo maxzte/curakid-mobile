@@ -12,13 +12,13 @@ import java.util.UUID
 
 @Dao
 interface EventDao {
-    @Query("SELECT * FROM events WHERE childId = :childId AND isDeleted = 0")
+    @Query("SELECT * FROM events WHERE childId = :childId AND isDeleted = 0 ORDER BY date ASC")
     fun getEvents(childId: UUID): Flow<List<EventEntity>>
 
     @Query("SELECT * FROM events WHERE id = :id AND isDeleted = 0")
     fun getEventById(id: UUID): Flow<EventEntity?>
 
-    @Query("SELECT * FROM events WHERE childId = :childId AND date = :date AND isDeleted = 0")
+    @Query("SELECT * FROM events WHERE childId = :childId AND date = :date AND isDeleted = 0 ORDER BY date ASC")
     fun getEventsByDate(childId: UUID, date: LocalDateTime): Flow<List<EventEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
@@ -36,16 +36,33 @@ interface EventDao {
     @Query("DELETE FROM events WHERE childId = :childId AND isSynced = 1 AND isDeleted = 0 AND id NOT IN (:remainingIds)")
     suspend fun deleteOldSyncedEvents(childId: UUID, remainingIds: List<UUID>)
 
+    @Query("DELETE FROM events WHERE childId = :childId AND isSynced = 1 AND isDeleted = 0")
+    suspend fun deleteAllSyncedEvents(childId: UUID)
+
     @Query("SELECT id FROM events WHERE childId = :childId AND isSynced = 1 AND isDeleted = 0 AND id NOT IN (:remainingIds)")
     suspend fun getDeletedEventIds(childId: UUID, remainingIds: List<UUID>): List<UUID>
 
+    @Query("SELECT id FROM events WHERE childId = :childId AND isSynced = 1 AND isDeleted = 0")
+    suspend fun getAllSyncedEventIds(childId: UUID): List<UUID>
+
     @Transaction
     suspend fun syncWithServer(childId: UUID, remoteEvents: List<EventEntity>) {
-        // 1. Видаляємо ті, яких більше немає на сервері (тільки для вже синхронізованих)
-        deleteOldSyncedEvents(childId, remoteEvents.map { it.id })
+        val unsyncedIds = getUnsyncedEvents(childId).map { it.id }.toSet()
+        val pendingDeleteIds = getPendingDeleteEvents().map { it.id }.toSet()
+        val protectedIds = unsyncedIds + pendingDeleteIds
 
-        // 2. Оновлюємо або вставляємо нові
-        insertEvents(remoteEvents)
+        // 1. Delete events that no longer exist on server (only for already synced and not pending delete)
+        if (remoteEvents.isNotEmpty()) {
+            deleteOldSyncedEvents(childId, remoteEvents.map { it.id })
+        } else {
+            deleteAllSyncedEvents(childId)
+        }
+
+        // 2. Only insert/update events that don't have pending local offline changes
+        val eventsToInsert = remoteEvents.filterNot { it.id in protectedIds }
+        if (eventsToInsert.isNotEmpty()) {
+            insertEvents(eventsToInsert)
+        }
     }
 
     @Query("UPDATE events SET isSynced = 1 WHERE id = :eventId")

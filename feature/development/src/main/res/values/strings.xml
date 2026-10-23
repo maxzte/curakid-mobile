@@ -29,4 +29,6 @@
     <string name="legend_attention">Увага (p3–p15, p85–p97)</string>
     <string name="legend_critical">Критично (&lt;p3 або &gt;p97)</string>
     <string name="legend_child">Дитина</string>
+    <string name="back">Назад</string>
+    <string name="empty_measurements_history">Історія замірів порожня</string>
 </resources>

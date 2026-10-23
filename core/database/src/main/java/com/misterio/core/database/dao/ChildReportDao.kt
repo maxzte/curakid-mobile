@@ -17,7 +17,7 @@ interface ChildReportDao {
     @Query("SELECT * FROM child_reports WHERE childId = :childId")
     fun getReportBy(childId: UUID): Flow<ChildReportEntity?>
 
-    @Query("SELECT * FROM child_reports WHERE childId = :childId")
+    @Query("SELECT * FROM child_reports WHERE childId = :childId ORDER BY createdAt DESC")
     fun getReports(childId: UUID): Flow<List<ChildReportEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)

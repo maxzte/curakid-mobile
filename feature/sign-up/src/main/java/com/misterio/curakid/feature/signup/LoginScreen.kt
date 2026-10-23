@@ -7,7 +7,6 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -33,27 +32,48 @@ fun LoginScreen(
     onNavigateToSignUp: () -> Unit = {},
     onNavigateToForgotPassword: () -> Unit = {},
     emailError: String? = null,
-    passwordError: String? = null
+    passwordError: String? = null,
+    viewModel: LoginViewModel = hiltViewModel()
 ) {
-    val viewModel: LoginViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LoginContent(
+        uiState = uiState,
+        onLogin = { email, password -> viewModel.login(email, password) },
+        onOAuthLogin = { token -> viewModel.oAuthLogin(token) },
+        onNavigateToSignUp = onNavigateToSignUp,
+        onNavigateToForgotPassword = onNavigateToForgotPassword,
+        emailError = emailError,
+        passwordError = passwordError
+    )
+}
+
+@Composable
+fun LoginContent(
+    uiState: UiState<String>,
+    onLogin: (String, String) -> Unit,
+    onOAuthLogin: (String) -> Unit,
+    onNavigateToSignUp: () -> Unit,
+    onNavigateToForgotPassword: () -> Unit,
+    emailError: String? = null,
+    passwordError: String? = null,
+    modifier: Modifier = Modifier,
+) {
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
 
     val isEmailValid = remember(email) { ValidationUtils.isValidEmail(email) }
     val isFormValid = isEmailValid && password.isNotBlank()
 
-    // Focus chain: email → password → submit
     val passwordFocus = remember { FocusRequester() }
 
     fun submit() {
         if (isFormValid) {
-            viewModel.login(email, password)
+            onLogin(email, password)
         }
     }
 
     AuthScaffold {
-        // Logo + title
         AuthHeader(
             title = stringResource(R.string.login_welcome),
             subtitle = stringResource(R.string.login_subtitle)
@@ -61,7 +81,6 @@ fun LoginScreen(
 
         Spacer(Modifier.height(32.dp))
 
-        // Email
         CuraKidTextField(
             value = email,
             onValueChange = { email = it },
@@ -79,7 +98,6 @@ fun LoginScreen(
 
         Spacer(Modifier.height(12.dp))
 
-        // Password
         CuraKidTextField(
             value = password,
             onValueChange = { password = it },
@@ -107,7 +125,6 @@ fun LoginScreen(
 
         Spacer(Modifier.height(24.dp))
 
-        // Login button
         AuthPrimaryButton(
             text = stringResource(R.string.login_button),
             isLoading = uiState is UiState.Loading,
@@ -121,12 +138,10 @@ fun LoginScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        // Google sign-in
-        GoogleButton(onTokenReceived = viewModel::oAuthLogin)
+        GoogleButton(onTokenReceived = onOAuthLogin)
 
         Spacer(Modifier.height(32.dp))
 
-        // Navigate to register
         AuthSwitchText(
             text = stringResource(R.string.login_no_account),
             actionText = stringResource(R.string.login_register_action),
@@ -138,18 +153,25 @@ fun LoginScreen(
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun LoginScreenPreview() {
-    MaterialTheme {
-        LoginScreen()
-    }
+    LoginContent(
+        uiState = UiState.Initial,
+        onLogin = { _, _ -> },
+        onOAuthLogin = {},
+        onNavigateToSignUp = {},
+        onNavigateToForgotPassword = {}
+    )
 }
 
 @Preview(showBackground = true)
 @Composable
 fun LoginWithErrorsPreview() {
-    MaterialTheme {
-        LoginScreen(
-            emailError = "Невірний формат email",
-            passwordError = "Пароль має бути не менше 8 символів"
-        )
-    }
+    LoginContent(
+        uiState = UiState.Initial,
+        onLogin = { _, _ -> },
+        onOAuthLogin = {},
+        onNavigateToSignUp = {},
+        onNavigateToForgotPassword = {},
+        emailError = "Невірний формат email",
+        passwordError = "Пароль має бути не менше 8 символів"
+    )
 }

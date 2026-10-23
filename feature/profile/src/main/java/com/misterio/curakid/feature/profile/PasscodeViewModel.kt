@@ -131,9 +131,14 @@ class PasscodeViewModel(
                         }
                         _events.send(PasscodeEvent.Success)
                     } else {
-                        _uiState.update { it.copy(errorMessage = "Неправильний ПІН-код") }
-                        delay(1000)
-                        _uiState.update { it.copy(passcode = "", errorMessage = null) }
+                        val newAttempts = _uiState.value.failedAttempts + 1
+                        if (newAttempts >= 5) {
+                            triggerLockout(30)
+                        } else {
+                            _uiState.update { it.copy(failedAttempts = newAttempts, errorMessage = "Неправильний ПІН-код") }
+                            delay(1000)
+                            _uiState.update { it.copy(passcode = "", errorMessage = null) }
+                        }
                     }
                 }
             }

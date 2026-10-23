@@ -150,7 +150,7 @@ class CalendarViewModelTest {
 
         val data = (viewModel.uiState.value as UiState.Success).data
         assertTrue(data.isEventSheetOpen)
-        assertEquals(LocalDate.now().atStartOfDay(), data.eventForm.date)
+        assertEquals(LocalDate.now(), data.eventForm.date.toLocalDate())
 
         job.cancel()
     }
@@ -202,6 +202,57 @@ class CalendarViewModelTest {
         coVerify { deleteEventUseCase(eventId) }
         val data = (viewModel.uiState.value as UiState.Success).data
         assertFalse(data.isEventSheetOpen)
+
+        job.cancel()
+    }
+
+    @Test
+    fun `onSaveEvent preserves Vaccine type and metadata when editing existing vaccine`() = runTest(testDispatcher) {
+        val vaccineId = UUID.randomUUID()
+        val originalVaccine = Event.Vaccine(
+            id = vaccineId,
+            title = "Гепатит В (1 доза)",
+            date = LocalDateTime.now().plusDays(2),
+            status = EventStatus.PLANNED,
+            disease = "Hepatitis B",
+            doseNumber = 1,
+            totalDoses = 3
+        )
+
+        every { getChildUseCase() } returns flowOf(sampleChild)
+        every { getEventsUseCase(sampleChild.id) } returns flowOf(listOf(originalVaccine))
+        coEvery { updateEventUseCase(sampleChild.id, any()) } returns Result.success(Unit)
+
+        val viewModel = createViewModel()
+        val job = launch { viewModel.uiState.collect {} }
+        advanceUntilIdle()
+
+        viewModel.onEditEvent(originalVaccine)
+        viewModel.onEventFormChange(
+            EventFormState(
+                id = vaccineId,
+                title = "Гепатит В (1 доза) - зроблено",
+                type = EventType.VACCINE,
+                date = originalVaccine.date,
+                status = EventStatus.DONE
+            )
+        )
+        viewModel.onSaveEvent()
+        advanceUntilIdle()
+
+        coVerify {
+            updateEventUseCase(
+                sampleChild.id,
+                match {
+                    it is Event.Vaccine &&
+                    it.disease == "Hepatitis B" &&
+                    it.doseNumber == 1 &&
+                    it.totalDoses == 3 &&
+                    it.status == EventStatus.DONE &&
+                    it.title == "Гепатит В (1 доза) - зроблено"
+                }
+            )
+        }
 
         job.cancel()
     }

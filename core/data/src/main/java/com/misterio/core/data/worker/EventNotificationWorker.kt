@@ -7,15 +7,27 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
+import com.misterio.curakid.core.common.SettingsManager
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedInject
+import kotlinx.coroutines.flow.first
 
-class EventNotificationWorker(
-    context: Context,
-    workerParams: WorkerParameters,
+@HiltWorker
+class EventNotificationWorker @AssistedInject constructor(
+    @Assisted context: Context,
+    @Assisted workerParams: WorkerParameters,
+    private val settingsManager: SettingsManager,
 ) : CoroutineWorker(context, workerParams) {
 
     override suspend fun doWork(): Result {
+        val isEnabled = settingsManager.isNotificationsEnabled.first()
+        if (!isEnabled) {
+            return Result.success()
+        }
+
         val title = inputData.getString(KEY_EVENT_TITLE) ?: "Подія"
         val description = inputData.getString(KEY_EVENT_DESCRIPTION) ?: ""
         val eventId = inputData.getString(KEY_EVENT_ID)

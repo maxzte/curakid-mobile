@@ -11,7 +11,7 @@ import java.util.UUID
 @Dao
 interface LifePeriodDao {
 
-    @Query("SELECT * FROM life_periods")
+    @Query("SELECT * FROM life_periods ORDER BY minMonths ASC")
     fun getLifePeriods(): Flow<List<LifePeriodEntity>>
 
     @Query("SELECT * FROM life_periods WHERE id = :id")

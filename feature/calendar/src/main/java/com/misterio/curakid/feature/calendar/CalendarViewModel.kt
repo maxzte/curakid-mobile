@@ -21,18 +21,22 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asSharedFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -57,11 +61,11 @@ class CalendarViewModel @AssistedInject constructor(
     private val _isEventSheetOpen = MutableStateFlow(false)
     private val _isEventsExpanded = MutableStateFlow(false)
     private val _eventForm = MutableStateFlow(EventFormState())
-    private val _toastMessage = MutableSharedFlow<String>()
-    val toastMessage = _toastMessage.asSharedFlow()
+    private val _toastMessage = Channel<String>(Channel.BUFFERED)
+    val toastMessage = _toastMessage.receiveAsFlow()
     private var eventIdHandled = false
-    private val _sheetClosed = MutableSharedFlow<Unit>()
-    val sheetClosed = _sheetClosed.asSharedFlow()
+    private val _sheetClosed = Channel<Unit>(Channel.BUFFERED)
+    val sheetClosed = _sheetClosed.receiveAsFlow()
 
     private val selectedChild = getChildUseCase()
         .distinctUntilChanged { old, new -> old?.id == new?.id }
@@ -100,9 +104,7 @@ class CalendarViewModel @AssistedInject constructor(
                     return@collectLatest
                 }
                 Log.i(TAG, "Syncing events for child ${child.id}")
-                runCatching {
-                    syncEventsUseCase(child.id)
-                }.onFailure { e ->
+                syncEventsUseCase(child.id).onFailure { e ->
                     Log.e(TAG, "Sync events error", e)
                 }
             }
@@ -113,17 +115,25 @@ class CalendarViewModel @AssistedInject constructor(
         }
     }
 
+    fun refresh() {
+        val child = selectedChild.value ?: return
+        viewModelScope.launch {
+            syncEventsUseCase(child.id).onFailure { e ->
+                Log.e(TAG, "Refresh events error", e)
+            }
+        }
+    }
+
     fun loadAndEditEvent(eventId: UUID) {
         viewModelScope.launch {
-            allEvents.collectLatest { events ->
-                if (eventIdHandled) return@collectLatest
-                events.find { it.id == eventId }?.let { event ->
-                    eventIdHandled = true
-                    val eventDate = event.date.toLocalDate()
-                    _selectedDate.update { eventDate }
-                    _selectedMonth.update { eventDate.withDayOfMonth(1) }
-                    onEditEvent(event)
-                }
+            if (eventIdHandled) return@launch
+            val event = allEvents.mapNotNull { events -> events.find { it.id == eventId } }.first()
+            if (!eventIdHandled) {
+                eventIdHandled = true
+                val eventDate = event.date.toLocalDate()
+                _selectedDate.update { eventDate }
+                _selectedMonth.update { eventDate.withDayOfMonth(1) }
+                onEditEvent(event)
             }
         }
     }
@@ -150,6 +160,8 @@ class CalendarViewModel @AssistedInject constructor(
         } else {
             val selectedDateEvents = events.filter { it.date.toLocalDate() == date }
             val vaccineEvents = events.filter { it.type == EventType.VACCINE }
+            val eventTypesByDate = events.groupBy { it.date.toLocalDate() }
+                .mapValues { entry -> entry.value.map { it.type }.distinct() }
 
             CalendarUiState(
                 selectedMonth = month,
@@ -159,6 +171,7 @@ class CalendarViewModel @AssistedInject constructor(
                 vaccinesDone = vaccineEvents.count { it.status == EventStatus.DONE },
                 filteredEvents = selectedDateEvents,
                 allEvents = events,
+                eventTypesByDate = eventTypesByDate,
                 isEventSheetOpen = isSheetOpen,
                 eventForm = if (form.id == null && !isSheetOpen) {
                     form.copy(date = date.atStartOfDay())
@@ -206,7 +219,13 @@ class CalendarViewModel @AssistedInject constructor(
 
     fun onOpenEventSheet() {
         _isEventSheetOpen.update { true }
-        _eventForm.update { EventFormState(date = _selectedDate.value.atStartOfDay()) }
+        val targetDate = _selectedDate.value
+        val initialDateTime = if (targetDate == LocalDate.now()) {
+            LocalDateTime.now().plusHours(1).withMinute(0).withSecond(0).withNano(0)
+        } else {
+            targetDate.atTime(9, 0)
+        }
+        _eventForm.update { EventFormState(date = initialDateTime) }
     }
 
     fun onEditEvent(event: Event) {
@@ -228,7 +247,7 @@ class CalendarViewModel @AssistedInject constructor(
         _isEventSheetOpen.update { false }
         eventIdHandled = true
         viewModelScope.launch {
-            _sheetClosed.emit(Unit)
+            _sheetClosed.send(Unit)
         }
     }
 
@@ -239,10 +258,10 @@ class CalendarViewModel @AssistedInject constructor(
         viewModelScope.launch {
             val result = deleteEventUseCase(eventId)
             if (result.isSuccess) {
-                _toastMessage.emit("Подію видалено")
+                _toastMessage.send("Подію видалено")
                 onCloseEventSheet()
             } else {
-                _toastMessage.emit("Помилка при видаленні події")
+                _toastMessage.send("Помилка при видаленні події")
             }
         }
     }
@@ -255,10 +274,17 @@ class CalendarViewModel @AssistedInject constructor(
         val child = selectedChild.value ?: return
         val form = _eventForm.value
 
+        if (form.title.isBlank()) {
+            viewModelScope.launch {
+                _toastMessage.send("Введіть назву події")
+            }
+            return
+        }
+
         val originalEvent = allEvents.value.find { it.id == form.id }
         if (originalEvent != null && originalEvent.status == EventStatus.DONE && originalEvent.date != form.date) {
             viewModelScope.launch {
-                _toastMessage.emit("Неможливо змінити дату виконаної події")
+                _toastMessage.send("Неможливо змінити дату виконаної події")
             }
             return
         }
@@ -270,15 +296,24 @@ class CalendarViewModel @AssistedInject constructor(
                 form.status
             }
 
-        val event = Event.General(
-            id = form.id ?: UUID.randomUUID(),
-            title = form.title,
-            type = form.type,
-            date = form.date,
-            location = form.location,
-            description = form.description,
-            status = finalStatus,
-        )
+        val event: Event = if (originalEvent is Event.Vaccine) {
+            originalEvent.copy(
+                title = form.title,
+                date = form.date,
+                description = form.description,
+                status = finalStatus,
+            )
+        } else {
+            Event.General(
+                id = form.id ?: UUID.randomUUID(),
+                title = form.title,
+                type = form.type,
+                date = form.date,
+                location = form.location,
+                description = form.description,
+                status = finalStatus,
+            )
+        }
 
         viewModelScope.launch {
             val result = if (form.id == null) {
@@ -290,12 +325,12 @@ class CalendarViewModel @AssistedInject constructor(
             if (result.isSuccess) {
                 val message =
                     if (form.id == null) "Подію успішно створено" else "Подію успішно оновлено"
-                _toastMessage.emit(message)
+                _toastMessage.send(message)
                 onCloseEventSheet()
             } else {
                 val message =
                     if (form.id == null) "Помилка при створенні події" else "Помилка при оновленні події"
-                _toastMessage.emit(message)
+                _toastMessage.send(message)
             }
         }
     }

@@ -76,24 +76,19 @@ fun RulerSlider(
                     val velocityInValue = (velocity / lineSpacing) * step
                     scope.launch {
                         try {
+                            animatableValue.updateBounds(range.start, range.endInclusive)
                             animatableValue.animateDecay(
                                 initialVelocity = -velocityInValue,
                                 animationSpec = androidx.compose.animation.core.exponentialDecay(
                                     frictionMultiplier = 1.5f
                                 )
                             ) {
-                                val currentValue = this.value
-                                if (currentValue < range.start || currentValue > range.endInclusive) {
-                                    val clamped = currentValue.coerceIn(range)
-                                    onValueChange(clamped)
-                                    // Use a non-suspending way to trigger end of animation or handle it after
-                                    throw IllegalStateException("Boundary reached")
-                                } else {
-                                    onValueChange(currentValue)
-                                }
+                                onValueChange(this.value.coerceIn(range))
                             }
+                        } catch (e: kotlinx.coroutines.CancellationException) {
+                            throw e
                         } catch (e: Exception) {
-                            // If we hit the boundary or exception, snapping will happen below
+                            // If exception occurred, snapping will happen below
                         } finally {
                             // Ensure we snap exactly to a tick after decay or drag
                             val finalValue = snapToTick(animatableValue.value, step).coerceIn(range)

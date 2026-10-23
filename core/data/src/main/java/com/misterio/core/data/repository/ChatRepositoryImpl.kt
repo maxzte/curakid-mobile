@@ -1,8 +1,10 @@
 package com.misterio.core.data.repository
 
+import org.json.JSONObject
 import com.misterio.core.data.mapper.toDomain
 import com.misterio.core.data.util.safeApiCall
 import com.misterio.core.domain.model.ChatMessage
+import com.misterio.core.domain.model.DomainError
 import com.misterio.core.domain.repository.ChatRepository
 import com.misterio.core.network.di.BASE_URL
 import com.misterio.core.network.di.SseClient
@@ -39,7 +41,11 @@ class ChatRepositoryImpl @Inject constructor(
         childId: UUID,
         text: String,
     ): Flow<String> = callbackFlow {
-        val json = """{"id":"$id","childId":"$childId","text":"$text"}"""
+        val json = JSONObject().apply {
+            put("id", id.toString())
+            put("childId", childId.toString())
+            put("text", text)
+        }.toString()
         val requestBody = json.toRequestBody("application/json".toMediaType())
 
         val request = Request.Builder()
@@ -51,7 +57,7 @@ class ChatRepositoryImpl @Inject constructor(
 
         val listener = object : EventSourceListener() {
             override fun onOpen(eventSource: EventSource, response: Response) {
-                // можна перевірити response.code(), щоб упевнитись у 200 OK
+                // Connection opened
             }
 
             override fun onEvent(
@@ -60,7 +66,7 @@ class ChatRepositoryImpl @Inject constructor(
                 type: String?,
                 data: String
             ) {
-                trySend(data)   // кожен chunk – окремий рядок у Flow
+                trySend(data)   // Each chunk is emitted to Flow
             }
 
             override fun onClosed(eventSource: EventSource) {
@@ -68,7 +74,18 @@ class ChatRepositoryImpl @Inject constructor(
             }
 
             override fun onFailure(eventSource: EventSource, t: Throwable?, response: Response?) {
-                close(t)
+                val error = when {
+                    t != null -> t
+                    response != null -> when (response.code) {
+                        400 -> DomainError.BadRequestError("Помилка запиту: ${response.code}")
+                        401 -> DomainError.AuthenticationError("Помилка авторизації: ${response.code}")
+                        404 -> DomainError.NotFoundError("Чат не знайдено: ${response.code}")
+                        in 500..599 -> DomainError.ServerError("Помилка сервера: ${response.code}")
+                        else -> DomainError.UnknownError("Помилка з'єднання: ${response.code}")
+                    }
+                    else -> DomainError.UnknownError("Невідома помилка стрімінгу")
+                }
+                close(error)
             }
         }
 

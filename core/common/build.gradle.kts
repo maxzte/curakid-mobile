@@ -2,16 +2,16 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.serialization)
-    id("com.android.library")
+    alias(libs.plugins.android.library)
     id("jacoco")
 }
 
 android {
     namespace = "com.misterio.curakid.core.common"
-    compileSdk = 37
+    compileSdk = libs.versions.compileSdk.get().toInt()
 
     defaultConfig {
-        minSdk = 26
+        minSdk = libs.versions.minSdk.get().toInt()
     }
 
     testOptions {
@@ -35,7 +35,7 @@ dependencies {
 }
 
 jacoco {
-    toolVersion = "0.8.12"
+    toolVersion = libs.versions.jacoco.get()
 }
 
 tasks.register<JacocoReport>("jacocoTestReport") {

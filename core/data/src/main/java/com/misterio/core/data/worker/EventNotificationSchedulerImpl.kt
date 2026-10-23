@@ -40,6 +40,7 @@ class EventNotificationSchedulerImpl @Inject constructor(
                 )
             )
             .addTag("event_${event.id}")
+            .addTag("event_reminder")
             .build()
 
         WorkManager.getInstance(context).enqueueUniqueWork(
@@ -71,6 +72,7 @@ class EventNotificationSchedulerImpl @Inject constructor(
                     )
                 )
                 .addTag("event_${event.id}")
+                .addTag("event_reminder")
                 .build()
 
             workManager.enqueueUniqueWork(

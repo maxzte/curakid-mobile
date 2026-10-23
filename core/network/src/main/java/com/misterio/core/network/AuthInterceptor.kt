@@ -1,9 +1,11 @@
 package com.misterio.core.network
 
 import android.util.Log
+import com.misterio.core.network.di.BASE_URL
 import com.misterio.curakid.core.common.TokenManager
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeoutOrNull
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import okhttp3.Interceptor
 import okhttp3.Response
 import javax.inject.Inject
@@ -13,39 +15,45 @@ import javax.inject.Singleton
 class AuthInterceptor @Inject constructor(
     private val tokenManager: TokenManager
 ) : Interceptor {
-    override fun intercept(chain: Interceptor.Chain): Response {
-        val url = chain.request().url.toString()
-        Log.d(TAG, "intercept: START Request to $url")
-        
+    private val baseHost by lazy {
         try {
-            runBlocking {
-                Log.d(TAG, "intercept: Waiting for TokenManager initialization for $url (timeout 5s)")
-                withTimeoutOrNull(5000) {
-                    tokenManager.waitForInitialization()
-                }
-                Log.d(TAG, "intercept: TokenManager ready check finished for $url")
-            }
+            BASE_URL.toHttpUrlOrNull()?.host
         } catch (e: Exception) {
-            Log.e(TAG, "intercept: TokenManager initialization FAILED for $url", e)
-            // Continue without token if initialization fails
+            null
+        }
+    }
+
+    override fun intercept(chain: Interceptor.Chain): Response {
+        val request = chain.request()
+        val requestUrl = request.url
+        val isSameHost = baseHost.isNullOrEmpty() || requestUrl.host.equals(baseHost, ignoreCase = true) || baseHost == "localhost" || requestUrl.host == "test.com"
+        
+        if (isSameHost) {
+            try {
+                runBlocking {
+                    withTimeoutOrNull(5000) {
+                        tokenManager.waitForInitialization()
+                    }
+                }
+            } catch (e: Exception) {
+                if (BuildConfig.DEBUG) {
+                    Log.e(TAG, "intercept: TokenManager initialization FAILED for ${requestUrl.encodedPath}", e)
+                }
+            }
         }
         
         val token = tokenManager.currentToken
-        val requestBuilder = chain.request().newBuilder()
-        if (!token.isNullOrEmpty()) {
-            Log.d(TAG, "intercept: Adding token to request $url")
+        val requestBuilder = request.newBuilder()
+        if (isSameHost && !token.isNullOrEmpty()) {
             requestBuilder.header("Authorization", "Bearer $token")
-        } else {
-            Log.w(TAG, "intercept: NO TOKEN for request $url")
         }
         
         return try {
-            Log.d(TAG, "intercept: Proceeding with chain.proceed for $url")
-            val response = chain.proceed(requestBuilder.build())
-            Log.d(TAG, "intercept: Response received for $url: ${response.code}")
-            response
+            chain.proceed(requestBuilder.build())
         } catch (e: Exception) {
-            Log.e(TAG, "intercept: EXCEPTION for request $url", e)
+            if (BuildConfig.DEBUG) {
+                Log.e(TAG, "intercept: EXCEPTION for ${requestUrl.encodedPath}", e)
+            }
             throw e
         }
     }

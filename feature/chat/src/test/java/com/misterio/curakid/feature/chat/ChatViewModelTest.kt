@@ -4,7 +4,6 @@ import com.misterio.core.domain.model.ChatMessage
 import com.misterio.core.domain.model.Child
 import com.misterio.core.domain.model.Gender
 import com.misterio.core.domain.repository.ChatRepository
-import com.misterio.core.domain.repository.ChildRepository
 import com.misterio.core.domain.usecase.GetChildUseCase
 import io.mockk.coEvery
 import io.mockk.every
@@ -32,7 +31,6 @@ class ChatViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
     private val chatRepository: ChatRepository = mockk(relaxed = true)
-    private val childRepository: ChildRepository = mockk(relaxed = true)
     private val getChildUseCase: GetChildUseCase = mockk()
 
     private val testChild = Child(
@@ -71,14 +69,8 @@ class ChatViewModelTest {
         every { getChildUseCase() } returns flowOf(testChild)
         coEvery { chatRepository.getChatHistory(testChild.id) } returns Result.success(listOf(historyMsg))
 
-        val viewModel = ChatViewModel(chatRepository, childRepository, getChildUseCase)
-        
-        var retries = 0
-        while (viewModel.messages.value.isEmpty() && retries < 20) {
-            advanceUntilIdle()
-            kotlinx.coroutines.delay(50)
-            retries++
-        }
+        val viewModel = ChatViewModel(chatRepository, getChildUseCase, testDispatcher)
+        advanceUntilIdle()
 
         assertFalse(viewModel.isLoading.value)
         assertEquals(2, viewModel.messages.value.size)
@@ -90,13 +82,12 @@ class ChatViewModelTest {
     fun `sendMessage appends user message and streams ai response`() = runTest(testDispatcher) {
         every { getChildUseCase() } returns flowOf(testChild)
         coEvery { chatRepository.getChatHistory(testChild.id) } returns Result.success(emptyList())
-        every { childRepository.getSelectedChild() } returns flowOf(testChild)
         every { chatRepository.startChatStream(any(), testChild.id, "Привіт") } returns flow {
             emit("При")
             emit("віт!")
         }
 
-        val viewModel = ChatViewModel(chatRepository, childRepository, getChildUseCase)
+        val viewModel = ChatViewModel(chatRepository, getChildUseCase, testDispatcher)
         advanceUntilIdle()
 
         viewModel.sendMessage("Привіт")
@@ -111,12 +102,11 @@ class ChatViewModelTest {
     fun `sendMessage handles error gracefully`() = runTest(testDispatcher) {
         every { getChildUseCase() } returns flowOf(testChild)
         coEvery { chatRepository.getChatHistory(testChild.id) } returns Result.success(emptyList())
-        every { childRepository.getSelectedChild() } returns flowOf(testChild)
         every { chatRepository.startChatStream(any(), testChild.id, "Test") } returns flow {
             throw RuntimeException("Network timeout")
         }
 
-        val viewModel = ChatViewModel(chatRepository, childRepository, getChildUseCase)
+        val viewModel = ChatViewModel(chatRepository, getChildUseCase, testDispatcher)
         advanceUntilIdle()
 
         viewModel.sendMessage("Test")

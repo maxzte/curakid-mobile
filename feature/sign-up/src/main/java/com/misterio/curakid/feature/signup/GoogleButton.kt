@@ -9,6 +9,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -20,18 +21,18 @@ import androidx.credentials.CustomCredential
 import androidx.credentials.GetCredentialRequest
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
+import com.misterio.core.domain.util.suspendRunCatching
 import com.misterio.core.ui.theme.CuraKidColors
 import com.misterio.core.ui.theme.CurakidTheme
 import com.misterio.curakid.feature.signup.BuildConfig
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 
 @Composable
 internal fun GoogleButton(onTokenReceived: (String) -> Unit) {
     val context = LocalContext.current
-    val credentialManager = CredentialManager.create(context)
+    val credentialManager = androidx.compose.runtime.remember(context) { CredentialManager.create(context) }
+    val coroutineScope = rememberCoroutineScope()
 
     OutlinedButton(
         onClick = {
@@ -51,8 +52,8 @@ internal fun GoogleButton(onTokenReceived: (String) -> Unit) {
                 .addCredentialOption(googleIdOption)
                 .build()
 
-            CoroutineScope(Dispatchers.Main).launch {
-                try {
+            coroutineScope.launch {
+                suspendRunCatching {
                     val result = credentialManager.getCredential(
                         request = request,
                         context = context
@@ -69,7 +70,7 @@ internal fun GoogleButton(onTokenReceived: (String) -> Unit) {
 
                         onTokenReceived(idToken)
                     }
-                } catch (e: Exception) {
+                }.onFailure { e ->
                     e.printStackTrace()
                 }
             }

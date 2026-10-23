@@ -1,12 +1,15 @@
 package com.misterio.core.data.repository
 
+import android.content.Context
 import android.util.Log
+import androidx.work.WorkManager
 import com.misterio.core.data.BuildConfig
 import com.misterio.core.data.util.safeApiCall
 import com.misterio.core.database.AppDatabase
 import com.misterio.core.domain.model.ConsentType
 import com.misterio.core.domain.repository.AuthRepository
 import com.misterio.core.domain.repository.LegalDocumentRepository
+import com.misterio.core.domain.util.suspendRunCatching
 import com.misterio.core.network.api.AuthApi
 import com.misterio.core.network.dto.ConsentRequest
 import com.misterio.core.network.dto.ForgotPasswordRequest
@@ -17,8 +20,10 @@ import com.misterio.core.network.dto.RegisterRequest
 import com.misterio.core.network.dto.ResetPasswordRequest
 import com.misterio.core.network.dto.VerifyEmailRequest
 import com.misterio.curakid.core.common.AppDataStore
+import com.misterio.curakid.core.common.SecurityManager
 import com.misterio.curakid.core.common.SettingsManager
 import com.misterio.curakid.core.common.TokenManager
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.time.OffsetDateTime
@@ -29,19 +34,15 @@ import javax.inject.Singleton
 
 @Singleton
 class AuthRepositoryImpl @Inject constructor(
+    @param:ApplicationContext private val context: Context,
     private val authApi: AuthApi,
     private val tokenManager: TokenManager,
     private val database: AppDatabase,
     private val settingsManager: SettingsManager,
+    private val securityManager: SecurityManager,
     private val appDataStore: AppDataStore,
     private val legalDocumentRepository: LegalDocumentRepository,
 ) : AuthRepository {
-
-    init {
-        tokenManager.setRefreshAction {
-            refresh()
-        }
-    }
 
     override suspend fun login(email: String, password: String): Result<Unit> {
         return safeApiCall { authApi.login(LoginRequest(email, password)) }.map { tokens ->
@@ -112,7 +113,7 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun refresh(): Unit = withContext(Dispatchers.IO) {
         Log.i(TAG, "REFRESH")
-        try {
+        suspendRunCatching {
             tokenManager.waitForInitialization()
 
             val hasRefreshToken = tokenManager.currentRefreshToken != null
@@ -126,41 +127,33 @@ class AuthRepositoryImpl @Inject constructor(
                     )
                 }
             }
-        } catch (e: Exception) {
+        }.onFailure { e ->
             Log.e(TAG, "Refresh failed", e)
         }
     }
 
-    override suspend fun logout(): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun logout(): Result<Unit> = withContext(kotlinx.coroutines.NonCancellable + Dispatchers.IO) {
         Log.i(TAG, "LOGOUT")
-        try {
-            tokenManager.clearTokens()
+        suspendRunCatching {
+            WorkManager.getInstance(context).cancelAllWork()
             database.clearAllTables()
             settingsManager.clear()
+            securityManager.clearPasscode()
             appDataStore.clear()
-
-            Result.success(Unit)
-        } catch (e: Exception) {
-            database.clearAllTables()
             tokenManager.clearTokens()
-            settingsManager.clear()
-            appDataStore.clear()
-            Result.failure(e)
         }
     }
 
-    override suspend fun deleteAccount(): Result<Unit> = withContext(Dispatchers.IO) {
+    override suspend fun deleteAccount(): Result<Unit> = withContext(kotlinx.coroutines.NonCancellable + Dispatchers.IO) {
         Log.i(TAG, "DELETE ACCOUNT")
         val result = safeApiCall { authApi.deleteAccount() }
         
-        // Even if the server fails, we should clear local data to "log out" the user
-        // and prevent them from being stuck in a broken state.
-        // But if it's a 401, they are already unauthorized.
-        
-        tokenManager.clearTokens()
+        WorkManager.getInstance(context).cancelAllWork()
         database.clearAllTables()
         settingsManager.clear()
+        securityManager.clearPasscode()
         appDataStore.clear()
+        tokenManager.clearTokens()
         
         result.map { Unit }
     }

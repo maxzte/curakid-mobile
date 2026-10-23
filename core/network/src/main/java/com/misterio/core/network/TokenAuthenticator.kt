@@ -78,7 +78,6 @@ class TokenAuthenticator @Inject constructor(
             }
         } catch (e: Exception) {
             Log.e(TAG, "authenticate: Refresh job failed", e)
-            if (e is CancellationException) throw e
             null
         }
 

@@ -2,15 +2,15 @@ plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
     alias(libs.plugins.kotlin.compose)
-    id("com.android.library")
+    alias(libs.plugins.android.library)
 }
 
 android {
     namespace = "com.misterio.curakid.feature.calendar"
-    compileSdk = 37
+    compileSdk = libs.versions.compileSdk.get().toInt()
 
     defaultConfig {
-        minSdk = 26
+        minSdk = libs.versions.minSdk.get().toInt()
     }
 
     buildFeatures {

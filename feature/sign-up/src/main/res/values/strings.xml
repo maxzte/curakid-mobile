@@ -37,6 +37,11 @@
     <string name="forgot_password_new_password_label">Новий пароль</string>
     <string name="forgot_password_change_button">Змінити пароль</string>
     <string name="forgot_password_to_login_button">До логіну</string>
+    <string name="forgot_password_remembered_prefix">Згадали пароль? </string>
+    <string name="forgot_password_login_action">Увійти</string>
+
+    <!-- Legal Documents -->
+    <string name="legal_document_error_prefix">Помилка при завантаженні: %1$s</string>
 
     <!-- Verify Email -->
     <string name="verify_email_title">Підтвердження</string>

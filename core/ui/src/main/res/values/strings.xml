@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="event_type_vaccine">Вакцинація</string>
+    <string name="event_type_doctor">Лікар</string>
+    <string name="event_type_user">Подія</string>
+    <string name="date_picker_title">Виберіть дату</string>
+    <string name="time_picker_title">Виберіть час</string>
+    <string name="dialog_confirm">OK</string>
+    <string name="dialog_cancel">Скасувати</string>
+</resources>

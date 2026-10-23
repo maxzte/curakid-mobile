@@ -33,6 +33,8 @@ open class SecurityManager @Inject constructor(
 ) {
     private val passcodeKey = stringPreferencesKey("encrypted_passcode")
     private val biometricsEnabledKey = androidx.datastore.preferences.core.booleanPreferencesKey("biometrics_enabled")
+    private val lockoutUntilKey = androidx.datastore.preferences.core.longPreferencesKey("passcode_lockout_until")
+    private val failedAttemptsKey = androidx.datastore.preferences.core.intPreferencesKey("passcode_failed_attempts")
     private val alias = "passcode_key"
     private val transformation = "AES/GCM/NoPadding"
     private val provider = "AndroidKeyStore"
@@ -45,6 +47,28 @@ open class SecurityManager @Inject constructor(
         it[biometricsEnabledKey] ?: true // enabled by default if hardware supports
     }
 
+    val lockoutUntilMillis: Flow<Long> = dataStore.data.map {
+        it[lockoutUntilKey] ?: 0L
+    }
+
+    val failedAttempts: Flow<Int> = dataStore.data.map {
+        it[failedAttemptsKey] ?: 0
+    }
+
+    suspend fun setLockout(untilMillis: Long, attempts: Int) {
+        dataStore.edit {
+            it[lockoutUntilKey] = untilMillis
+            it[failedAttemptsKey] = attempts
+        }
+    }
+
+    suspend fun resetLockout() {
+        dataStore.edit {
+            it.remove(lockoutUntilKey)
+            it.remove(failedAttemptsKey)
+        }
+    }
+
     suspend fun setBiometricsEnabled(enabled: Boolean) {
         dataStore.edit { it[biometricsEnabledKey] = enabled }
     }
@@ -55,14 +79,21 @@ open class SecurityManager @Inject constructor(
     }
 
     suspend fun clearPasscode() {
-        dataStore.edit { it.remove(passcodeKey) }
+        dataStore.edit {
+            it.remove(passcodeKey)
+            it.remove(lockoutUntilKey)
+            it.remove(failedAttemptsKey)
+        }
     }
 
     suspend fun verifyPasscode(enteredPasscode: String): Boolean {
         val storedEncrypted = dataStore.data.map { it[passcodeKey] }.first() ?: return false
         return try {
             val decrypted = decrypt(storedEncrypted)
-            decrypted == enteredPasscode
+            java.security.MessageDigest.isEqual(
+                decrypted.toByteArray(Charsets.UTF_8),
+                enteredPasscode.toByteArray(Charsets.UTF_8)
+            )
         } catch (e: Exception) {
             false
         }

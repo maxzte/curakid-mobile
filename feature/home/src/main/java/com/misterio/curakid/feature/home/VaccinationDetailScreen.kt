@@ -31,17 +31,19 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.misterio.core.domain.model.Event
 import com.misterio.core.domain.model.EventStatus
 import com.misterio.core.ui.components.LoadingScreen
@@ -50,21 +52,35 @@ import com.misterio.core.ui.theme.CurakidTheme
 import com.misterio.core.ui.toFormatted
 import java.util.UUID
 
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-
 @Composable
 fun VaccinationDetailScreen(
     vaccineEventId: UUID,
     onBack: () -> Unit,
+    viewModel: VaccineDetailsViewModel = hiltViewModel<VaccineDetailsViewModel, VaccineDetailsViewModel.Factory> { factory ->
+        factory.create(vaccineEventId)
+    }
 ) {
-    val viewModel: VaccineDetailsViewModel =
-        hiltViewModel<VaccineDetailsViewModel, VaccineDetailsViewModel.Factory> { factory ->
-            factory.create(vaccineEventId)
-        }
     val details by viewModel.vaccineDetails.collectAsStateWithLifecycle()
 
+    val currentDetails = details
+    if (currentDetails != null) {
+        VaccinationDetailContent(
+            vaccination = currentDetails,
+            onBack = onBack
+        )
+    } else {
+        LoadingScreen()
+    }
+}
+
+@Composable
+fun VaccinationDetailContent(
+    vaccination: Event.Vaccine,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
             .padding(
@@ -76,115 +92,102 @@ fun VaccinationDetailScreen(
             horizontalArrangement = Arrangement.spacedBy(CurakidTheme.paddings.medium),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(
-                onClick = onBack
-            ) {
+            IconButton(onClick = onBack) {
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "Назад"
+                    contentDescription = stringResource(R.string.back)
                 )
             }
 
-            details?.let {
-                Text(
-                    text = "Про вакцину ${it.title}",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Medium,
+            Text(
+                text = stringResource(R.string.vaccine_details_title, vaccination.title),
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Medium,
+            )
+        }
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            colors = CardDefaults.cardColors(containerColor = CurakidTheme.colors.surface),
+            elevation = CardDefaults.cardElevation(2.dp)
+        ) {
+            Column(modifier = Modifier.padding(20.dp)) {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(48.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(CurakidTheme.colors.primaryContainer),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Vaccines,
+                            contentDescription = null,
+                            tint = CurakidTheme.colors.primary,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+
+                    Spacer(Modifier.width(16.dp))
+
+                    Column {
+                        Text(
+                            text = vaccination.title,
+                            style = CurakidTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text(
+                            text = stringResource(
+                                R.string.vaccine_dose_format,
+                                vaccination.doseNumber ?: 0,
+                                vaccination.totalDoses ?: 0
+                            ),
+                            style = CurakidTheme.typography.bodyMedium,
+                            color = CurakidTheme.colors.primary
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(24.dp))
+
+                DetailItem(
+                    icon = Icons.Default.CalendarToday,
+                    label = stringResource(R.string.vaccine_date_label),
+                    value = vaccination.date.toFormatted()
+                )
+
+                Spacer(Modifier.height(16.dp))
+
+                DetailItem(
+                    icon = Icons.Default.Info,
+                    label = stringResource(R.string.vaccine_status_label),
+                    value = when (vaccination.status) {
+                        EventStatus.DONE -> stringResource(R.string.home_status_done)
+                        EventStatus.PLANNED -> stringResource(R.string.home_status_planned)
+                        EventStatus.SKIPPED -> stringResource(R.string.home_status_skipped)
+                    },
+                    valueColor = if (vaccination.status == EventStatus.DONE) CurakidTheme.colors.tertiary else CurakidTheme.colors.primary
                 )
             }
         }
 
-        if (details != null) {
-            VaccinationDetailContent(
-                vaccination = details!!,
-            )
-        } else {
-            LoadingScreen()
-        }
-    }
-}
-
-@Composable
-private fun VaccinationDetailContent(
-    vaccination: Event.Vaccine,
-) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = CurakidTheme.colors.surface),
-        elevation = CardDefaults.cardElevation(2.dp)
-    ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(48.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(CurakidTheme.colors.primaryContainer),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.Vaccines,
-                        null,
-                        tint = CurakidTheme.colors.primary,
-                        modifier = Modifier.size(24.dp)
-                    )
-                }
-
-                Spacer(Modifier.width(16.dp))
-
-                Column {
-                    Text(
-                        vaccination.title,
-                        style = CurakidTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text(
-                        "Доза ${vaccination.doseNumber}/${vaccination.totalDoses}",
-                        style = CurakidTheme.typography.bodyMedium,
-                        color = CurakidTheme.colors.primary
-                    )
-                }
-            }
-
-            Spacer(Modifier.height(24.dp))
-
-            DetailItem(
-                icon = Icons.Default.CalendarToday,
-                label = "Дата",
-                value = vaccination.date.toFormatted()
+        vaccination.notes?.let { notes ->
+            Text(
+                text = stringResource(R.string.vaccine_about_title),
+                style = CurakidTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(top = 16.dp)
             )
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(8.dp))
 
-            DetailItem(
-                icon = Icons.Default.Info,
-                label = "Статус",
-                value = when (vaccination.status) {
-                    EventStatus.DONE -> "Виконано"
-                    EventStatus.PLANNED -> "Заплановано"
-                    EventStatus.SKIPPED -> "Пропущено"
-                },
-                valueColor = if (vaccination.status == EventStatus.DONE) CurakidTheme.colors.tertiary else CurakidTheme.colors.primary
+            Text(
+                text = notes,
+                style = CurakidTheme.typography.bodyLarge,
+                lineHeight = 24.sp
             )
         }
-    }
-
-    vaccination.notes?.let {
-        Text(
-            "Про вакцину",
-            style = CurakidTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            modifier = Modifier.padding(top = 8.dp)
-        )
-
-        Spacer(Modifier.height(8.dp))
-
-        Text(
-            it,
-            style = CurakidTheme.typography.bodyLarge,
-            lineHeight = 24.sp
-        )
     }
 }
 
@@ -197,24 +200,44 @@ private fun DetailItem(
 ) {
     Row(verticalAlignment = Alignment.CenterVertically) {
         Icon(
-            icon,
-            null,
+            imageVector = icon,
+            contentDescription = null,
             tint = CurakidTheme.colors.outline,
             modifier = Modifier.size(20.dp)
         )
         Spacer(Modifier.width(12.dp))
         Column {
             Text(
-                label,
+                text = label,
                 style = CurakidTheme.typography.labelSmall,
                 color = CurakidTheme.colors.outline
             )
             Text(
-                value,
+                text = value,
                 style = CurakidTheme.typography.bodyLarge,
                 color = valueColor,
                 fontWeight = FontWeight.Medium
             )
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun VaccinationDetailPreview() {
+    CurakidTheme {
+        VaccinationDetailContent(
+            vaccination = Event.Vaccine(
+                id = UUID.randomUUID(),
+                title = "Гексаксим",
+                date = java.time.LocalDateTime.now(),
+                status = EventStatus.PLANNED,
+                doseNumber = 1,
+                totalDoses = 3,
+                vaccineType = com.misterio.core.domain.model.VaccineType.VACCINATION,
+                notes = "Вакцина для первинної імунізації проти дифтерії, правця, кашлюка, гепатиту B."
+            ),
+            onBack = {}
+        )
     }
 }

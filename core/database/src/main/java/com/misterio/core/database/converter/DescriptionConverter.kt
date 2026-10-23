@@ -6,12 +6,18 @@ import kotlinx.serialization.json.Json
 
 class DescriptionConverter {
 
-    @TypeConverter
-    fun descriptionToJson(value: LifePeriodDescription?) = Json.encodeToString(value)
+    private val json = Json {
+        ignoreUnknownKeys = true
+        encodeDefaults = true
+        isLenient = true
+    }
 
     @TypeConverter
-    fun jsonToDescription(value: String): LifePeriodDescription? = runCatching {
-        Json.decodeFromString<LifePeriodDescription>(value)
+    fun descriptionToJson(value: LifePeriodDescription?): String? = value?.let { json.encodeToString(it) }
+
+    @TypeConverter
+    fun jsonToDescription(value: String?): LifePeriodDescription? = if (value.isNullOrBlank()) null else runCatching {
+        json.decodeFromString<LifePeriodDescription>(value)
     }.getOrNull()
 
 }

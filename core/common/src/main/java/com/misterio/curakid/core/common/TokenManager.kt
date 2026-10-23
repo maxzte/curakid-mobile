@@ -38,12 +38,6 @@ class TokenManager @Inject constructor(
     private val _isInitialized = MutableStateFlow(false)
     val isInitialized: StateFlow<Boolean> = _isInitialized.asStateFlow()
 
-    private var refreshAction: (suspend () -> Unit)? = null
-
-    fun setRefreshAction(action: suspend () -> Unit) {
-        refreshAction = action
-    }
-
     val currentToken: String?
         get() = _accessToken.value
 
@@ -85,12 +79,6 @@ class TokenManager @Inject constructor(
                     Log.d(TAG, "init: Tokens state updated (hasRefreshToken=${decryptedRt != null})")
                     _refreshToken.value = decryptedRt
                     _isInitialized.value = true
-
-                    if (decryptedRt != null && _accessToken.value == null) {
-                        scope.launch {
-                            refreshAction?.invoke()
-                        }
-                    }
                 }
         }
     }
@@ -108,6 +96,7 @@ class TokenManager @Inject constructor(
     suspend fun save(accessToken: String, refreshToken: String) {
         Log.d(TAG, "Tokens saved securely")
         _accessToken.value = accessToken
+        _refreshToken.value = refreshToken
 
         val encryptedRt = securityManager.encrypt(refreshToken)
 
@@ -119,6 +108,7 @@ class TokenManager @Inject constructor(
     suspend fun clearTokens() {
         Log.i(TAG, "clearing tokens")
         _accessToken.value = null
+        _refreshToken.value = null
         dataStore.edit { prefs ->
             prefs.remove(refreshTokenKey)
         }

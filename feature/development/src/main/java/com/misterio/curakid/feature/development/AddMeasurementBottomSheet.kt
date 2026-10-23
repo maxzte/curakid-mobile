@@ -131,80 +131,28 @@ fun AddMeasurementBottomSheet(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = stringResource(R.string.child_weight, child.name),
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            val currentWeight = weightWhole + weightDecimal
-            Text(
-                text = String.format(Locale.US, "%.1f kg", currentWeight),
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    color = CurakidTheme.colors.primary,
-                    fontWeight = FontWeight.Bold
-                )
-            )
-
-            NormStatus(value = currentWeight.toFloat(), normRange = weightNorm)
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            RulerSlider(
-                value = weightWhole.toFloat(),
-                onValueChange = { weightWhole = round(it.toDouble()) },
+            MeasurementInputSection(
+                title = stringResource(R.string.child_weight, child.name),
+                unit = "kg",
+                wholeValue = weightWhole,
+                onWholeChange = { weightWhole = it },
+                decimalValue = weightDecimal,
+                onDecimalChange = { weightDecimal = it },
                 range = 0f..32f,
-                step = 1f,
-                modifier = Modifier.height(80.dp),
                 normRange = weightNorm
-            )
-
-            RulerSlider(
-                value = weightDecimal.toFloat(),
-                onValueChange = { weightDecimal = it.toDouble() },
-                range = 0f..1f,
-                step = 0.1f,
-                modifier = Modifier.height(80.dp)
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            Text(
-                text = stringResource(R.string.child_height, child.name),
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            val currentHeight = heightWhole + heightDecimal
-            Text(
-                text = String.format(Locale.US, "%.1f cm", currentHeight),
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    color = CurakidTheme.colors.primary,
-                    fontWeight = FontWeight.Bold
-                )
-            )
-
-            NormStatus(value = currentHeight.toFloat(), normRange = heightNorm)
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            RulerSlider(
-                value = heightWhole.toFloat(),
-                onValueChange = { heightWhole = round(it.toDouble()) },
+            MeasurementInputSection(
+                title = stringResource(R.string.child_height, child.name),
+                unit = "cm",
+                wholeValue = heightWhole,
+                onWholeChange = { heightWhole = it },
+                decimalValue = heightDecimal,
+                onDecimalChange = { heightDecimal = it },
                 range = 30f..125f,
-                step = 1f,
-                modifier = Modifier.height(80.dp),
                 normRange = heightNorm
-            )
-
-            RulerSlider(
-                value = heightDecimal.toFloat(),
-                onValueChange = { heightDecimal = it.toDouble() },
-                range = 0f..1f,
-                step = 0.1f,
-                modifier = Modifier.height(80.dp)
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -279,41 +227,15 @@ fun AddHeadCircBottomSheet(
                 .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Text(
-                text = stringResource(R.string.child_head_circ, childName),
-                style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            val currentVal = headCircWhole + headCircDecimal
-            Text(
-                text = String.format(Locale.US, "%.1f cm", currentVal),
-                style = MaterialTheme.typography.headlineMedium.copy(
-                    color = CurakidTheme.colors.primary,
-                    fontWeight = FontWeight.Bold
-                )
-            )
-
-            NormStatus(value = currentVal.toFloat(), normRange = normRange)
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            RulerSlider(
-                value = headCircWhole.toFloat(),
-                onValueChange = { headCircWhole = round(it.toDouble()) },
+            MeasurementInputSection(
+                title = stringResource(R.string.child_head_circ, childName),
+                unit = "cm",
+                wholeValue = headCircWhole,
+                onWholeChange = { headCircWhole = it },
+                decimalValue = headCircDecimal,
+                onDecimalChange = { headCircDecimal = it },
                 range = 30f..60f,
-                step = 1f,
-                modifier = Modifier.height(80.dp),
                 normRange = normRange
-            )
-
-            RulerSlider(
-                value = headCircDecimal.toFloat(),
-                onValueChange = { headCircDecimal = it.toDouble() },
-                range = 0f..1f,
-                step = 0.1f,
-                modifier = Modifier.height(80.dp)
             )
 
             Spacer(modifier = Modifier.height(32.dp))

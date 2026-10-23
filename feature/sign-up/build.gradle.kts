@@ -1,7 +1,7 @@
 import java.util.Properties
 
 plugins {
-    id("com.android.library")
+    alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
@@ -9,7 +9,7 @@ plugins {
 
 android {
     namespace = "com.misterio.curakid.feature.signup"
-    compileSdk = 37
+    compileSdk = libs.versions.compileSdk.get().toInt()
 
     buildFeatures {
         compose = true
@@ -17,10 +17,10 @@ android {
     }
 
     defaultConfig {
-        minSdk = 26
+        minSdk = libs.versions.minSdk.get().toInt()
 
         val localProperties = Properties()
-        val localPropertiesFile = project.file("local.properties")
+        val localPropertiesFile = rootProject.file("local.properties")
         if (localPropertiesFile.exists()) {
             localPropertiesFile.inputStream().use { input ->
                 localProperties.load(input)
@@ -48,7 +48,7 @@ dependencies {
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.googleid)
 
-    implementation(libs.androidx.ui.tooling.preview)
+    implementation(libs.androidx.compose.ui.tooling.preview)
 
     implementation(libs.bundles.richtext)
 
@@ -59,7 +59,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.compose)
     implementation(libs.hilt.navigation.compose)
     implementation(libs.hilt.android)
-    debugImplementation(libs.androidx.ui.tooling)
+    debugImplementation(libs.androidx.compose.ui.tooling)
     ksp(libs.hilt.compiler)
 
     testImplementation(libs.junit)

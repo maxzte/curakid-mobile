@@ -9,4 +9,26 @@
     <string name="recommendations">Рекомендації</string>
     <string name="back">Назад</string>
     <string name="all_events">Усі події</string>
+    <string name="home_app_name">CuraKid</string>
+    <string name="home_upcoming">Майбутні</string>
+    <string name="home_all">Всі</string>
+    <string name="home_reports_and_recommendations">Звіти та Рекомендації</string>
+    <string name="home_revaccination">Ревакцинація</string>
+    <string name="home_doctor_visit">Похід до лікаря</string>
+    <string name="home_status_planned">Заплановано</string>
+    <string name="home_status_done">Виконано</string>
+    <string name="home_status_skipped">Пропущено</string>
+    <string name="home_badge_vaccine">Вакцина</string>
+    <string name="home_badge_doctor">Лікар</string>
+    <string name="home_badge_event">Подія</string>
+    <string name="home_ai_report_title">Аналіз розвитку</string>
+    <string name="home_ai_report_empty">Звіт порожній</string>
+    <string name="home_no_upcoming_events">Майбутніх подій немає</string>
+    <string name="home_error_loading">Помилка завантаження</string>
+    <string name="vaccine_details_title">Про вакцину %1$s</string>
+    <string name="vaccine_about_title">Про вакцину</string>
+    <string name="vaccine_dose_format">Доза %1$d/%2$d</string>
+    <string name="vaccine_date_label">Дата</string>
+    <string name="vaccine_status_label">Статус</string>
+    <string name="ai_analyzing_child_data">ШІ аналізує дані розвитку дитини…</string>
 </resources>

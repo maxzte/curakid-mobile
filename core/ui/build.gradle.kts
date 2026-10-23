@@ -1,14 +1,14 @@
 plugins {
-    id("com.android.library")
+    alias(libs.plugins.android.library)
     alias(libs.plugins.kotlin.compose)
 }
 
 android {
     namespace = "com.misterio.core.ui"
-    compileSdk = 37
+    compileSdk = libs.versions.compileSdk.get().toInt()
 
     defaultConfig {
-        minSdk = 26
+        minSdk = libs.versions.minSdk.get().toInt()
     }
 
     buildFeatures {
@@ -23,5 +23,5 @@ dependencies {
     implementation(libs.androidx.compose.material3)
 
     implementation(libs.bundles.richtext)
-    implementation(project(":core:domain"))
+    implementation(projects.core.domain)
 }

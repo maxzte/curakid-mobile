@@ -12,10 +12,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -26,43 +23,24 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.plus
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.BottomSheetDefaults
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Checkbox
-import androidx.compose.material3.DatePicker
-import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedCard
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
-import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TimePicker
-import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.material3.rememberModalBottomSheetState
-import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.StrokeCap
@@ -72,9 +50,10 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.kizitonwose.calendar.compose.HorizontalCalendar
 import com.kizitonwose.calendar.compose.rememberCalendarState
 import com.kizitonwose.calendar.core.CalendarDay
@@ -82,9 +61,9 @@ import com.kizitonwose.calendar.core.DayPosition
 import com.kizitonwose.calendar.core.daysOfWeek
 import com.misterio.core.domain.UiState
 import com.misterio.core.domain.model.Event
-import com.misterio.core.domain.model.EventStatus
 import com.misterio.core.domain.model.EventType
 import com.misterio.core.ui.TrackFab
+import com.misterio.core.ui.components.ErrorView
 import com.misterio.core.ui.components.LoadingScreen
 import com.misterio.core.ui.components.ScreenHeader
 import com.misterio.core.ui.components.SectionHeader
@@ -92,16 +71,11 @@ import com.misterio.core.ui.components.rememberListContentPadding
 import com.misterio.core.ui.theme.CurakidTheme
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import java.time.Instant
 import java.time.LocalDate
-import java.time.LocalTime
 import java.time.YearMonth
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import java.util.UUID
-
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun CalendarScreen(
@@ -164,7 +138,10 @@ fun CalendarScreen(
         }
 
         is UiState.Error -> {
-            // TODO: Error screen
+            ErrorView(
+                error = state.error,
+                onRetry = { viewModel.refresh() }
+            )
         }
     }
 }
@@ -214,7 +191,7 @@ private fun CalendarScreenContent(
         verticalArrangement = Arrangement.spacedBy(CurakidTheme.paddings.medium),
     ) {
         item {
-            ScreenHeader(title = "Календар", childName = childName, onChatClick = onChatClick)
+            ScreenHeader(title = stringResource(R.string.calendar), childName = childName, onChatClick = onChatClick)
         }
 
         item {
@@ -257,9 +234,7 @@ private fun CalendarScreenContent(
                             Day(
                                 day = day,
                                 isSelected = uiState.selectedDate == day.date,
-                                eventTypes = uiState.allEvents
-                                    .filter { it.date.toLocalDate() == day.date }
-                                    .map { it.type },
+                                eventTypes = uiState.eventTypesByDate[day.date] ?: emptyList(),
                                 onClick = {
                                     view.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)
                                     onDateSelected(it.date)
@@ -353,242 +328,7 @@ private fun CalendarScreenContent(
 }
 
 @Composable
-fun EventCreationSheet(
-    state: EventFormState,
-    onStateChange: (EventFormState) -> Unit,
-    onSave: () -> Unit,
-    onDelete: () -> Unit
-) {
-    val isEditing = state.id != null
-    var showDatePicker by remember { mutableStateOf(false) }
-    var showTimePicker by remember { mutableStateOf(false) }
-
-    if (showDatePicker) {
-        val datePickerState = rememberDatePickerState(
-            initialSelectedDateMillis = state.date.atZone(ZoneId.systemDefault()).toInstant()
-                .toEpochMilli(),
-            selectableDates = object : SelectableDates {
-                override fun isSelectableDate(utcTimeMillis: Long): Boolean {
-                    // Якщо ми не редагуємо існуючий евент, забороняємо минулі дати
-                    if (!isEditing) {
-                        val todayMillis =
-                            LocalDate.now().atStartOfDay(ZoneId.systemDefault()).toInstant()
-                                .toEpochMilli()
-                        return utcTimeMillis >= todayMillis
-                    }
-                    return true
-                }
-            }
-        )
-        DatePickerDialog(
-            onDismissRequest = { showDatePicker = false },
-            confirmButton = {
-                TextButton(
-                    onClick = {
-                    datePickerState.selectedDateMillis?.let { millis ->
-                        val selectedDate = Instant.ofEpochMilli(millis)
-                            .atZone(ZoneId.systemDefault())
-                            .toLocalDate()
-                        onStateChange(state.copy(date = selectedDate.atTime(state.date.toLocalTime())))
-                    }
-                    showDatePicker = false
-                    showTimePicker = true
-                }
-                ) {
-                    Text(stringResource(android.R.string.ok))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDatePicker = false }) {
-                    Text(stringResource(android.R.string.cancel))
-                }
-            }
-        ) {
-            DatePicker(state = datePickerState)
-        }
-    }
-
-    if (showTimePicker) {
-        val timePickerState = rememberTimePickerState(
-            initialHour = state.date.hour,
-            initialMinute = state.date.minute
-        )
-        Dialog(onDismissRequest = { showTimePicker = false }) {
-            OutlinedCard(
-                colors = CardDefaults.outlinedCardColors(containerColor = CurakidTheme.colors.surface),
-                shape = CurakidTheme.Radius.xl
-            ) {
-                Column(
-                    modifier = Modifier.padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(24.dp)
-                ) {
-                    Text(
-                        text = stringResource(R.string.select_time),
-                        style = CurakidTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    TimePicker(state = timePickerState)
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.End,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        TextButton(onClick = { showTimePicker = false }) {
-                            Text(stringResource(android.R.string.cancel))
-                        }
-
-                        TextButton(
-                            onClick = {
-                                val selectedTime =
-                                    LocalTime.of(timePickerState.hour, timePickerState.minute)
-                                onStateChange(
-                                    state.copy(
-                                        date = state.date.toLocalDate().atTime(selectedTime)
-                                    )
-                                )
-                                showTimePicker = false
-                            }
-                        ) {
-                            Text(stringResource(android.R.string.ok))
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = CurakidTheme.paddings.medium)
-//            .padding(bottom = 24.dp)
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(CurakidTheme.paddings.medium)
-    ) {
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                text = if (isEditing) stringResource(R.string.edit_event) else stringResource(R.string.create_event),
-                style = CurakidTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold
-            )
-
-            if (isEditing) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        text = stringResource(R.string.is_done),
-                        style = CurakidTheme.typography.bodyMedium
-                    )
-
-                    Checkbox(
-                        checked = state.status == EventStatus.DONE,
-                        onCheckedChange = { isChecked ->
-                            onStateChange(
-                                state.copy(
-                                    status = if (isChecked) EventStatus.DONE else EventStatus.PLANNED
-                                )
-                            )
-                        }
-                    )
-                }
-            }
-        }
-
-        OutlinedTextField(
-            value = state.title,
-            onValueChange = { onStateChange(state.copy(title = it)) },
-            label = { Text(stringResource(R.string.title)) },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
-        ) {
-            EventType.entries.forEach { type ->
-                FilterChip(
-                    selected = state.type == type,
-                    onClick = { onStateChange(state.copy(type = type)) },
-                    label = { Text(type.name) }
-                )
-            }
-        }
-
-    val isDateEditable = state.status != EventStatus.DONE
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(
-                enabled = isDateEditable,
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = { showDatePicker = true }
-            )
-    ) {
-        OutlinedTextField(
-            value = state.date.format(DateTimeFormatter.ofPattern("d MMMM yyyy, HH:mm")),
-            onValueChange = { },
-            label = { Text(stringResource(R.string.date)) },
-            modifier = Modifier.fillMaxWidth(),
-            readOnly = true,
-            enabled = false,
-            colors = OutlinedTextFieldDefaults.colors(
-                disabledTextColor = if (isDateEditable) CurakidTheme.colors.onSurface else CurakidTheme.colors.onSurface.copy(alpha = 0.38f),
-                disabledBorderColor = if (isDateEditable) CurakidTheme.colors.outline else CurakidTheme.colors.outline.copy(alpha = 0.38f),
-                disabledLabelColor = if (isDateEditable) CurakidTheme.colors.onSurfaceVariant else CurakidTheme.colors.onSurfaceVariant.copy(alpha = 0.38f),
-                disabledPlaceholderColor = CurakidTheme.colors.onSurfaceVariant,
-            )
-        )
-    }
-
-        if (state.type == EventType.DOCTOR) {
-            OutlinedTextField(
-                value = state.location ?: "",
-                onValueChange = { onStateChange(state.copy(location = it)) },
-                label = { Text(stringResource(R.string.location)) },
-                modifier = Modifier.fillMaxWidth()
-            )
-        }
-
-        OutlinedTextField(
-            value = state.description ?: "",
-            onValueChange = { onStateChange(state.copy(description = it)) },
-            label = { Text(stringResource(R.string.description)) },
-            modifier = Modifier.fillMaxWidth(),
-            minLines = 3
-        )
-
-        Button(
-            onClick = onSave,
-            modifier = Modifier.fillMaxWidth(),
-            shape = CurakidTheme.Radius.md
-        ) {
-            Text(if (isEditing) stringResource(R.string.save) else stringResource(R.string.create))
-        }
-
-        if (isEditing) {
-            OutlinedButton(
-                onClick = onDelete,
-                modifier = Modifier.fillMaxWidth(),
-                shape = CurakidTheme.Radius.md,
-                colors = ButtonDefaults.outlinedButtonColors(contentColor = CurakidTheme.colors.error)
-            ) {
-                Text(stringResource(R.string.delete))
-            }
-        }
-
-        Spacer(modifier = Modifier.height(32.dp))
-    }
-}
-
-@Composable
-private fun ProgressSection(completed: Int, total: Int) {
+private fun ProgressSection(completed: Int, total: Int, modifier: Modifier = Modifier) {
     val progress = if (total > 0) completed.toFloat() / total.toFloat() else 0f
     val animatedProgress by animateFloatAsState(
         targetValue = progress,
@@ -596,7 +336,7 @@ private fun ProgressSection(completed: Int, total: Int) {
         label = "progress"
     )
 
-    Column(modifier = Modifier.padding(vertical = 8.dp)) {
+    Column(modifier = modifier.padding(vertical = 8.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween
@@ -639,4 +379,27 @@ private fun Day(
         eventTypes = eventTypes,
         onDateSelected = { onClick(day) }
     )
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun CalendarScreenPreview() {
+    CurakidTheme {
+        CalendarScreenContent(
+            childName = "Богдан",
+            uiState = CalendarUiState(
+                childName = "Богдан",
+                selectedDate = LocalDate.now(),
+                selectedMonth = LocalDate.now(),
+                filteredEvents = emptyList(),
+                allEvents = emptyList()
+            ),
+            onDateSelected = {},
+            onMonthChanged = {},
+            onEventClick = {},
+            onEditEvent = {},
+            onToggleExpand = {},
+            onAddEvent = {}
+        )
+    }
 }

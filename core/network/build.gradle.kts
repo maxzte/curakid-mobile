@@ -1,18 +1,29 @@
 plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
-    id("com.android.library")
+    alias(libs.plugins.android.library)
     id("jacoco")
 }
 
 android {
     namespace = "com.misterio.core.network"
-    compileSdk = 37
+    compileSdk = libs.versions.compileSdk.get().toInt()
 
     defaultConfig {
-        minSdk = 26
-        val defaultBaseUrl = providers.gradleProperty("API_BASE_URL").getOrElse("http://192.168.1.5:8080/")
-        buildConfigField("String", "BASE_URL", "\"$defaultBaseUrl\"")
+        minSdk = libs.versions.minSdk.get().toInt()
+    }
+
+    buildTypes {
+        debug {
+            val debugBaseUrl = providers.gradleProperty("API_BASE_URL")
+                .getOrElse("https://stopped-longitude-new-andrew.trycloudflare.com/")
+            buildConfigField("String", "BASE_URL", "\"$debugBaseUrl\"")
+        }
+        release {
+            val releaseBaseUrl = providers.gradleProperty("API_BASE_URL")
+                .getOrElse("https://api.curakid.com/")
+            buildConfigField("String", "BASE_URL", "\"$releaseBaseUrl\"")
+        }
     }
 
     buildFeatures {
@@ -28,10 +39,11 @@ android {
 }
 
 jacoco {
-    toolVersion = "0.8.12"
+    toolVersion = libs.versions.jacoco.get()
 }
 
 tasks.register<JacocoReport>("jacocoTestReport") {
+    description = ""
     dependsOn("testDebugUnitTest")
 
     reports {

@@ -51,24 +51,10 @@ class HomeViewModel @Inject constructor(
     private val syncChildAiReportsUseCase: SyncChildAiReportsUseCase,
 ) : ViewModel() {
 
-    init {
-        Log.d(TAG, "INIT")
-        viewModelScope.launch {
-            selectedChild.collectLatest { child ->
-                if (child != null) {
-                    launch { runCatching { syncEventsUseCase(child.id) } }
-                    launch { runCatching { syncChildAiReportsUseCase(child.id) } }
-                }
-            }
-        }
-    }
-
     private val selectedChild = getChildUseCase()
         .distinctUntilChanged()
         .onStart {
-            runCatching {
-                syncChildrenUseCase(false)
-            }
+            syncChildrenUseCase(false)
         }
         .stateIn(
             scope = viewModelScope,
@@ -101,14 +87,14 @@ class HomeViewModel @Inject constructor(
     ) { child, eList, reports ->
         Log.d(TAG, "childId: ${child?.id}, totalEvents: ${eList.size}, reports: ${reports.size}")
 
+        val activeEvents = eList.sortedBy { it.date }
         // Select items for Hero Cards
-        val v = eList.filterIsInstance<Event.Vaccine>().firstOrNull { it.status != EventStatus.DONE }
-        val e = eList.firstOrNull { it.type == EventType.DOCTOR && it.status != EventStatus.DONE }
-            ?: eList.firstOrNull { it !is Event.Vaccine }
+        val v = activeEvents.filterIsInstance<Event.Vaccine>().firstOrNull { it.status == EventStatus.PLANNED }
+        val e = activeEvents.firstOrNull { it.type == EventType.DOCTOR && it.status == EventStatus.PLANNED }
+            ?: activeEvents.firstOrNull { it !is Event.Vaccine && it.status == EventStatus.PLANNED }
 
-        val allUpcoming = eList
+        val allUpcoming = activeEvents
             .filter { it.date.toLocalDate() >= LocalDate.now() }
-            .sortedBy { it.date }
 
         // Skip items shown in Hero Cards
         val upcomingItems = allUpcoming.filter { it.id != v?.id && it.id != e?.id }
@@ -126,6 +112,33 @@ class HomeViewModel @Inject constructor(
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = UiState.Initial
         )
+
+    init {
+        Log.d(TAG, "INIT")
+        viewModelScope.launch {
+            selectedChild.collectLatest { child ->
+                if (child != null) {
+                    kotlinx.coroutines.coroutineScope {
+                        launch { syncEventsUseCase(child.id) }
+                        launch { syncChildAiReportsUseCase(child.id) }
+                    }
+                }
+            }
+        }
+    }
+
+    fun refresh() {
+        viewModelScope.launch {
+            syncChildrenUseCase(true)
+            val child = selectedChild.value
+            if (child != null) {
+                kotlinx.coroutines.coroutineScope {
+                    launch { syncEventsUseCase(child.id) }
+                    launch { syncChildAiReportsUseCase(child.id) }
+                }
+            }
+        }
+    }
 
     private companion object {
         private const val TAG = "HomeVM"

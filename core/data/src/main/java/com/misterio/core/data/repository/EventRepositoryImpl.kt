@@ -11,6 +11,8 @@ import com.misterio.core.domain.repository.EventRepository
 import com.misterio.core.domain.util.EventNotificationScheduler
 import com.misterio.core.network.api.EventApi
 import com.misterio.core.network.dto.toRequest
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -102,9 +104,20 @@ class EventRepositoryImpl @Inject constructor(
     }
 
     override suspend fun syncEvents(childId: UUID): Result<Unit> {
-        // 1. Pull events from backend (General and Vaccines)
-        val generalResult = safeApiCall { eventApi.getEvents(childId) }
-        val vaccineResult = safeApiCall { eventApi.getVaccineEventsFor(childId) }
+        // 1. Pull events from backend concurrently
+        val (generalResult, vaccineResult) = coroutineScope {
+            val generalDeferred = async { safeApiCall { eventApi.getEvents(childId) } }
+            val vaccineDeferred = async { safeApiCall { eventApi.getVaccineEventsFor(childId) } }
+            generalDeferred.await() to vaccineDeferred.await()
+        }
+
+        if (generalResult.isFailure || vaccineResult.isFailure) {
+            return Result.failure(
+                generalResult.exceptionOrNull()
+                    ?: vaccineResult.exceptionOrNull()
+                    ?: com.misterio.core.domain.model.DomainError.UnknownError("Failed to sync events")
+            )
+        }
 
         val remoteEvents = mutableListOf<Event>()
         generalResult.onSuccess { body -> remoteEvents.addAll(body.map { it.toDomain() }) }
@@ -114,7 +127,11 @@ class EventRepositoryImpl @Inject constructor(
 
         // Get IDs of events to be deleted to cancel notifications
         val remainingIds = entities.map { it.id }
-        val deletedIds = eventDao.getDeletedEventIds(childId, remainingIds)
+        val deletedIds = if (remainingIds.isNotEmpty()) {
+            eventDao.getDeletedEventIds(childId, remainingIds)
+        } else {
+            eventDao.getAllSyncedEventIds(childId)
+        }
 
         // Cancel notifications for deleted events
         deletedIds.forEach { eventId ->
@@ -127,26 +144,13 @@ class EventRepositoryImpl @Inject constructor(
         // Reschedule notifications for all active events from server
         notificationScheduler.schedule(remoteEvents)
 
-        // 2. Send unsynced local events
+        // 2. Trigger background sync for unsynced local events
         val unsynced = eventDao.getUnsyncedEvents(childId)
         if (unsynced.isNotEmpty()) {
-            Log.d(TAG, "Syncing ${unsynced.size} unsynced events for child $childId")
-            syncEventsInternal(childId, unsynced.map { it.toDomain() })
+            syncManager.scheduleSync()
         }
 
         return Result.success(Unit)
-    }
-
-    private suspend fun syncEventsInternal(childId: UUID, events: List<Event>): Result<Unit> {
-        if (events.isEmpty()) return Result.success(Unit)
-
-        return safeApiCall {
-            eventApi.createEvents(
-                childId,
-                events.map { it.toRequest(childId) })
-        }.onSuccess {
-            eventDao.markAsSynced(events.map { it.id })
-        }.map { Unit }
     }
 
     private companion object {

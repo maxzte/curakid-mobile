@@ -12,6 +12,7 @@ data class CalendarUiState(
     val selectedDate: LocalDate = LocalDate.now(),
     val filteredEvents: List<Event> = emptyList(),
     val allEvents: List<Event> = emptyList(),
+    val eventTypesByDate: Map<LocalDate, List<EventType>> = emptyMap(),
     val childName: String = "",
     val vaccinesQuantity: Int = 0,
     val vaccinesDone: Int = 0,

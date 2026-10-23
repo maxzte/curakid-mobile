@@ -19,8 +19,6 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -29,32 +27,30 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.misterio.core.domain.UiState
 import com.misterio.core.domain.model.Event
-import com.misterio.core.domain.model.EventType
+import com.misterio.core.ui.components.ErrorView
+import com.misterio.core.ui.components.EventListItem
 import com.misterio.core.ui.components.LoadingScreen
 import com.misterio.core.ui.theme.CurakidTheme
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.misterio.core.ui.toFormatted
 import java.util.UUID
-
-import androidx.compose.ui.res.stringResource
-import com.misterio.curakid.feature.home.R
 
 @Composable
 fun UpcomingEventsScreen(
     onEventClick: (UUID) -> Unit,
     onBack: () -> Unit,
+    viewModel: HomeViewModel = hiltViewModel()
 ) {
-    val viewModel: HomeViewModel = hiltViewModel()
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
     Scaffold(
@@ -63,7 +59,10 @@ fun UpcomingEventsScreen(
                 title = { Text(stringResource(R.string.upcoming_events)) },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = stringResource(R.string.back)
+                        )
                     }
                 }
             )
@@ -73,49 +72,58 @@ fun UpcomingEventsScreen(
             is UiState.Loading, UiState.Initial -> LoadingScreen()
             is UiState.Success -> {
                 val events = state.data.upcomingItems
-                if (events.isNotEmpty()) {
-                    UpcomingEventsContent(
-                        events = events,
-                        onEventClick = onEventClick,
-                        modifier = Modifier.padding(innerPadding)
-                    )
-                } else {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Text("Майбутніх подій немає")
-                    }
-                }
+                UpcomingEventsContent(
+                    events = events,
+                    onEventClick = onEventClick,
+                    modifier = Modifier.padding(innerPadding)
+                )
             }
             is UiState.Error -> {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Text("Помилка завантаження")
-                }
+                ErrorView(
+                    error = state.error,
+                    onRetry = { viewModel.refresh() },
+                    modifier = Modifier.padding(innerPadding)
+                )
             }
         }
     }
 }
 
 @Composable
-private fun UpcomingEventsContent(
+fun UpcomingEventsContent(
     events: List<Event>,
     onEventClick: (UUID) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(CurakidTheme.paddings.medium),
-        verticalArrangement = Arrangement.spacedBy(CurakidTheme.paddings.small)
-    ) {
-        itemsIndexed(events) { index, event ->
-            UpcomingEventItem(
-                event = event,
-                onClick = { onEventClick(event.id) }
+    if (events.isEmpty()) {
+        Box(
+            modifier = modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = stringResource(R.string.home_no_upcoming_events),
+                style = CurakidTheme.typography.bodyMedium,
+                color = CurakidTheme.colors.outline
             )
-            if (index < events.lastIndex) {
-                HorizontalDivider(
-                    modifier = Modifier.padding(vertical = 8.dp),
-                    thickness = 0.5.dp,
-                    color = CurakidTheme.colors.outlineVariant
+        }
+    } else {
+        LazyColumn(
+            modifier = modifier.fillMaxSize(),
+            contentPadding = PaddingValues(CurakidTheme.paddings.medium),
+            verticalArrangement = Arrangement.spacedBy(CurakidTheme.paddings.small)
+        ) {
+            itemsIndexed(events, key = { _, item -> item.id }) { index, event ->
+                UpcomingEventItem(
+                    event = event,
+                    onClick = { onEventClick(event.id) }
                 )
+                if (index < events.lastIndex) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(vertical = 8.dp),
+                        thickness = 0.5.dp,
+                        color = CurakidTheme.colors.outlineVariant
+                    )
+                }
             }
         }
     }
@@ -126,73 +134,21 @@ private fun UpcomingEventItem(
     event: Event,
     onClick: () -> Unit
 ) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
-            .padding(vertical = 12.dp, horizontal = 8.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
-        val dotColor = when (event.type) {
-            EventType.VACCINE -> CurakidTheme.colors.primary
-            EventType.DOCTOR -> CurakidTheme.colors.secondary
-            EventType.USER -> CurakidTheme.colors.tertiary
-        }
-        Box(
-            modifier = Modifier
-                .size(10.dp)
-                .clip(CircleShape)
-                .background(dotColor)
-        )
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = event.title,
-                style = CurakidTheme.typography.bodyLarge,
-                fontWeight = FontWeight.Medium
-            )
-            Text(
-                text = event.date.toFormatted(),
-                style = CurakidTheme.typography.bodySmall,
-                color = CurakidTheme.colors.outline
-            )
-        }
-        
-        UpcomingTypeBadge(event = event)
-    }
+    EventListItem(
+        event = event,
+        onClick = onClick,
+        dotSize = 10.dp,
+        padding = 12.dp
+    )
 }
 
+@Preview(showBackground = true)
 @Composable
-private fun UpcomingTypeBadge(event: Event) {
-    val (bg, textColor, text) = when (event.type) {
-        EventType.VACCINE -> Triple(
-            CurakidTheme.colors.primaryContainer,
-            CurakidTheme.colors.primary,
-            "Вакцина"
-        )
-        EventType.DOCTOR -> Triple(
-            CurakidTheme.colors.secondaryContainer,
-            CurakidTheme.colors.secondary,
-            "Лікар"
-        )
-        EventType.USER -> Triple(
-            CurakidTheme.colors.tertiaryContainer,
-            CurakidTheme.colors.tertiary,
-            "Подія"
-        )
-    }
-    Box(
-        modifier = Modifier
-            .clip(RoundedCornerShape(20.dp))
-            .background(bg)
-            .padding(horizontal = 10.dp, vertical = 4.dp)
-    ) {
-        Text(
-            text = text,
-            style = CurakidTheme.typography.labelSmall,
-            color = textColor,
-            fontWeight = FontWeight.Bold
+fun UpcomingEventsPreview() {
+    CurakidTheme {
+        UpcomingEventsContent(
+            events = emptyList(),
+            onEventClick = {}
         )
     }
 }

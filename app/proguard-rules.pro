@@ -18,7 +18,15 @@
 -keepclassmembers class * {
     @com.google.gson.annotations.SerializedName <fields>;
 }
+-keep class com.google.gson.reflect.TypeToken { *; }
+-keep class * extends com.google.gson.reflect.TypeToken
 -keep class com.misterio.core.network.dto.** { *; }
+
+# Strip verbose logs in release
+-assumenosideeffects class android.util.Log {
+    public static int v(...);
+    public static int d(...);
+}
 
 # Kotlinx Serialization
 -keepclassmembers class * {

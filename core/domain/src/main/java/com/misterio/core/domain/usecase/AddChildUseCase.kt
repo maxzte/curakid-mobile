@@ -8,8 +8,6 @@ import javax.inject.Inject
 
 class AddChildUseCase @Inject constructor(
     private val repository: ChildRepository,
-    private val scheduleVaccineEventsUseCase: ScheduleVaccineEventsUseCase,
-    private val scheduleDoctorVisitsUseCase: ScheduleDoctorVisitsUseCase,
 ) {
     suspend operator fun invoke(
         name: String,
@@ -37,13 +35,6 @@ class AddChildUseCase @Inject constructor(
             specialFeatures
         ).onSuccess { childId ->
             repository.setSelectedChildId(childId)
-            scheduleVaccineEventsUseCase(
-                childId,
-                childBirthDate = Instant.ofEpochMilli(birthDate)
-                    .atZone(ZoneId.systemDefault())
-                    .toLocalDate()
-            )
-            scheduleDoctorVisitsUseCase(childId)
         }.map { Unit }
     }
 }

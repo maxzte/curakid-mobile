@@ -104,5 +104,11 @@ abstract class DataModule {
         impl: com.misterio.core.data.worker.EventNotificationSchedulerImpl
     ): com.misterio.core.domain.util.EventNotificationScheduler
 
+    @Binds
+    @Singleton
+    abstract fun bindNotificationRepository(
+        notificationRepositoryImpl: com.misterio.core.data.repository.NotificationRepositoryImpl
+    ): com.misterio.core.domain.repository.NotificationRepository
+
 }
 

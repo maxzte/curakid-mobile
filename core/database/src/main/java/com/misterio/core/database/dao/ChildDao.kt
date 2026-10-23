@@ -5,6 +5,7 @@ import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import androidx.room.Upsert
 import com.misterio.core.database.entity.ChildEntity
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID
@@ -21,10 +22,10 @@ interface ChildDao {
     @Query("SELECT * FROM children WHERE id = :childId")
     fun getChildByIdFlow(childId: UUID): Flow<ChildEntity?>
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertChild(child: ChildEntity)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun insertChildren(children: List<ChildEntity>)
 
     @Delete
@@ -33,13 +34,21 @@ interface ChildDao {
     @Query("DELETE FROM children WHERE isSynced = 1 AND id NOT IN (:remainingIds)")
     suspend fun deleteOldSyncedChildren(remainingIds: List<UUID>)
 
+    @Query("DELETE FROM children WHERE isSynced = 1")
+    suspend fun deleteAllSyncedChildren()
+
     @androidx.room.Transaction
     suspend fun syncWithServer(remoteChildren: List<ChildEntity>) {
+        val unsyncedIds = getUnsyncedChildren().map { it.id }.toSet()
         if (remoteChildren.isNotEmpty()) {
-            deleteOldSyncedChildren(remoteChildren.map { it.id })
-            insertChildren(remoteChildren)
+            val remoteIds = remoteChildren.map { it.id }
+            deleteOldSyncedChildren(remoteIds)
+            val childrenToInsert = remoteChildren.filterNot { it.id in unsyncedIds }
+            if (childrenToInsert.isNotEmpty()) {
+                insertChildren(childrenToInsert)
+            }
         } else {
-            deleteOldSyncedChildren(emptyList())
+            deleteAllSyncedChildren()
         }
     }
 

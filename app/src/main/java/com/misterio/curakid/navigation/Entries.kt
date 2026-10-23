@@ -58,9 +58,9 @@ fun EntryProviderScope<NavKey>.calendarEntry(
     onVaccinationClick: (UUID) -> Unit,
     onChatClick: () -> Unit,
 ) {
-    entry<Route.CalendarRoot> {
+    entry<Route.CalendarRoot> { key ->
         CalendarScreen(
-            eventId = null,
+            eventId = key.eventId,
             onVaccinationClick = onVaccinationClick,
             onChatClick = onChatClick
         )
@@ -129,4 +129,3 @@ fun EntryProviderScope<NavKey>.commonEntries(
         )
     }
 }
-

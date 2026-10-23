@@ -12,10 +12,10 @@ sealed class DomainError(message: String, cause: Throwable? = null) : Throwable(
 
     companion object {
         fun fromThrowable(throwable: Throwable): DomainError {
-            return if (throwable is CancellationException) {
-                throw throwable
-            } else {
-                UnknownError(cause = throwable)
+            return when (throwable) {
+                is CancellationException -> throw throwable
+                is DomainError -> throwable
+                else -> UnknownError(throwable.message ?: "Виникла непередбачувана помилка", cause = throwable)
             }
         }
     }

@@ -18,4 +18,9 @@
     <string name="passcode_mismatch">ПІН-коди не співпадають</string>
     <string name="passcode_incorrect">Невірний ПІН-код</string>
     <string name="passcode_forgot">Забули ПІН-код?</string>
+    <string name="passcode_reset_title">Скидання ПІН-коду</string>
+    <string name="passcode_reset_description">Якщо ви забули ПІН-код, вам доведеться вийти з акаунта. Це видалить ПІН-код та всі локальні дані сесії. Ви зможете увійти знову за допомогою свого пароля.</string>
+    <string name="passcode_reset_confirm">Вийти та скинути</string>
+    <string name="app_version">Версія %1$s</string>
+    <string name="save">Зберегти</string>
 </resources>

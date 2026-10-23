@@ -7,7 +7,6 @@ import com.misterio.core.domain.UiState
 import com.misterio.core.domain.model.DomainError
 import com.misterio.core.domain.model.Child
 import com.misterio.core.domain.model.Gender
-import com.misterio.core.domain.repository.ChildRepository
 import com.misterio.core.domain.usecase.AddChildUseCase
 import com.misterio.core.domain.usecase.GetChildUseCase
 import com.misterio.core.domain.usecase.GetChildrenUseCase
@@ -50,7 +49,7 @@ class ProfileViewModel @Inject constructor(
     private val _uiState = MutableStateFlow<UiState<String>>(UiState.Initial)
     val uiState: StateFlow<UiState<String>> = _uiState.asStateFlow()
 
-    private val _uiEvent = Channel<UiEvent>()
+    private val _uiEvent = Channel<UiEvent>(Channel.BUFFERED)
     val uiEvent = _uiEvent.receiveAsFlow()
 
     sealed interface UiEvent {

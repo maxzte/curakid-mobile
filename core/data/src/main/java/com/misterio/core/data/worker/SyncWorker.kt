@@ -263,10 +263,12 @@ class SyncWorker @AssistedInject constructor(
             val child = childDao.getChildById(assessment.childId)
             if (child == null || !child.isSynced) continue
 
-            val answersRequests = assessment.answers.map {
+            val answersRequests = assessment.answers.mapNotNull {
+                val qId = it.question?.id ?: return@mapNotNull null
+                val optId = it.selectedOption?.id ?: return@mapNotNull null
                 AnswerRequest(
-                    questionId = it.question?.id ?: UUID.randomUUID(),
-                    selectedOptionId = it.selectedOption?.id ?: UUID.randomUUID(),
+                    questionId = qId,
+                    selectedOptionId = optId,
                     answeredAt = it.answeredAt.toString()
                 )
             }
@@ -279,8 +281,16 @@ class SyncWorker @AssistedInject constructor(
                 )
             }
 
-            result.onSuccess {
-                assessmentDao.markAsSynced(assessment.id)
+            result.onSuccess { responses ->
+                val savedDto = responses.lastOrNull()
+                if (savedDto != null) {
+                    if (savedDto.id != assessment.id) {
+                        assessmentDao.deleteChildAssessment(assessment.id)
+                    }
+                    assessmentDao.insertChildAssessment(savedDto.toEntity())
+                } else {
+                    assessmentDao.markAsSynced(assessment.id)
+                }
             }.onFailure { error ->
                 if (error is DomainError.NetworkError || error is DomainError.ServerError) {
                     hasTransientFailure = true

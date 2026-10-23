@@ -44,12 +44,13 @@ class AssessmentRepositoryImpl @Inject constructor(
 
     override suspend fun syncChildAssessments(childId: UUID): Result<Unit> {
         return safeApiCall { api.getAssessments(childId) }.map { body ->
-            Log.d(TAG, "Syncing $body assessments for child $childId")
+            Log.d(TAG, "Syncing ${body.size} assessments for child $childId")
             if (body.isNotEmpty()) {
-                dao.insertChildAssessments(body.map { it.toEntity() })
-            } else {
-                Log.d(TAG, "Server returned empty list, clearing local database for $childId")
-                dao.clearChildAssessment(childId)
+                val unsyncedIds = dao.getUnsyncedAssessments().map { it.id }.toSet()
+                val toInsert = body.map { it.toEntity() }.filterNot { it.id in unsyncedIds }
+                if (toInsert.isNotEmpty()) {
+                    dao.insertChildAssessments(toInsert)
+                }
             }
             Unit
         }
@@ -100,16 +101,23 @@ class AssessmentRepositoryImpl @Inject constructor(
             isSynced = false
         )
         dao.insertChildAssessment(tempEntity)
-        syncManager.scheduleSync()
 
         return safeApiCall {
             val request = SaveAnswersRequest(answers = listOf(answer.toDto()))
             api.saveAssessmentAnswers(childId, periodId, request)
         }.map { body ->
-            val savedDto = body.last()
-            dao.insertChildAssessment(savedDto.toEntity())
-            savedDto.toDomain()
+            val savedDto = body.lastOrNull()
+            if (savedDto != null) {
+                if (savedDto.id != periodId) {
+                    dao.deleteChildAssessment(periodId)
+                }
+                dao.insertChildAssessment(savedDto.toEntity())
+                savedDto.toDomain()
+            } else {
+                tempEntity.toDomain()
+            }
         }.recover {
+            syncManager.scheduleSync()
             tempEntity.toDomain()
         }
     }
@@ -125,9 +133,9 @@ class AssessmentRepositoryImpl @Inject constructor(
         var tempAssessment: ChildAssessment? = null
         originalEntity?.let { entity ->
             val updatedAnswers = entity.answers.toMutableList()
-            val lifePeriodEntity = lifePeriodDao.getLifePeriodById(entity.id).firstOrNull()
-            val lifePeriod = lifePeriodEntity?.toDomain()
-            val question = lifePeriod?.questions?.find { it.id == answer.questionId }
+            val lifePeriods = lifePeriodDao.getLifePeriods().firstOrNull() ?: emptyList()
+            val allQuestions = lifePeriods.flatMap { it.toDomain().questions }
+            val question = allQuestions.find { it.id == answer.questionId }
             val option = question?.options?.find { it.id == answer.selectedOptionId }
             
             if (question != null && option != null) {
@@ -143,7 +151,6 @@ class AssessmentRepositoryImpl @Inject constructor(
                 val updatedEntity = entity.copy(answers = updatedAnswers, isSynced = false)
                 dao.insertChildAssessment(updatedEntity)
                 tempAssessment = updatedEntity.toDomain()
-                syncManager.scheduleSync()
             }
         }
 
@@ -152,8 +159,8 @@ class AssessmentRepositoryImpl @Inject constructor(
                 dao.insertChildAssessment(updatedDto.toEntity())
             }
             .onFailure {
-                // If it's a real failure (not offline), maybe rollback or keep as unsynced
-                // For now, we keep it as unsynced locally
+                // Schedule sync only if network failed
+                syncManager.scheduleSync()
             }
             .map { it.toDomain() }
             .recover {

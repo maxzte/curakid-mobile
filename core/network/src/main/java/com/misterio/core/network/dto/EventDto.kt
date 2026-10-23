@@ -57,33 +57,6 @@ data class VaccineEventResponse(
     val description: String?,
 )
 
-fun EventResponse.toDomain() = Event.General(
-    id = id,
-    title = title,
-    type = type,
-    date = Instant.parse(date).atZone(ZoneId.systemDefault()).toLocalDateTime(),
-    location = location,
-    description = description,
-    status = status,
-    isSynced = true
-)
-
-fun VaccineEventResponse.toDomain() = Event.Vaccine(
-    id = id,
-    title = name,
-    date = Instant.parse(date).atZone(ZoneId.systemDefault()).toLocalDateTime(),
-    status = status,
-    description = description,
-    isSynced = true,
-    disease = disease,
-    doseNumber = doseNumber,
-    totalDoses = totalDoses,
-    vaccineType = vaccineType,
-    scheduledAgeMonths = scheduledAgeMonths,
-    scheduledAgeDays = scheduledAgeDays,
-    notes = notes
-)
-
 fun Event.toRequest(childId: UUID) = EventRequest(
     id = id,
     childId = childId,

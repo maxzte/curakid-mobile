@@ -112,4 +112,22 @@ class ChildRepositoryImplTest {
         coVerify { childDao.insertChild(match { !it.isSynced && it.name == "Іван" }) }
         coVerify { syncManager.scheduleSync() }
     }
+
+    @Test
+    fun `addChild preserves gestationalWeeks for premature child`() = runTest {
+        val result = repository.addChild(
+            name = "Лука",
+            birthDate = System.currentTimeMillis(),
+            gender = Gender.MALE,
+            isPremature = true,
+            gestationalWeeks = 33,
+            allergies = emptyList(),
+            chronicDiseases = emptyList(),
+            pastDiseases = emptyList(),
+            specialFeatures = emptyList()
+        )
+
+        assertTrue(result.isSuccess)
+        coVerify { childDao.insertChild(match { it.isPremature && it.gestationalWeeks == 33 }) }
+    }
 }

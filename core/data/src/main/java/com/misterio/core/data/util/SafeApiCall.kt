@@ -1,27 +1,32 @@
 package com.misterio.core.data.util
 
 import com.misterio.core.domain.model.DomainError
+import com.misterio.core.domain.util.suspendRunCatching
 import retrofit2.Response
 import java.io.IOException
-import kotlin.coroutines.cancellation.CancellationException
 
 suspend fun <T> safeApiCall(call: suspend () -> Response<T>): Result<T> {
-    return try {
+    return suspendRunCatching {
         val response = call()
         if (response.isSuccessful && response.body() != null) {
-            Result.success(response.body()!!)
+            response.body()!!
         } else if (response.isSuccessful && response.body() == null && response.code() == 204) {
-             @Suppress("UNCHECKED_CAST")
-             Result.success(Unit as T)
+            @Suppress("UNCHECKED_CAST")
+            Unit as T
         } else {
-            Result.failure(mapToDomainError(response))
+            throw mapToDomainError(response)
         }
-    } catch (e: IOException) {
-        Result.failure(DomainError.NetworkError(cause = e))
-    } catch (e: Exception) {
-        if (e is CancellationException) throw e
-        Result.failure(DomainError.UnknownError(cause = e))
-    }
+    }.fold(
+        onSuccess = { Result.success(it) },
+        onFailure = { error ->
+            val domainError = when (error) {
+                is DomainError -> error
+                is IOException -> DomainError.NetworkError(cause = error)
+                else -> DomainError.UnknownError(cause = error)
+            }
+            Result.failure(domainError)
+        }
+    )
 }
 
 private fun <T> mapToDomainError(response: Response<T>): DomainError {

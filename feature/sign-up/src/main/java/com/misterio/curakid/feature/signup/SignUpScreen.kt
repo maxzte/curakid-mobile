@@ -14,12 +14,18 @@ import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Checkbox
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
@@ -32,14 +38,12 @@ import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.misterio.core.domain.UiState
 import com.misterio.core.domain.model.ConsentType
 import com.misterio.core.ui.components.CuraKidTextField
 import com.misterio.core.ui.theme.CuraKidColors
 import com.misterio.curakid.core.common.util.ValidationUtils
-
-import androidx.compose.ui.res.stringResource
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 
 @Composable
 fun SignUpScreen(
@@ -54,30 +58,120 @@ fun SignUpScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val legalDocs by viewModel.legalDocuments.collectAsStateWithLifecycle()
 
-    var name by rememberSaveable { mutableStateOf("") }
-    var email by rememberSaveable { mutableStateOf("") }
-    var password by rememberSaveable { mutableStateOf("") }
-    var isPolicyAccepted by rememberSaveable { mutableStateOf(false) }
-
-    val isEmailValid = remember(email) { ValidationUtils.isValidEmail(email) }
-    val isPasswordValid = remember(password) { ValidationUtils.isValidPassword(password) }
-    val isFormValid = name.isNotBlank() && isEmailValid && isPasswordValid && isPolicyAccepted
-
-    val error = (uiState as? UiState.Error)?.errorMessage
-    val currentEmailError = emailError ?: if (error == "Невірний формат email") error else null
-
-    // Focus chain: name → email → password → submit
-    val emailFocus = remember { FocusRequester() }
-    val passwordFocus = remember { FocusRequester() }
-
     LaunchedEffect(uiState) {
-        if (uiState is UiState.Success) {
-            onNavigateToVerify(email)
+        val state = uiState
+        if (state is UiState.Success) {
+            val data = state.data
+            viewModel.resetState()
+            if (data != "Login successful") {
+                onNavigateToVerify(data)
+            }
         }
     }
 
+    SignUpContent(
+        uiState = uiState,
+        legalDocs = legalDocs,
+        onSignUp = { email, password, name, isAccepted ->
+            viewModel.signUp(email, password, name, isAccepted)
+        },
+        onOAuthLogin = { token -> viewModel.oAuthLogin(token) },
+        onNavigateToLogIn = onNavigateToLogIn,
+        onShowDocument = onShowDocument,
+        nameError = nameError,
+        emailError = emailError,
+        passwordError = passwordError
+    )
+}
+
+@Composable
+fun SignUpContent(
+    uiState: UiState<String>,
+    legalDocs: UiState<List<com.misterio.core.domain.model.LegalDocument>>,
+    onSignUp: (String, String, String, Boolean) -> Unit,
+    onOAuthLogin: (String) -> Unit,
+    onNavigateToLogIn: () -> Unit,
+    onShowDocument: (String, String) -> Unit,
+    nameError: String? = null,
+    emailError: String? = null,
+    passwordError: String? = null,
+    modifier: Modifier = Modifier,
+) {
+    var name by rememberSaveable { mutableStateOf("") }
+    var email by rememberSaveable { mutableStateOf("") }
+    var password by rememberSaveable { mutableStateOf("") }
+    var isAccepted by rememberSaveable { mutableStateOf(false) }
+
+    val isEmailValid = remember(email) { ValidationUtils.isValidEmail(email) }
+    val isPasswordValid = remember(password) { ValidationUtils.isValidPassword(password) }
+    val isFormValid = name.isNotBlank() && isEmailValid && isPasswordValid && isAccepted
+
+    val emailFocus = remember { FocusRequester() }
+    val passwordFocus = remember { FocusRequester() }
+
+    val currentEmailError = emailError ?: if (uiState is UiState.Error) (uiState as UiState.Error).errorMessage else null
+
     fun submit() {
-        viewModel.signUp(email, password, name, isPolicyAccepted)
+        if (isFormValid) {
+            onSignUp(email, password, name, isAccepted)
+        }
+    }
+
+    val termsTitle = stringResource(R.string.signup_terms_title)
+    val privacyTitle = stringResource(R.string.signup_privacy_title)
+
+    val termsUrl = (legalDocs as? UiState.Success)?.data?.find { it.type == ConsentType.TERMS }?.url
+    val privacyUrl = (legalDocs as? UiState.Success)?.data?.find { it.type == ConsentType.PRIVACY_POLICY }?.url
+
+    val annotatedString = buildAnnotatedString {
+        append(stringResource(R.string.signup_agree_prefix))
+
+        val linkStyle = TextLinkStyles(
+            style = SpanStyle(
+                color = CuraKidColors.Blue40,
+                fontWeight = FontWeight.Bold
+            )
+        )
+
+        withLink(
+            LinkAnnotation.Clickable(
+                tag = "TERMS",
+                styles = linkStyle,
+                linkInteractionListener = {
+                    termsUrl?.let { onShowDocument(it, termsTitle) }
+                }
+            )
+        ) {
+            withStyle(
+                SpanStyle(
+                    color = CuraKidColors.Blue40,
+                    fontWeight = FontWeight.Bold
+                )
+            ) {
+                append(stringResource(R.string.signup_terms_action))
+            }
+        }
+
+        append(stringResource(R.string.signup_and_conjunction))
+
+        withLink(
+            LinkAnnotation.Clickable(
+                tag = "PRIVACY",
+                styles = linkStyle,
+                linkInteractionListener = {
+                    privacyUrl?.let { onShowDocument(it, privacyTitle) }
+                }
+            )
+        ) {
+            withStyle(
+                SpanStyle(
+                    color = CuraKidColors.Blue40,
+                    fontWeight = FontWeight.Bold
+                )
+            ) {
+                append(stringResource(R.string.signup_privacy_action))
+            }
+        }
     }
 
     AuthScaffold {
@@ -88,7 +182,6 @@ fun SignUpScreen(
 
         Spacer(Modifier.height(32.dp))
 
-        // Name
         CuraKidTextField(
             value = name,
             onValueChange = { name = it },
@@ -106,7 +199,6 @@ fun SignUpScreen(
 
         Spacer(Modifier.height(12.dp))
 
-        // Email
         CuraKidTextField(
             value = email,
             onValueChange = { email = it },
@@ -125,7 +217,6 @@ fun SignUpScreen(
 
         Spacer(Modifier.height(12.dp))
 
-        // Password
         CuraKidTextField(
             value = password,
             onValueChange = { password = it },
@@ -150,54 +241,9 @@ fun SignUpScreen(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Checkbox(
-                checked = isPolicyAccepted,
-                onCheckedChange = { isPolicyAccepted = it }
+                checked = isAccepted,
+                onCheckedChange = { isAccepted = it },
             )
-            val agreePrefix = stringResource(R.string.signup_agree_prefix)
-            val termsText = stringResource(R.string.signup_terms_action)
-            val andConjunction = stringResource(R.string.signup_and_conjunction)
-            val privacyText = stringResource(R.string.signup_privacy_action)
-            val termsTitle = stringResource(R.string.signup_terms_title)
-            val privacyTitle = stringResource(R.string.signup_privacy_title)
-
-            val annotatedString = buildAnnotatedString {
-                append(agreePrefix)
-                
-                val linkStyle = SpanStyle(
-                    color = CuraKidColors.Blue40,
-                    fontWeight = FontWeight.Medium
-                )
-                
-                withLink(
-                    LinkAnnotation.Clickable(
-                        tag = "TERMS",
-                        styles = TextLinkStyles(style = linkStyle),
-                        linkInteractionListener = {
-                            val url = (legalDocs as? UiState.Success)?.data
-                                ?.find { it.type == ConsentType.TERMS }?.url
-                            url?.let { onShowDocument(it, termsTitle) }
-                        }
-                    )
-                ) {
-                    append(termsText)
-                }
-                
-                append(andConjunction)
-                
-                withLink(
-                    LinkAnnotation.Clickable(
-                        tag = "PRIVACY",
-                        styles = TextLinkStyles(style = linkStyle),
-                        linkInteractionListener = {
-                            val url = (legalDocs as? UiState.Success)?.data
-                                ?.find { it.type == ConsentType.PRIVACY_POLICY }?.url
-                            url?.let { onShowDocument(it, privacyTitle) }
-                        }
-                    )
-                ) {
-                    append(privacyText)
-                }
-            }
             Text(
                 text = annotatedString,
                 style = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurface),
@@ -220,7 +266,7 @@ fun SignUpScreen(
 
         Spacer(Modifier.height(16.dp))
 
-        GoogleButton(onTokenReceived = viewModel::oAuthLogin)
+        GoogleButton(onTokenReceived = onOAuthLogin)
 
         Spacer(Modifier.height(32.dp))
 
@@ -235,19 +281,26 @@ fun SignUpScreen(
 @Preview(showBackground = true, showSystemUi = true)
 @Composable
 fun RegisterScreenPreview() {
-    MaterialTheme {
-        SignUpScreen({}, {})
-    }
+    SignUpContent(
+        uiState = UiState.Initial,
+        legalDocs = UiState.Initial,
+        onSignUp = { _, _, _, _ -> },
+        onOAuthLogin = {},
+        onNavigateToLogIn = {},
+        onShowDocument = { _, _ -> }
+    )
 }
 
 @Preview(showBackground = true)
 @Composable
 fun RegisterWithErrorPreview() {
-    MaterialTheme {
-        SignUpScreen(
-            onNavigateToLogIn = {},
-            onNavigateToVerify = {},
-            emailError = "Невірний формат email"
-        )
-    }
+    SignUpContent(
+        uiState = UiState.Initial,
+        legalDocs = UiState.Initial,
+        onSignUp = { _, _, _, _ -> },
+        onOAuthLogin = {},
+        onNavigateToLogIn = {},
+        onShowDocument = { _, _ -> },
+        emailError = "Невірний формат email"
+    )
 }

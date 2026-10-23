@@ -8,18 +8,19 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Numbers
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.compose.ui.res.stringResource
 import com.misterio.core.domain.UiState
 import com.misterio.core.ui.components.CuraKidTextField
+import com.misterio.core.ui.theme.CurakidTheme
 
 @Composable
 fun ForgotPasswordScreen(
@@ -29,6 +30,24 @@ fun ForgotPasswordScreen(
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val step by viewModel.step.collectAsStateWithLifecycle()
 
+    ForgotPasswordContent(
+        step = step,
+        uiState = uiState,
+        onRequestReset = viewModel::requestReset,
+        onResetPassword = viewModel::resetPassword,
+        onBack = onBack
+    )
+}
+
+@Composable
+fun ForgotPasswordContent(
+    step: ForgotPasswordStep,
+    uiState: UiState<Unit>,
+    onRequestReset: (email: String) -> Unit,
+    onResetPassword: (email: String, code: String, newPass: String) -> Unit,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     var email by rememberSaveable { mutableStateOf("") }
     var code by rememberSaveable { mutableStateOf("") }
     var newPassword by rememberSaveable { mutableStateOf("") }
@@ -57,7 +76,7 @@ fun ForgotPasswordScreen(
                         imeAction = ImeAction.Done
                     ),
                     keyboardActions = KeyboardActions(
-                        onDone = { viewModel.requestReset(email) }
+                        onDone = { onRequestReset(email) }
                     ),
                     error = (uiState as? UiState.Error)?.errorMessage
                 )
@@ -67,7 +86,7 @@ fun ForgotPasswordScreen(
                 AuthPrimaryButton(
                     text = stringResource(R.string.forgot_password_send_button),
                     isLoading = uiState is UiState.Loading,
-                    onClick = { viewModel.requestReset(email) }
+                    onClick = { onRequestReset(email) }
                 )
             }
 
@@ -97,7 +116,7 @@ fun ForgotPasswordScreen(
                         imeAction = ImeAction.Done
                     ),
                     keyboardActions = KeyboardActions(
-                        onDone = { viewModel.resetPassword(email, code, newPassword) }
+                        onDone = { onResetPassword(email, code, newPassword) }
                     )
                 )
 
@@ -106,7 +125,7 @@ fun ForgotPasswordScreen(
                 AuthPrimaryButton(
                     text = stringResource(R.string.forgot_password_change_button),
                     isLoading = uiState is UiState.Loading,
-                    onClick = { viewModel.resetPassword(email, code, newPassword) }
+                    onClick = { onResetPassword(email, code, newPassword) }
                 )
             }
 
@@ -122,9 +141,37 @@ fun ForgotPasswordScreen(
         Spacer(Modifier.height(32.dp))
 
         AuthSwitchText(
-            text = "Згадали пароль? ",
-            actionText = "Увійти",
+            text = stringResource(R.string.forgot_password_remembered_prefix),
+            actionText = stringResource(R.string.forgot_password_login_action),
             onClick = onBack
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ForgotPasswordRequestEmailPreview() {
+    CurakidTheme {
+        ForgotPasswordContent(
+            step = ForgotPasswordStep.RequestEmail,
+            uiState = UiState.Initial,
+            onRequestReset = {},
+            onResetPassword = { _, _, _ -> },
+            onBack = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun ForgotPasswordResetPreview() {
+    CurakidTheme {
+        ForgotPasswordContent(
+            step = ForgotPasswordStep.ResetPassword,
+            uiState = UiState.Initial,
+            onRequestReset = {},
+            onResetPassword = { _, _, _ -> },
+            onBack = {}
         )
     }
 }

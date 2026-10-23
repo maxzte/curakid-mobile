@@ -27,11 +27,10 @@ import androidx.compose.ui.unit.dp
 import com.misterio.core.domain.model.ChartNormPoint
 import com.misterio.core.domain.model.Child
 import com.misterio.core.domain.model.Measurement
+import com.misterio.core.domain.util.GrowthSummaryCalculator
+import com.misterio.core.domain.util.GrowthTrend
+import com.misterio.core.domain.util.ZScoreStatus
 import com.misterio.core.ui.theme.CurakidTheme
-import java.time.temporal.ChronoUnit
-import java.util.Locale
-import kotlin.math.abs
-import kotlin.math.roundToInt
 
 @Composable
 internal fun TopSummaryRow(
@@ -40,110 +39,36 @@ internal fun TopSummaryRow(
     norms: List<ChartNormPoint>,
     selectedChartType: GrowthChartType
 ) {
-    // Sort and filter to find the latest record that actually has data for the selected type
-    val sorted = measurements.sortedBy { it.date }
+    val summary = GrowthSummaryCalculator.calculateSummary(
+        child = child,
+        measurements = measurements,
+        norms = norms,
+        valueExtractor = { getMeasurementValue(it, selectedChartType) },
+        zScoreExtractor = { getZScore(it, selectedChartType) },
+        percentileExtractor = { getPercentile(it, selectedChartType) },
+        isWeightForHeight = selectedChartType == GrowthChartType.WeightForHeight
+    )
 
-    val relevantMeasurements = sorted.filter { m ->
-        val value = getMeasurementValue(m, selectedChartType)
-        if (value == null) return@filter false
-        // For WeightForHeight we specifically need height as the X-axis
-        if (selectedChartType == GrowthChartType.WeightForHeight && m.height == null) return@filter false
-        true
+    val zScoreStatusText = when (summary.zScoreStatus) {
+        ZScoreStatus.NORMAL -> "Норма"
+        ZScoreStatus.ABOVE_NORMAL -> "Вище норми"
+        ZScoreStatus.MODERATE_DEFICIT -> "Помірний дефіцит"
+        ZScoreStatus.SIGNIFICANT_DEVIATION -> "Значне відхилення"
+        ZScoreStatus.UNKNOWN -> "Статус"
     }
 
-    val last = relevantMeasurements.lastOrNull()
-
-    // Estimate percentile and z-score by nearest norm
-    var percentileText = "—"
-    var zScoreText = "—"
-    var zScoreStatus = "Статус"
-    var zScoreColor = Color.Gray
-
-    if (child != null && last != null) {
-        val zValue = getZScore(last, selectedChartType)
-        val pValue = getPercentile(last, selectedChartType)
-
-        if (zValue != null) {
-            zScoreText = String.format(Locale.US, "%.2f", zValue)
-            zScoreStatus = when {
-                zValue >= -2.0 && zValue <= 2.0 -> "Норма"
-                zValue > 2.0 && zValue <= 3.0 -> "Вище норми"
-                zValue < -2.0 && zValue >= -3.0 -> "Помірний дефіцит"
-                else -> "Значне відхилення"
-            }
-            zScoreColor = when {
-                zValue >= -2.0 && zValue <= 2.0 -> CurakidTheme.colors.tertiary
-                zValue >= -3.0 && zValue <= 3.0 -> com.misterio.core.ui.theme.CuraKidColors.Amber30
-                else -> CurakidTheme.colors.error
-            }
-        }
-
-        if (pValue != null) {
-            percentileText = "${pValue.roundToInt()}‑й"
-        } else if (norms.isNotEmpty()) {
-            val x = if (selectedChartType == GrowthChartType.WeightForHeight) {
-                last.height ?: 0.0
-            } else {
-                ChronoUnit.DAYS.between(child.birthDate, last.date.toLocalDate()).toDouble()
-            }
-
-            val value = getMeasurementValue(last, selectedChartType)
-            if (value != null) {
-                // find nearest norm point
-                val nearest = norms.minByOrNull { abs(it.x - x) }
-                if (nearest == null) {
-                    percentileText = "—"
-                } else {
-                    // Simple interpolation between stored percentiles
-                    fun interp(pLow: Double, pHigh: Double, valLow: Double, valHigh: Double): Double {
-                        if (valHigh == valLow) return (pLow + pHigh) / 2.0
-                        val t = ((value - valLow) / (valHigh - valLow)).coerceIn(0.0, 1.0)
-                        return pLow + t * (pHigh - pLow)
-                    }
-
-                    val pct = when {
-                        value <= nearest.p3 -> 3.0
-                        value <= nearest.p15 -> interp(3.0, 15.0, nearest.p3, nearest.p15)
-                        value <= nearest.p50 -> interp(15.0, 50.0, nearest.p15, nearest.p50)
-                        value <= nearest.p85 -> interp(50.0, 85.0, nearest.p50, nearest.p85)
-                        value <= nearest.p97 -> interp(85.0, 97.0, nearest.p85, nearest.p97)
-                        else -> 97.0
-                    }
-                    percentileText = "${pct.toInt()}‑й"
-                }
-            }
-        }
+    val zScoreColor = when (summary.zScoreStatus) {
+        ZScoreStatus.NORMAL -> CurakidTheme.colors.tertiary
+        ZScoreStatus.ABOVE_NORMAL, ZScoreStatus.MODERATE_DEFICIT -> com.misterio.core.ui.theme.CuraKidColors.Amber30
+        ZScoreStatus.SIGNIFICANT_DEVIATION -> CurakidTheme.colors.error
+        ZScoreStatus.UNKNOWN -> Color.Gray
     }
 
-    // Trend: compare last two relevant values
-    var trendText = "—"
-    var trendIcon: ImageVector? = null
-    var trendIconColor = Color.Gray
-    if (relevantMeasurements.size >= 2) {
-        val lastVal = getMeasurementValue(relevantMeasurements.last(), selectedChartType)
-        val prevVal = getMeasurementValue(relevantMeasurements[relevantMeasurements.size - 2], selectedChartType)
-        if (lastVal != null && prevVal != null) {
-            val delta = lastVal - prevVal
-            when {
-                abs(delta) < (abs(prevVal) * 0.01) -> {
-                    trendText = "Стабільно"
-                    trendIcon = Icons.AutoMirrored.Filled.TrendingFlat
-                    trendIconColor = Color.Gray
-                }
-
-                delta > 0 -> {
-                    trendText = "Зростає"
-                    trendIcon = Icons.AutoMirrored.Filled.TrendingUp
-                    trendIconColor = CurakidTheme.colors.tertiary
-                }
-
-                else -> {
-                    trendText = "Знижується"
-                    trendIcon = Icons.AutoMirrored.Filled.TrendingDown
-                    trendIconColor = CurakidTheme.colors.error
-                }
-            }
-        }
+    val (trendText, trendIcon, trendIconColor) = when (summary.trend) {
+        GrowthTrend.STABLE -> Triple("Стабільно", Icons.AutoMirrored.Filled.TrendingFlat, Color.Gray)
+        GrowthTrend.INCREASING -> Triple("Зростає", Icons.AutoMirrored.Filled.TrendingUp, CurakidTheme.colors.tertiary)
+        GrowthTrend.DECREASING -> Triple("Знижується", Icons.AutoMirrored.Filled.TrendingDown, CurakidTheme.colors.error)
+        GrowthTrend.UNKNOWN -> Triple("—", null, Color.Gray)
     }
 
     Row(
@@ -153,14 +78,14 @@ internal fun TopSummaryRow(
         TopStatCard(
             modifier = Modifier.weight(1f),
             title = "Останній Z‑score",
-            value = zScoreText,
-            subtitle = zScoreStatus,
+            value = summary.zScoreText,
+            subtitle = zScoreStatusText,
             tint = zScoreColor
         )
         TopStatCard(
             modifier = Modifier.weight(1f),
             title = "Перцентиль",
-            value = percentileText,
+            value = summary.percentileText,
             subtitle = "з 100 дітей",
             tint = CurakidTheme.colors.primary
         )

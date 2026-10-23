@@ -1,12 +1,12 @@
 plugins {
     alias(libs.plugins.hilt)
     alias(libs.plugins.ksp)
-    id("com.android.library")
+    alias(libs.plugins.android.library)
 }
 
 android {
     namespace = "com.misterio.core.data"
-    compileSdk = 37
+    compileSdk = libs.versions.compileSdk.get().toInt()
 
     testOptions {
         unitTests.isReturnDefaultValues = true
@@ -17,7 +17,7 @@ android {
     }
 
     defaultConfig {
-        minSdk = 26
+        minSdk = libs.versions.minSdk.get().toInt()
         buildConfigField("String", "VERSION_NAME", "\"1.0.0\"")
     }
 }

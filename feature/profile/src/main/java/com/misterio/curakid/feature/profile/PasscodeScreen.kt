@@ -38,18 +38,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.misterio.curakid.core.common.PasscodeMode
-import com.misterio.curakid.core.common.SecurityManager
-import kotlinx.coroutines.delay
-
-import androidx.compose.ui.res.stringResource
-import com.misterio.curakid.feature.profile.R
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.misterio.core.ui.theme.CurakidTheme
+import com.misterio.curakid.core.common.PasscodeMode
 
 @Composable
 fun PasscodeScreen(
@@ -62,13 +60,6 @@ fun PasscodeScreen(
     )
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    var showResetDialog by remember { mutableStateOf(false) }
-
-    val title = when (mode) {
-        PasscodeMode.SETUP -> if (uiState.isConfirming) stringResource(R.string.passcode_confirm_title) else stringResource(R.string.passcode_create_title)
-        PasscodeMode.UNLOCK -> stringResource(R.string.passcode_unlock_title)
-        PasscodeMode.DISABLE -> stringResource(R.string.passcode_unlock_title)
-    }
 
     val context = androidx.compose.ui.platform.LocalContext.current
     val activity = remember(context) { BiometricHelper.findActivity(context) }
@@ -97,8 +88,42 @@ fun PasscodeScreen(
         }
     }
 
+    PasscodeContent(
+        mode = mode,
+        passcodeLength = uiState.passcode.length,
+        isConfirming = uiState.isConfirming,
+        errorMessage = uiState.errorMessage,
+        isBiometricAvailable = isBiometricAvailable,
+        onDigitClick = viewModel::onDigitClick,
+        onDeleteClick = viewModel::onDeleteClick,
+        onBiometricClick = ::triggerBiometrics,
+        onForgotPasscode = onForgotPasscode
+    )
+}
+
+@Composable
+fun PasscodeContent(
+    mode: PasscodeMode,
+    passcodeLength: Int,
+    isConfirming: Boolean,
+    errorMessage: String?,
+    isBiometricAvailable: Boolean,
+    onDigitClick: (String) -> Unit,
+    onDeleteClick: () -> Unit,
+    onBiometricClick: () -> Unit,
+    onForgotPasscode: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var showResetDialog by remember { mutableStateOf(false) }
+
+    val title = when (mode) {
+        PasscodeMode.SETUP -> if (isConfirming) stringResource(R.string.passcode_confirm_title) else stringResource(R.string.passcode_create_title)
+        PasscodeMode.UNLOCK -> stringResource(R.string.passcode_unlock_title)
+        PasscodeMode.DISABLE -> stringResource(R.string.passcode_unlock_title)
+    }
+
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
             .padding(24.dp),
@@ -119,7 +144,7 @@ fun PasscodeScreen(
             modifier = Modifier.padding(vertical = 16.dp)
         ) {
             repeat(4) { index ->
-                val isFilled = index < uiState.passcode.length
+                val isFilled = index < passcodeLength
                 Box(
                     modifier = Modifier
                         .size(16.dp)
@@ -133,7 +158,7 @@ fun PasscodeScreen(
         }
 
         AnimatedContent(
-            targetState = uiState.errorMessage,
+            targetState = errorMessage,
             transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(300)) },
             label = "error_message"
         ) { msg ->
@@ -152,10 +177,10 @@ fun PasscodeScreen(
         Spacer(modifier = Modifier.height(48.dp))
 
         Keypad(
-            onDigitClick = viewModel::onDigitClick,
-            onDeleteClick = viewModel::onDeleteClick,
+            onDigitClick = onDigitClick,
+            onDeleteClick = onDeleteClick,
             showBiometric = mode == PasscodeMode.UNLOCK && isBiometricAvailable,
-            onBiometricClick = ::triggerBiometrics
+            onBiometricClick = onBiometricClick
         )
 
         if (mode == PasscodeMode.UNLOCK) {
@@ -173,8 +198,8 @@ fun PasscodeScreen(
     if (showResetDialog) {
         AlertDialog(
             onDismissRequest = { showResetDialog = false },
-            title = { Text("Скидання ПІН-коду") },
-            text = { Text("Якщо ви забули ПІН-код, вам доведеться вийти з акаунта. Це видалить ПІН-код та всі локальні дані сесії. Ви зможете увійти знову за допомогою свого пароля.") },
+            title = { Text(stringResource(R.string.passcode_reset_title)) },
+            text = { Text(stringResource(R.string.passcode_reset_description)) },
             confirmButton = {
                 Button(
                     onClick = {
@@ -182,12 +207,12 @@ fun PasscodeScreen(
                         onForgotPasscode()
                     }
                 ) {
-                    Text("Вийти та скинути")
+                    Text(stringResource(R.string.passcode_reset_confirm))
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showResetDialog = false }) {
-                    Text("Скасувати")
+                    Text(stringResource(R.string.cancel))
                 }
             }
         )
@@ -247,7 +272,7 @@ fun Keypad(
                                     modifier = Modifier.size(64.dp)
                                 ) {
                                     Icon(
-                                        imageVector = androidx.compose.material.icons.Icons.AutoMirrored.Filled.Backspace,
+                                        imageVector = Icons.AutoMirrored.Filled.Backspace,
                                         contentDescription = "Delete",
                                         tint = MaterialTheme.colorScheme.onBackground
                                     )
@@ -274,5 +299,23 @@ fun Keypad(
                 }
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun PasscodeScreenPreview() {
+    CurakidTheme {
+        PasscodeContent(
+            mode = PasscodeMode.UNLOCK,
+            passcodeLength = 2,
+            isConfirming = false,
+            errorMessage = null,
+            isBiometricAvailable = true,
+            onDigitClick = {},
+            onDeleteClick = {},
+            onBiometricClick = {},
+            onForgotPasscode = {}
+        )
     }
 }

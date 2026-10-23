@@ -51,4 +51,30 @@ class ChildMapperTest {
         assertEquals("Олександр", child.name)
         assertEquals(Gender.MALE, child.gender)
     }
+
+    @Test
+    fun `toEntity preserves gestationalWeeks from ChildResponse and Child`() {
+        val remoteDto = com.misterio.core.network.dto.ChildResponse(
+            id = UUID.randomUUID(),
+            name = "Лука",
+            birthDate = "2023-01-15",
+            gender = "MALE",
+            isPremature = true,
+            gestationalWeeks = 34,
+            allergies = emptyList(),
+            chronicDiseases = emptyList(),
+            pastDiseases = emptyList(),
+            specialFeatures = emptyList()
+        )
+
+        val entityFromDto = remoteDto.toEntity()
+        assertEquals(34, entityFromDto.gestationalWeeks)
+        assertEquals(true, entityFromDto.isPremature)
+
+        val domainChild = entityFromDto.toDomain()
+        assertEquals(34, domainChild.gestationalWeeks)
+
+        val entityFromDomain = domainChild.toEntity()
+        assertEquals(34, entityFromDomain.gestationalWeeks)
+    }
 }

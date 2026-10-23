@@ -6,7 +6,6 @@ import com.misterio.core.domain.model.ChartType
 import com.misterio.core.domain.model.Child
 import com.misterio.core.domain.model.Gender
 import com.misterio.core.domain.model.Measurement
-import com.misterio.core.domain.repository.MeasurementRepository
 import com.misterio.core.domain.usecase.AddMeasurementUseCase
 import com.misterio.core.domain.usecase.GetAiReportByIdUseCase
 import com.misterio.core.domain.usecase.GetChildUseCase
@@ -14,6 +13,7 @@ import com.misterio.core.domain.usecase.GetMeasurementNormsUseCase
 import com.misterio.core.domain.usecase.GetMeasurementsUseCase
 import com.misterio.core.domain.usecase.PollReportStatusUseCase
 import com.misterio.core.domain.usecase.SyncChildAiReportsUseCase
+import com.misterio.core.domain.usecase.SyncMeasurementsUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -43,7 +43,7 @@ class ChildDetailsViewModelTest {
     private val getMeasurementsUseCase: GetMeasurementsUseCase = mockk()
     private val addMeasurementUseCase: AddMeasurementUseCase = mockk(relaxed = true)
     private val getChildUseCase: GetChildUseCase = mockk()
-    private val measurementRepository: MeasurementRepository = mockk(relaxed = true)
+    private val syncMeasurementsUseCase: SyncMeasurementsUseCase = mockk(relaxed = true)
     private val pollReportStatusUseCase: PollReportStatusUseCase = mockk(relaxed = true)
     private val getAiReportByIdUseCase: GetAiReportByIdUseCase = mockk(relaxed = true)
     private val getMeasurementNormsUseCase: GetMeasurementNormsUseCase = mockk(relaxed = true)
@@ -78,7 +78,7 @@ class ChildDetailsViewModelTest {
             getMeasurementsUseCase = getMeasurementsUseCase,
             addMeasurementUseCase = addMeasurementUseCase,
             getChildUseCase = getChildUseCase,
-            measurementRepository = measurementRepository,
+            syncMeasurementsUseCase = syncMeasurementsUseCase,
             pollReportStatusUseCase = pollReportStatusUseCase,
             getAiReportByIdUseCase = getAiReportByIdUseCase,
             getMeasurementNormsUseCase = getMeasurementNormsUseCase,
@@ -124,7 +124,7 @@ class ChildDetailsViewModelTest {
         assertTrue(viewModel.measurements.value is UiState.Success)
         assertEquals(1, (viewModel.measurements.value as UiState.Success).data.size)
 
-        coVerify { measurementRepository.syncMeasurementsForChild(sampleChild.id) }
+        coVerify { syncMeasurementsUseCase(sampleChild.id) }
 
         job1.cancel()
         job2.cancel()
@@ -143,7 +143,7 @@ class ChildDetailsViewModelTest {
         advanceUntilIdle()
 
         coVerify { addMeasurementUseCase(sampleChild.id, 11.0, 80.0, 47.0) }
-        coVerify { measurementRepository.syncMeasurementsForChild(sampleChild.id) }
+        coVerify { syncMeasurementsUseCase(sampleChild.id) }
 
         job.cancel()
     }

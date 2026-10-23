@@ -8,15 +8,19 @@ import com.halilibo.richtext.commonmark.CommonmarkAstNodeParser
 import com.halilibo.richtext.markdown.node.AstNode
 import com.misterio.core.domain.model.ChatMessage
 import com.misterio.core.domain.repository.ChatRepository
-import com.misterio.core.domain.repository.ChildRepository
 import com.misterio.core.domain.usecase.GetChildUseCase
+import com.misterio.core.domain.util.suspendRunCatching
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -60,11 +64,21 @@ fun ChatMessage.toUiModel(parsedAstNode: StableAstNode? = null) = ChatMessageUiM
 )
 
 @HiltViewModel
-class ChatViewModel @Inject constructor(
+class ChatViewModel(
     private val chatRepository: ChatRepository,
-    private val childRepository: ChildRepository,
     private val getChildUseCase: GetChildUseCase,
+    private val defaultDispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) : ViewModel() {
+
+    @Inject
+    constructor(
+        chatRepository: ChatRepository,
+        getChildUseCase: GetChildUseCase,
+    ) : this(
+        chatRepository = chatRepository,
+        getChildUseCase = getChildUseCase,
+        defaultDispatcher = Dispatchers.Default,
+    )
 
     private val _messages = MutableStateFlow<List<ChatMessageUiModel>>(emptyList())
     val messages: StateFlow<List<ChatMessageUiModel>> = _messages.asStateFlow()
@@ -77,37 +91,42 @@ class ChatViewModel @Inject constructor(
     init {
         Log.d(TAG, "INIT")
         viewModelScope.launch {
-            _isLoading.value = true
-            try {
-                val selectedChild = getChildUseCase().first()
-                if (selectedChild == null) {
-                    _isLoading.value = false
-                    return@launch
-                }
-                val history = chatRepository.getChatHistory(selectedChild.id).getOrElse {
-                    emptyList()
-                }
-
-                // Split turns into separate user and AI messages for the UI
-                val splitMessages = mutableListOf<ChatMessageUiModel>()
-                history.forEach { msg ->
-                    if (msg.userText.isNotBlank()) {
-                        splitMessages.add(msg.copy(aiText = "", id = UUID.randomUUID()).toUiModel())
+            getChildUseCase()
+                .distinctUntilChanged { old, new -> old?.id == new?.id }
+                .collect { selectedChild ->
+                    if (selectedChild == null) {
+                        _isLoading.value = false
+                        _messages.value = emptyList()
+                        return@collect
                     }
-                    if (msg.aiText.isNotBlank()) {
-                        val aiMsg = msg.copy(userText = "", id = UUID.randomUUID())
-                        val astNode = withContext(Dispatchers.Default) {
-                            markdownParser.parse(aiMsg.aiText)
+                    _isLoading.value = true
+                    suspendRunCatching {
+                        val history = chatRepository.getChatHistory(selectedChild.id).getOrElse {
+                            emptyList()
                         }
-                        splitMessages.add(aiMsg.toUiModel(parsedAstNode = StableAstNode(astNode)))
+
+                        // Split turns into separate user and AI messages for the UI
+                        val splitMessages = mutableListOf<ChatMessageUiModel>()
+                        history.forEach { msg ->
+                            if (msg.userText.isNotBlank()) {
+                                val userMsgId = UUID.nameUUIDFromBytes("${msg.id}_user".toByteArray())
+                                splitMessages.add(msg.copy(aiText = "", id = userMsgId).toUiModel())
+                            }
+                            if (msg.aiText.isNotBlank()) {
+                                val aiMsgId = UUID.nameUUIDFromBytes("${msg.id}_ai".toByteArray())
+                                val aiMsg = msg.copy(userText = "", id = aiMsgId)
+                                val astNode = withContext(defaultDispatcher) {
+                                    markdownParser.parse(aiMsg.aiText)
+                                }
+                                splitMessages.add(aiMsg.toUiModel(parsedAstNode = StableAstNode(astNode)))
+                            }
+                        }
+                        _messages.value = splitMessages
+                    }.onFailure { e ->
+                        Log.e(TAG, "Failed to load history", e)
                     }
+                    _isLoading.value = false
                 }
-                _messages.value = splitMessages
-            } catch (e: Exception) {
-                Log.e(TAG, "Failed to load history", e)
-            } finally {
-                _isLoading.value = false
-            }
         }
     }
 
@@ -115,9 +134,9 @@ class ChatViewModel @Inject constructor(
         if (text.isBlank()) return
 
         viewModelScope.launch {
-            val childId = childRepository.getSelectedChild().firstOrNull()?.id
+            val childId = getChildUseCase().first()?.id
                 ?: return@launch
-            val now = System.currentTimeMillis().milliseconds.toIsoString()
+            val now = java.time.Instant.now().toString()
             val userMessage = ChatMessage(
                 id = UUID.randomUUID(),
                 childId = childId,
@@ -128,14 +147,13 @@ class ChatViewModel @Inject constructor(
             )
             _messages.update { it + userMessage.toUiModel() }
 
-
             _isLoading.value = true
 
             val messageId = UUID.randomUUID()
             var firstChunk = true
             var fullText = ""
 
-            runCatching {
+            suspendRunCatching {
                 chatRepository.startChatStream(messageId, childId, text)
                     .collect { chunk ->
                         if (firstChunk) {
@@ -166,6 +184,23 @@ class ChatViewModel @Inject constructor(
                             }
                         }
                     }
+            }.onSuccess {
+                // ПАРСИНГ ТІЛЬКИ ПРИ УСПІШНОМУ СТРІМІНГУ З НЕПОРОЖНІМ ТЕКСТОМ
+                if (fullText.isNotBlank()) {
+                    val finalAstNode = withContext(defaultDispatcher) {
+                        markdownParser.parse(fullText)
+                    }
+
+                    _messages.update { list ->
+                        list.map { msg ->
+                            if (msg.id == messageId) {
+                                msg.copy(isStreaming = false, parsedAstNode = StableAstNode(finalAstNode))
+                            } else {
+                                msg
+                            }
+                        }
+                    }
+                }
             }.onFailure { e ->
                 _isLoading.value = false
                 if (firstChunk) {
@@ -184,21 +219,6 @@ class ChatViewModel @Inject constructor(
                         list.map { msg ->
                             if (msg.id == messageId) msg.copy(aiText = "$fullText\n[Помилка]") else msg
                         }
-                    }
-                }
-            }
-
-            // ПАРСИНГ ПІСЛЯ ЗАВЕРШЕННЯ СТРІМІНГУ
-            val finalAstNode = withContext(Dispatchers.Default) {
-                markdownParser.parse(fullText)
-            }
-
-            _messages.update { list ->
-                list.map { msg ->
-                    if (msg.id == messageId) {
-                        msg.copy(isStreaming = false, parsedAstNode = StableAstNode(finalAstNode))
-                    } else {
-                        msg
                     }
                 }
             }

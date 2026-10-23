@@ -26,7 +26,7 @@ import javax.inject.Singleton
 
 import com.misterio.core.network.BuildConfig
 
-val BASE_URL = BuildConfig.BASE_URL
+const val BASE_URL = BuildConfig.BASE_URL
 
 @Qualifier
 @Retention(AnnotationRetention.BINARY)
@@ -41,6 +41,7 @@ object NetworkModule {
     @Singleton
     fun provideHttpLoggingInterceptor(): HttpLoggingInterceptor {
         return HttpLoggingInterceptor().apply {
+            redactHeader("Authorization")
             level = if (BuildConfig.DEBUG) {
                 HttpLoggingInterceptor.Level.BODY
             } else {
@@ -54,6 +55,9 @@ object NetworkModule {
     @Named("AuthClient")
     fun provideAuthOkHttpClient(loggingInterceptor: HttpLoggingInterceptor): OkHttpClient {
         return OkHttpClient.Builder()
+            .connectTimeout(30L, TimeUnit.SECONDS)
+            .writeTimeout(30L, TimeUnit.SECONDS)
+            .readTimeout(30L, TimeUnit.SECONDS)
             .addInterceptor(loggingInterceptor)
             .build()
     }
@@ -93,6 +97,16 @@ object NetworkModule {
     fun provideSseOkHttpClient(
         baseClient: OkHttpClient
     ): OkHttpClient = baseClient.newBuilder()
+        .apply {
+            // Remove full BODY logging interceptor to prevent buffering of SSE stream
+            interceptors().removeAll { it is HttpLoggingInterceptor }
+            if (BuildConfig.DEBUG) {
+                addInterceptor(HttpLoggingInterceptor().apply {
+                    redactHeader("Authorization")
+                    level = HttpLoggingInterceptor.Level.HEADERS
+                })
+            }
+        }
         .readTimeout(0, TimeUnit.MILLISECONDS)
         .build()
 
@@ -152,6 +166,12 @@ object NetworkModule {
     @Singleton
     fun provideChatApi(retrofit: Retrofit): ChatApi {
         return retrofit.create(ChatApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideNotificationApi(retrofit: Retrofit): com.misterio.core.network.api.NotificationApi {
+        return retrofit.create(com.misterio.core.network.api.NotificationApi::class.java)
     }
 
 }

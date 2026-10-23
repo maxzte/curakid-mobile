@@ -24,12 +24,12 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -38,31 +38,52 @@ import com.misterio.core.domain.UiState
 import com.misterio.core.ui.theme.CurakidTheme
 import com.misterio.curakid.core.common.PasscodeMode
 
-import androidx.compose.ui.res.stringResource
-import com.misterio.curakid.feature.profile.R
-
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit,
     onNavigateToPasscode: (PasscodeMode) -> Unit,
+    viewModel: SettingsViewModel = hiltViewModel()
 ) {
-    val viewModel: SettingsViewModel = hiltViewModel()
     val isNotificationsEnabled by viewModel.isNotificationsEnabled.collectAsStateWithLifecycle()
     val isPasscodeEnabled by viewModel.isPasscodeEnabled.collectAsStateWithLifecycle()
     val showDeleteDialog by viewModel.showDeleteDialog.collectAsStateWithLifecycle()
     val deleteState by viewModel.deleteState.collectAsStateWithLifecycle()
 
+    SettingsContent(
+        isNotificationsEnabled = isNotificationsEnabled,
+        isPasscodeEnabled = isPasscodeEnabled,
+        showDeleteDialog = showDeleteDialog,
+        deleteState = deleteState,
+        onNotificationsChange = viewModel::setNotificationsEnabled,
+        onShowDeleteDialogChange = viewModel::setShowDeleteDialog,
+        onDeleteAccount = viewModel::deleteAccount,
+        onNavigateToPasscode = onNavigateToPasscode,
+        onBack = onBack
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun SettingsContent(
+    isNotificationsEnabled: Boolean,
+    isPasscodeEnabled: Boolean,
+    showDeleteDialog: Boolean,
+    deleteState: UiState<Unit>,
+    onNotificationsChange: (Boolean) -> Unit,
+    onShowDeleteDialogChange: (Boolean) -> Unit,
+    onDeleteAccount: () -> Unit,
+    onNavigateToPasscode: (PasscodeMode) -> Unit,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     if (showDeleteDialog) {
         AlertDialog(
-            onDismissRequest = { viewModel.setShowDeleteDialog(false) },
+            onDismissRequest = { onShowDeleteDialogChange(false) },
             title = { Text(stringResource(R.string.delete_profile_title)) },
             text = { Text(stringResource(R.string.delete_profile_warning)) },
             confirmButton = {
                 TextButton(
-                    onClick = {
-                        viewModel.deleteAccount()
-                    },
+                    onClick = onDeleteAccount,
                     colors = ButtonDefaults.textButtonColors(
                         contentColor = MaterialTheme.colorScheme.error
                     )
@@ -71,7 +92,7 @@ fun SettingsScreen(
                 }
             },
             dismissButton = {
-                TextButton(onClick = { viewModel.setShowDeleteDialog(false) }) {
+                TextButton(onClick = { onShowDeleteDialogChange(false) }) {
                     Text(stringResource(R.string.cancel))
                 }
             }
@@ -79,6 +100,7 @@ fun SettingsScreen(
     }
 
     Scaffold(
+        modifier = modifier,
         topBar = {
             TopAppBar(
                 title = { Text(stringResource(R.string.settings)) },
@@ -116,7 +138,7 @@ fun SettingsScreen(
                 }
                 Switch(
                     checked = isNotificationsEnabled,
-                    onCheckedChange = { viewModel.setNotificationsEnabled(it) }
+                    onCheckedChange = onNotificationsChange
                 )
             }
 
@@ -157,7 +179,7 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(32.dp))
 
             OutlinedButton(
-                onClick = { viewModel.setShowDeleteDialog(true) },
+                onClick = { onShowDeleteDialogChange(true) },
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.outlinedButtonColors(
                     contentColor = MaterialTheme.colorScheme.error
@@ -177,11 +199,29 @@ fun SettingsScreen(
             Spacer(modifier = Modifier.height(16.dp))
             
             Text(
-                text = "Версія 1.0.0",
+                text = stringResource(R.string.app_version, "1.0.0"),
                 fontSize = 12.sp,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.align(Alignment.CenterHorizontally)
             )
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SettingsScreenPreview() {
+    CurakidTheme {
+        SettingsContent(
+            isNotificationsEnabled = true,
+            isPasscodeEnabled = false,
+            showDeleteDialog = false,
+            deleteState = UiState.Initial,
+            onNotificationsChange = {},
+            onShowDeleteDialogChange = {},
+            onDeleteAccount = {},
+            onNavigateToPasscode = {},
+            onBack = {}
+        )
     }
 }
