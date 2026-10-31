@@ -2,8 +2,6 @@ package com.misterio.core.domain.usecase
 
 import com.misterio.core.domain.model.Gender
 import com.misterio.core.domain.repository.ChildRepository
-import java.time.Instant
-import java.time.ZoneId
 import javax.inject.Inject
 
 class AddChildUseCase @Inject constructor(
@@ -23,7 +21,7 @@ class AddChildUseCase @Inject constructor(
         if (name.isBlank() || birthDate <= 0L) {
             return Result.failure(Exception("All child details are required"))
         }
-        return repository.addChild(
+        val result = repository.addChild(
             name,
             birthDate,
             gender,
@@ -33,9 +31,12 @@ class AddChildUseCase @Inject constructor(
             chronicDiseases,
             pastDiseases,
             specialFeatures
-        ).onSuccess { childId ->
+        )
+        val childId = result.getOrNull()
+        if (childId != null) {
             repository.setSelectedChildId(childId)
-        }.map { Unit }
+        }
+        return result.map { }
     }
 }
 
