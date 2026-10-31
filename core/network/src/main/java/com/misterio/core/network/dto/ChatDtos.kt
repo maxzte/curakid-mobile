@@ -14,4 +14,6 @@ data class ChatMessageResponse(
     val userText: String,
     val aiText: String,
     val createdAt: String,
+    val urgencyLevel: String = "ROUTINE",
+    val verifiedSources: List<String> = emptyList()
 )

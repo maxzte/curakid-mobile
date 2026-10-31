@@ -32,6 +32,9 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
+import com.misterio.core.domain.usecase.GetGrowthChartTypeUseCase
+import com.misterio.core.domain.usecase.GrowthChartCategory
+import com.misterio.core.domain.util.AgeCalculator
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.onEach
@@ -54,6 +57,7 @@ class ChildDetailsViewModel @Inject constructor(
     private val getAiReportByIdUseCase: GetAiReportByIdUseCase,
     private val getMeasurementNormsUseCase: GetMeasurementNormsUseCase,
     private val syncChildAiReportsUseCase: SyncChildAiReportsUseCase,
+    private val getGrowthChartTypeUseCase: GetGrowthChartTypeUseCase,
 ) : ViewModel() {
 
     private val _reportLoading = MutableStateFlow(false)
@@ -71,6 +75,7 @@ class ChildDetailsViewModel @Inject constructor(
     private val childFlow = getChildUseCase()
         .distinctUntilChanged { old, new -> old?.id == new?.id }
         .onEach { child ->
+            _normsCache.value = emptyMap() // Clear cache when switching children
             child?.let {
                 polledReportId = null // Reset polling state for new child
                 pollingJob?.cancel()
@@ -82,7 +87,7 @@ class ChildDetailsViewModel @Inject constructor(
 
     private fun prefetchNorms(child: Child) {
         viewModelScope.launch {
-            val ageInMonths = ChronoUnit.DAYS.between(child.birthDate, LocalDate.now()).toDouble() / 30.44
+            val ageInMonths = AgeCalculator.calculateAgeInMonthsExact(child.effectiveBirthDate)
 
             val typesToFetch = listOf(
                 GrowthChartType.WeightForAge,
@@ -123,7 +128,7 @@ class ChildDetailsViewModel @Inject constructor(
                 type to child
             }.collect { (type, child) ->
                 if (!_normsCache.value.containsKey(type)) {
-                    val ageInMonths = ChronoUnit.DAYS.between(child.birthDate, LocalDate.now()).toDouble() / 30.44
+                    val ageInMonths = AgeCalculator.calculateAgeInMonthsExact(child.effectiveBirthDate)
                     val res = getMeasurementNormsUseCase(
                         chartType = type.toDomain(ageInMonths),
                         gender = child.gender
@@ -216,7 +221,7 @@ class ChildDetailsViewModel @Inject constructor(
             val measurementsList = (measurements.value as? UiState.Success<List<Measurement>>)?.data ?: emptyList()
             measurementsList.lastOrNull()?.height ?: 75.0
         } else {
-            ChronoUnit.DAYS.between(child.birthDate, LocalDate.now()).toDouble()
+            AgeCalculator.calculateAgeInDays(child.effectiveBirthDate).toDouble()
         }
 
         val nearest = typeNorms.minByOrNull { kotlin.math.abs(it.x - targetX) } ?: return null
@@ -224,10 +229,10 @@ class ChildDetailsViewModel @Inject constructor(
     }
 
     private fun GrowthChartType.toDomain(ageInMonths: Double = 0.0) = when (this) {
-        GrowthChartType.WeightForAge -> ChartType.WFA
-        GrowthChartType.HeightForAge -> ChartType.HFA
-        GrowthChartType.WeightForHeight -> if (ageInMonths < 24.0) ChartType.WFL else ChartType.WFH
-        GrowthChartType.BMI -> ChartType.BMI
-        GrowthChartType.HeadCircumference -> ChartType.HCFA
+        GrowthChartType.WeightForAge -> getGrowthChartTypeUseCase(GrowthChartCategory.WEIGHT_FOR_AGE, ageInMonths)
+        GrowthChartType.HeightForAge -> getGrowthChartTypeUseCase(GrowthChartCategory.HEIGHT_FOR_AGE, ageInMonths)
+        GrowthChartType.WeightForHeight -> getGrowthChartTypeUseCase(GrowthChartCategory.WEIGHT_FOR_HEIGHT, ageInMonths)
+        GrowthChartType.BMI -> getGrowthChartTypeUseCase(GrowthChartCategory.BMI, ageInMonths)
+        GrowthChartType.HeadCircumference -> getGrowthChartTypeUseCase(GrowthChartCategory.HEAD_CIRCUMFERENCE, ageInMonths)
     }
 }

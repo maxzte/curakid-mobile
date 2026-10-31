@@ -150,13 +150,13 @@ fun AddChildContent(
                 IconButton(onClick = onBack) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Назад"
+                        contentDescription = stringResource(R.string.back)
                     )
                 }
             }
 
             Text(
-                text = "Додати дитину",
+                text = stringResource(R.string.add_child_title),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Medium,
             )
@@ -165,15 +165,15 @@ fun AddChildContent(
         CuraKidTextField(
             value = formState.name,
             onValueChange = onNameChange,
-            label = "Імʼя"
+            label = stringResource(R.string.add_child_name_label)
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(CurakidTheme.paddings.medium))
 
         ListItem(
             overlineContent = {
                 if (formState.birthDateMillis != 0L) {
-                    Text(text = "Дата народження")
+                    Text(text = stringResource(R.string.add_child_birth_date))
                 }
             },
             headlineContent = {
@@ -233,13 +233,13 @@ fun AddChildContent(
                 onCheckedChange = { onPrematureChange(it) }
             )
             Text(
-                text = "Дострокові пологи (передчасно)",
-                modifier = Modifier.padding(start = 4.dp)
+                text = stringResource(R.string.add_child_preterm),
+                modifier = Modifier.padding(start = CurakidTheme.paddings.spaceXs)
             )
         }
 
         if (formState.isPremature) {
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(CurakidTheme.paddings.medium))
             CuraKidTextField(
                 value = if (formState.gestationalWeeks == 0) "" else formState.gestationalWeeks.toString(),
                 onValueChange = {
@@ -253,7 +253,7 @@ fun AddChildContent(
                         }
                     }
                 },
-                label = "Тиждень народження (20-37)",
+                label = stringResource(R.string.add_child_birth_week),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 error = if (formState.isPremature && formState.gestationalWeeks !in 20..37 && formState.gestationalWeeks != 0)
                     "Введіть коректний тиждень (20-37)" else null
@@ -261,7 +261,7 @@ fun AddChildContent(
         }
 
         MedicalCategory.entries.forEach { category ->
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(CurakidTheme.paddings.medium))
             MedicalSection(
                 category = category,
                 items = formState.getMedicalItems(category),

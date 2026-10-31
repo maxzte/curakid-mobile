@@ -1,11 +1,12 @@
 package com.misterio.core.domain.repository
 
 import com.misterio.core.domain.model.Event
+import com.misterio.core.domain.sync.Syncable
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDateTime
 import java.util.UUID
 
-interface EventRepository {
+interface EventRepository : Syncable {
 
     fun getEvents(childId: UUID): Flow<List<Event>>
 

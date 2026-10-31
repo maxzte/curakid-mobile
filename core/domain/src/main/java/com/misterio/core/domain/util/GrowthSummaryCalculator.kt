@@ -33,6 +33,12 @@ data class GrowthSummary(
 
 object GrowthSummaryCalculator {
 
+    fun calculateBmi(weight: Double?, heightCm: Double?): Double? {
+        if (weight == null || heightCm == null || heightCm <= 0.0 || weight <= 0.0) return null
+        val heightMeters = heightCm / 100.0
+        return weight / (heightMeters * heightMeters)
+    }
+
     fun calculateSummary(
         child: Child?,
         measurements: List<Measurement>,
@@ -76,7 +82,7 @@ object GrowthSummaryCalculator {
                 val x = if (isWeightForHeight) {
                     last.height ?: 0.0
                 } else {
-                    ChronoUnit.DAYS.between(child.birthDate, last.date.toLocalDate()).toDouble()
+                    ChronoUnit.DAYS.between(child.effectiveBirthDate, last.date.toLocalDate()).toDouble()
                 }
 
                 val value = valueExtractor(last)

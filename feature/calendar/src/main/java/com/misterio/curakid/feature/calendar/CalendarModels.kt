@@ -1,12 +1,15 @@
 package com.misterio.curakid.feature.calendar
 
+import androidx.compose.runtime.Immutable
 import com.misterio.core.domain.model.Event
 import com.misterio.core.domain.model.EventStatus
 import com.misterio.core.domain.model.EventType
+import com.misterio.core.ui.util.UiText
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.UUID
 
+@Immutable
 data class CalendarUiState(
     val selectedMonth: LocalDate = LocalDate.now().withDayOfMonth(1),
     val selectedDate: LocalDate = LocalDate.now(),
@@ -19,7 +22,7 @@ data class CalendarUiState(
     val isEventSheetOpen: Boolean = false,
     val eventForm: EventFormState = EventFormState(),
     val isEventsExpanded: Boolean = false,
-    val quickPreview: String? = null
+    val quickPreview: UiText? = null
 )
 
 data class EventFormState(

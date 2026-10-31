@@ -12,14 +12,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.misterio.core.domain.model.Child
 import com.misterio.core.domain.model.Measurement
+import com.misterio.core.domain.util.AgeCalculator
+import com.misterio.core.ui.DateTimeUtils
 import com.misterio.core.ui.theme.CurakidTheme
+import com.misterio.core.ui.toShortDate
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
-import java.time.temporal.ChronoUnit
 import java.util.Locale
 import kotlin.math.pow
 import kotlin.math.roundToInt
@@ -37,37 +39,27 @@ internal fun MeasurementDetailsCard(
         modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = CurakidTheme.Radius.lg,
+        colors = CardDefaults.cardColors(containerColor = CurakidTheme.colors.surfaceContainer),
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(CurakidTheme.paddings.medium)) {
             Text(
-                text = "Деталі заміру",
+                text = stringResource(R.string.measurement_details),
                 style = CurakidTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                 color = CurakidTheme.colors.onSurface
             )
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(CurakidTheme.paddings.spaceMd))
 
-            val formattedDate = measurement.date.toLocalDate()?.format(
-                DateTimeFormatter.ofPattern("dd.MM.yyyy")
-            ) ?: "—"
+            val formattedDate = measurement.date.toLocalDate().toShortDate()
 
             val ageValue = if (selectedChartType == GrowthChartType.WeightForHeight) {
                 "${measurement.height?.roundToInt() ?: 0} см"
             } else {
-                val totalDays = ChronoUnit.DAYS.between(
-                    child?.birthDate ?: LocalDate.now(),
+                val (months, days) = AgeCalculator.calculateDetailedAge(
+                    child?.effectiveBirthDate ?: LocalDate.now(),
                     measurement.date.toLocalDate()
-                ).toInt()
-                
-                val months = totalDays / 30
-                val remainingDays = totalDays % 30
-                
-                if (months > 0) {
-                    "$months міс $remainingDays дн"
-                } else {
-                    "$remainingDays дн"
-                }
+                )
+                DateTimeUtils.formatAgeDetailed(months, days)
             }
 
             val weightText = measurement.weight?.let { String.format(Locale.US, "%.1f кг", it) } ?: "—"
@@ -77,12 +69,12 @@ internal fun MeasurementDetailsCard(
             } else "—"
             val headCircText = measurement.headCirc?.let { String.format(Locale.US, "%.1f см", it) } ?: "—"
 
-            DetailRow(label = "Дата", value = formattedDate)
-            DetailRow(label = "Вік", value = ageValue)
-            DetailRow(label = "Вага", value = weightText)
-            DetailRow(label = "Зріст", value = heightText)
-            DetailRow(label = "ІМТ", value = bmiText)
-            DetailRow(label = "Обхват голови", value = headCircText)
+            DetailRow(label = stringResource(R.string.detail_date), value = formattedDate)
+            DetailRow(label = stringResource(R.string.detail_age), value = ageValue)
+            DetailRow(label = stringResource(R.string.detail_weight), value = weightText)
+            DetailRow(label = stringResource(R.string.detail_height), value = heightText)
+            DetailRow(label = stringResource(R.string.detail_bmi), value = bmiText)
+            DetailRow(label = stringResource(R.string.detail_head_circ), value = headCircText)
         }
     }
 }

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="profile">Профіль</string>
+    <string name="settings">Налаштування</string>
+    <string name="notifications">Сповіщення</string>
+    <string name="notifications_description">Вимкнути всі сповіщення від застосунку</string>
+    <string name="passcode_protection">Захист ПІН-кодом</string>
+    <string name="passcode_protection_description">Запитувати ПІН-код при вході в застосунок</string>
+    <string name="delete_profile">Видалити профіль</string>
+    <string name="delete_profile_title">Видалити профіль?</string>
+    <string name="delete_profile_warning">Ця дія видалить усі ваші дані, дані дитини та історію без можливості відновлення.</string>
+    <string name="delete">Видалити</string>
+    <string name="cancel">Скасувати</string>
+    <string name="back">Назад</string>
+    <string name="passcode_create_title">Встановіть новий ПІН-код</string>
+    <string name="passcode_confirm_title">Повторіть новий ПІН-код</string>
+    <string name="passcode_unlock_title">Введіть ПІН-код</string>
+    <string name="passcode_disable_title">Введіть ПІН-код для вимкнення</string>
+    <string name="passcode_mismatch">ПІН-коди не співпадають</string>
+    <string name="passcode_incorrect">Невірний ПІН-код</string>
+    <string name="passcode_forgot">Забули ПІН-код?</string>
+    <string name="passcode_reset_title">Скидання ПІН-коду</string>
+    <string name="passcode_reset_description">Якщо ви забули ПІН-код, вам доведеться вийти з акаунта. Це видалить ПІН-код та всі локальні дані сесії. Ви зможете увійти знову за допомогою свого пароля.</string>
+    <string name="passcode_reset_confirm">Вийти та скинути</string>
+    <string name="app_version">Версія %1$s</string>
+    <string name="save">Зберегти</string>
+
+    <string name="add_child_title">Додати дитину</string>
+    <string name="add_child_name_label">Імʼя</string>
+    <string name="add_child_birth_date">Дата народження</string>
+    <string name="add_child_preterm">Дострокові пологи (передчасно)</string>
+    <string name="add_child_birth_week">Тиждень народження (20-37)</string>
+    <string name="logout">Вийти</string>
+    <string name="born_prefix">Нар.</string>
+    <string name="not_specified">Не вказано</string>
+    <string name="add">Додати</string>
+    <string name="edit">Редагувати</string>
+    <string name="user_name">Імʼя</string>
+</resources>

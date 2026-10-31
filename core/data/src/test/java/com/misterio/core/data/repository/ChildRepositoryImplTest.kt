@@ -4,6 +4,7 @@ import com.misterio.core.data.util.SyncManager
 import com.misterio.core.database.dao.ChildDao
 import com.misterio.core.database.entity.ChildEntity
 import com.misterio.core.domain.model.Gender
+import com.misterio.core.domain.sync.SyncResult
 import com.misterio.core.network.api.ChildApi
 import com.misterio.core.network.dto.ChildResponse
 import com.misterio.curakid.core.common.AppDataStore
@@ -19,6 +20,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
+import retrofit2.Response
 import java.time.LocalDate
 import java.util.UUID
 
@@ -49,7 +51,7 @@ class ChildRepositoryImplTest {
     }
 
     @Test
-    fun `getChildren returns cached children from Room DAO flow`() = runTest {
+    fun getChildren_cachedDataInRoom_returnsDomainModels() = runTest {
         every { childDao.getAllChildren() } returns flowOf(listOf(testChildEntity))
 
         val children = repository.getChildren().first()
@@ -60,7 +62,7 @@ class ChildRepositoryImplTest {
     }
 
     @Test
-    fun `getSelectedChild returns cached child from Room DAO flow`() = runTest {
+    fun getSelectedChild_childSelectedInStore_returnsChildModel() = runTest {
         every { childDao.getChildByIdFlow(testChildId) } returns flowOf(testChildEntity)
 
         val child = repository.getSelectedChild().first()
@@ -71,7 +73,18 @@ class ChildRepositoryImplTest {
     }
 
     @Test
-    fun `syncChildren fetches remote and updates Room via syncWithServer`() = runTest {
+    fun getSelectedChild_noChildSelectedInStore_fallsBackToFirstChild() = runTest {
+        every { appDataStore.selectedChildId } returns flowOf(null)
+        every { childDao.getAllChildren() } returns flowOf(listOf(testChildEntity))
+
+        val child = repository.getSelectedChild().first()
+
+        assertNotNull(child)
+        assertEquals(testChildId, child?.id)
+    }
+
+    @Test
+    fun syncChildren_remoteCallSuccess_updatesRoomServerSync() = runTest {
         val remoteDto = ChildResponse(
             id = testChildId,
             name = "Марія",
@@ -84,7 +97,7 @@ class ChildRepositoryImplTest {
             pastDiseases = emptyList(),
             specialFeatures = emptyList()
         )
-        coEvery { childApi.getChildren() } returns retrofit2.Response.success(listOf(remoteDto))
+        coEvery { childApi.getChildren() } returns Response.success(listOf(remoteDto))
         coEvery { childDao.getUnsyncedChildren() } returns emptyList()
 
         val result = repository.syncChildren(force = true)
@@ -95,7 +108,7 @@ class ChildRepositoryImplTest {
     }
 
     @Test
-    fun `addChild saves locally first as unsynced and triggers SyncManager`() = runTest {
+    fun addChild_validData_savesLocallyAndSchedulesSync() = runTest {
         val result = repository.addChild(
             name = "Іван",
             birthDate = System.currentTimeMillis(),
@@ -114,7 +127,7 @@ class ChildRepositoryImplTest {
     }
 
     @Test
-    fun `addChild preserves gestationalWeeks for premature child`() = runTest {
+    fun addChild_prematureChild_preservesGestationalWeeks() = runTest {
         val result = repository.addChild(
             name = "Лука",
             birthDate = System.currentTimeMillis(),
@@ -129,5 +142,30 @@ class ChildRepositoryImplTest {
 
         assertTrue(result.isSuccess)
         coVerify { childDao.insertChild(match { it.isPremature && it.gestationalWeeks == 33 }) }
+    }
+
+    @Test
+    fun syncPending_unsyncedChildrenPresent_uploadsToBackend() = runTest {
+        val unsyncedChild = testChildEntity.copy(isSynced = false)
+        coEvery { childDao.getUnsyncedChildren() } returns listOf(unsyncedChild)
+        val remoteDto = ChildResponse(
+            id = testChildId,
+            name = "Марія",
+            birthDate = "2023-05-10",
+            gender = "FEMALE",
+            isPremature = false,
+            gestationalWeeks = null,
+            allergies = emptyList(),
+            chronicDiseases = emptyList(),
+            pastDiseases = emptyList(),
+            specialFeatures = emptyList()
+        )
+        coEvery { childApi.createChild(any()) } returns Response.success(remoteDto)
+
+        val syncResult = repository.syncPending()
+
+        assertTrue(syncResult is SyncResult.Success)
+        coVerify { childApi.createChild(any()) }
+        coVerify { childDao.insertChild(match { it.isSynced }) }
     }
 }

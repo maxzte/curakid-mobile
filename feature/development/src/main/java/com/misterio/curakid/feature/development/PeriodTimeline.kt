@@ -42,7 +42,6 @@ import androidx.compose.ui.unit.sp
 import com.misterio.core.domain.model.LifePeriod
 import com.misterio.core.domain.model.LifePeriodDescription
 import com.misterio.core.domain.model.PeriodReadiness
-import com.misterio.core.ui.theme.CuraKidColors
 import com.misterio.core.ui.theme.CurakidTheme
 import java.util.UUID
 
@@ -58,9 +57,13 @@ fun PeriodTimeline(
         contentPadding = PaddingValues(horizontal = CurakidTheme.paddings.medium),
         horizontalArrangement = Arrangement.spacedBy(CurakidTheme.paddings.small),
     ) {
-        items(periods) { period ->
+        items(
+            items = periods,
+            key = { it.id },
+            contentType = { "period" }
+        ) { period ->
             PeriodItem(
-                label = "${period.label} міс",
+                label = period.label,
                 isSelected = period.id == selectedId,
                 onClick = { onSelect(period) }
             )
@@ -75,8 +78,10 @@ fun PeriodItem(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val barColor = if (isSelected) CuraKidColors.Blue40 else CuraKidColors.Blue90
-    val labelColor = if (isSelected) CuraKidColors.Blue40 else CuraKidColors.Neutral80
+    val barColor =
+        if (isSelected) CurakidTheme.colors.primary else CurakidTheme.colors.surfaceVariant
+    val labelColor =
+        if (isSelected) CurakidTheme.colors.primary else CurakidTheme.colors.onSurfaceVariant
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -111,7 +116,8 @@ fun PeriodProgressRow(
     readiness: PeriodReadiness?,
     modifier: Modifier = Modifier
 ) {
-    val progressValue = readiness?.completionPercent?.toFloat()?.div(100f) ?: summary.progressFraction
+    val progressValue =
+        readiness?.completionPercent?.toFloat()?.div(100f) ?: summary.progressFraction
     val animatedProgress by animateFloatAsState(
         targetValue = progressValue,
         animationSpec = tween(600),
@@ -125,7 +131,7 @@ fun PeriodProgressRow(
         ) {
             Text(
                 text = periodLabel,
-                style = CurakidTheme.typography.titleMedium.copy(color = CuraKidColors.Blue30)
+                style = CurakidTheme.typography.titleMedium.copy(color = CurakidTheme.colors.primary)
             )
             Text(
                 text = if (readiness != null) "${readiness.completionPercent}%" else "${summary.completed} / ${summary.totalQuestions} виконано",
@@ -141,8 +147,8 @@ fun PeriodProgressRow(
                 .fillMaxWidth()
                 .height(4.dp)
                 .clip(RoundedCornerShape(2.dp)),
-            color = if (readiness?.isReady == true) CuraKidColors.Teal40 else CuraKidColors.Blue40,
-            trackColor = CuraKidColors.Blue90,
+            color = if (readiness?.isReady == true) CurakidTheme.colors.tertiary else CurakidTheme.colors.primary,
+            trackColor = CurakidTheme.colors.surfaceVariant,
             strokeCap = StrokeCap.Round
         )
     }
@@ -162,35 +168,43 @@ fun PeriodDescriptionCard(
         Text(
             text = description.title,
             style = CurakidTheme.typography.titleMedium.copy(
-                color = CuraKidColors.Blue30,
+                color = CurakidTheme.colors.primary,
                 fontWeight = FontWeight.Bold
             )
         )
         Text(
             text = description.subtitle,
             style = CurakidTheme.typography.bodyMedium.copy(
-                color = CuraKidColors.Neutral40,
+                color = CurakidTheme.colors.onSurfaceVariant,
                 lineHeight = 20.sp
             )
         )
 
         Spacer(Modifier.height(4.dp))
 
-        MilestoneItem(
-            icon = Icons.AutoMirrored.Filled.DirectionsRun,
-            label = "Рух",
-            text = description.milestones.movement
-        )
-        MilestoneItem(
-            icon = Icons.Default.RecordVoiceOver,
-            label = "Мовлення",
-            text = description.milestones.speech
-        )
-        MilestoneItem(
-            icon = Icons.Default.Psychology,
-            label = "Мислення",
-            text = description.milestones.cognition
-        )
+        if (description.milestones.movement.isNotEmpty()) {
+            MilestoneItem(
+                icon = Icons.AutoMirrored.Filled.DirectionsRun,
+                label = "Рух",
+                text = description.milestones.movement
+            )
+        }
+
+        if (description.milestones.speech.isNotEmpty()) {
+            MilestoneItem(
+                icon = Icons.Default.RecordVoiceOver,
+                label = "Мовлення",
+                text = description.milestones.speech
+            )
+        }
+
+        if (description.milestones.cognition.isNotEmpty()) {
+            MilestoneItem(
+                icon = Icons.Default.Psychology,
+                label = "Мислення",
+                text = description.milestones.cognition
+            )
+        }
 
         if (description.tips.isNotEmpty()) {
             Spacer(Modifier.height(4.dp))
@@ -199,7 +213,7 @@ fun PeriodDescriptionCard(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clip(CurakidTheme.Radius.md)
-                    .background(CuraKidColors.Amber90.copy(alpha = 0.5f))
+                    .background(CurakidTheme.colors.tertiaryContainer.copy(alpha = 0.5f))
                     .padding(CurakidTheme.paddings.small),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -211,7 +225,7 @@ fun PeriodDescriptionCard(
                         Icon(
                             imageVector = Icons.Default.Lightbulb,
                             contentDescription = null,
-                            tint = CuraKidColors.Amber30,
+                            tint = CurakidTheme.colors.onTertiaryContainer,
                             modifier = Modifier
                                 .size(16.dp)
                                 .padding(top = 2.dp)
@@ -219,7 +233,7 @@ fun PeriodDescriptionCard(
                         Text(
                             text = tip,
                             style = CurakidTheme.typography.bodySmall.copy(
-                                color = CuraKidColors.Amber30,
+                                color = CurakidTheme.colors.onTertiaryContainer,
                                 lineHeight = 18.sp
                             )
                         )
@@ -245,13 +259,13 @@ fun MilestoneItem(
             modifier = Modifier
                 .size(32.dp)
                 .clip(CurakidTheme.Radius.sm)
-                .background(CuraKidColors.Blue90.copy(alpha = 0.5f)),
+                .background(CurakidTheme.colors.primaryContainer.copy(alpha = 0.5f)),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = CuraKidColors.Blue40,
+                tint = CurakidTheme.colors.primary,
                 modifier = Modifier.size(18.dp)
             )
         }

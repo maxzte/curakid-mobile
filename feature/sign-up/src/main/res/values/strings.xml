@@ -2,49 +2,53 @@
 <resources>
     <!-- Common Auth -->
     <string name="email_label">Email</string>
-    <string name="password_label">Пароль</string>
-    <string name="back">Назад</string>
+    <string name="password_label">Password</string>
+    <string name="back">Back</string>
 
     <!-- Login -->
-    <string name="login_welcome">Вітаємо!</string>
-    <string name="login_subtitle">Увійдіть до свого акаунту</string>
-    <string name="login_forgot_password">Забули пароль?</string>
-    <string name="login_button">Увійти</string>
-    <string name="login_no_account">Ще немає акаунту? </string>
-    <string name="login_register_action">Зареєструватись</string>
+    <string name="login_welcome">Welcome!</string>
+    <string name="login_subtitle">Sign in to your account</string>
+    <string name="login_forgot_password">Forgot password?</string>
+    <string name="login_button">Sign In</string>
+    <string name="login_no_account">Don\'t have an account? </string>
+    <string name="login_register_action">Sign Up</string>
 
     <!-- Sign Up -->
-    <string name="signup_title">Реєстрація</string>
-    <string name="signup_subtitle">Створіть акаунт</string>
-    <string name="signup_name_label">Ім\'я та прізвище</string>
-    <string name="signup_agree_prefix">Я погоджуюсь з </string>
-    <string name="signup_terms_action">політикою використання</string>
-    <string name="signup_and_conjunction"> та </string>
-    <string name="signup_privacy_action">конфіденційністю</string>
-    <string name="signup_terms_title">Політика використання</string>
-    <string name="signup_privacy_title">Конфіденційність</string>
-    <string name="signup_button">Зареєструватись</string>
-    <string name="signup_has_account">Вже маєте акаунт? </string>
-    <string name="signup_login_action">Увійти</string>
+    <string name="signup_title">Sign Up</string>
+    <string name="signup_subtitle">Create an account</string>
+    <string name="signup_name_label">Full name</string>
+    <string name="signup_agree_prefix">I agree to the </string>
+    <string name="signup_terms_action">terms of use</string>
+    <string name="signup_and_conjunction"> and </string>
+    <string name="signup_privacy_action">privacy policy</string>
+    <string name="signup_terms_title">Terms of Use</string>
+    <string name="signup_privacy_title">Privacy Policy</string>
+    <string name="signup_button">Sign Up</string>
+    <string name="signup_has_account">Already have an account? </string>
+    <string name="signup_login_action">Sign In</string>
 
     <!-- Forgot Password -->
-    <string name="forgot_password_title">Відновлення</string>
-    <string name="forgot_password_step_email">Введіть ваш email для отримання інструкцій</string>
-    <string name="forgot_password_step_reset">Введіть код з пошти та новий пароль</string>
-    <string name="forgot_password_step_success">Пароль успішно змінено!</string>
-    <string name="forgot_password_send_button">Надіслати</string>
-    <string name="forgot_password_code_label">Код підтвердження</string>
-    <string name="forgot_password_new_password_label">Новий пароль</string>
-    <string name="forgot_password_change_button">Змінити пароль</string>
-    <string name="forgot_password_to_login_button">До логіну</string>
-    <string name="forgot_password_remembered_prefix">Згадали пароль? </string>
-    <string name="forgot_password_login_action">Увійти</string>
+    <string name="forgot_password_title">Password Recovery</string>
+    <string name="forgot_password_step_email">Enter your email to receive instructions</string>
+    <string name="forgot_password_step_reset">Enter the code from email and your new password</string>
+    <string name="forgot_password_step_success">Password changed successfully!</string>
+    <string name="forgot_password_send_button">Send</string>
+    <string name="forgot_password_code_label">Confirmation code</string>
+    <string name="forgot_password_new_password_label">New password</string>
+    <string name="forgot_password_change_button">Change Password</string>
+    <string name="forgot_password_to_login_button">Back to Login</string>
+    <string name="forgot_password_remembered_prefix">Remembered your password? </string>
+    <string name="forgot_password_login_action">Sign In</string>
 
     <!-- Legal Documents -->
-    <string name="legal_document_error_prefix">Помилка при завантаженні: %1$s</string>
+    <string name="legal_document_error_prefix">Loading error: %1$s</string>
 
     <!-- Verify Email -->
-    <string name="verify_email_title">Підтвердження</string>
-    <string name="verify_email_subtitle">Введіть код, надісланий на %1$s</string>
-    <string name="verify_email_button">Підтвердити</string>
+    <string name="verify_email_title">Verification</string>
+    <string name="verify_email_subtitle">Enter the code sent to %1$s</string>
+    <string name="verify_email_button">Confirm</string>
+
+    <!-- Additional -->
+    <string name="continue_with_google">Continue with Google</string>
+    <string name="or_divider">or</string>
 </resources>

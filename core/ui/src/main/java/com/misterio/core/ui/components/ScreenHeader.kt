@@ -2,9 +2,11 @@ package com.misterio.core.ui.components
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -15,25 +17,33 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.misterio.core.ui.R
 import com.misterio.core.ui.theme.CurakidTheme
 
 @Composable
 fun ScreenHeader(
     title: String,
-    childName: String,
-    onChatClick: () -> Unit = {}
+    childName: String? = null,
+    onChatClick: (() -> Unit)? = null,
+    onChildClick: (() -> Unit)? = null,
+    actions: @Composable RowScope.() -> Unit = {}
 ) {
-    val name = childName.takeIf { it.isNotEmpty() }?.take(1)?.uppercase().orEmpty()
+    val name = childName?.takeIf { it.isNotEmpty() }?.take(1)?.uppercase().orEmpty()
 
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 4.dp, vertical = 8.dp),
+            .padding(
+                horizontal = CurakidTheme.paddings.spaceXs,
+                vertical = CurakidTheme.paddings.spaceSm
+            ),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -46,27 +56,44 @@ fun ScreenHeader(
 
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(CurakidTheme.paddings.spaceSm)
         ) {
-            IconButton(onClick = onChatClick) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.Chat,
-                    contentDescription = "Chat",
-                )
+            actions()
+
+            if (onChatClick != null) {
+                IconButton(onClick = onChatClick) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.Chat,
+                        contentDescription = stringResource(R.string.cd_chat),
+                    )
+                }
             }
 
-            Box(
-                modifier = Modifier
+            if (name.isNotEmpty()) {
+                val avatarModifier = Modifier
                     .size(40.dp)
                     .clip(CircleShape)
-                    .background(CurakidTheme.colors.surfaceVariant),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = name,
-                    style = CurakidTheme.typography.bodyMedium,
-                    color = CurakidTheme.colors.onSurfaceVariant
-                )
+                    .background(CurakidTheme.colors.surfaceVariant)
+                    .then(
+                        if (onChildClick != null) {
+                            Modifier.clickable(
+                                interactionSource = remember { MutableInteractionSource() },
+                                indication = null,
+                                onClick = onChildClick
+                            )
+                        } else Modifier
+                    )
+
+                Box(
+                    modifier = avatarModifier,
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = name,
+                        style = CurakidTheme.typography.bodyMedium,
+                        color = CurakidTheme.colors.onSurfaceVariant
+                    )
+                }
             }
         }
     }

@@ -14,7 +14,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.misterio.core.ui.theme.CuraKidColors
 import com.misterio.core.ui.theme.CurakidTheme
 
 @Composable
@@ -30,7 +29,7 @@ internal fun AuthHeader(title: String, subtitle: String) {
         Text(
             text = "CK",
             style = CurakidTheme.typography.titleLarge.copy(
-                color = CuraKidColors.White,
+                color = CurakidTheme.colors.onPrimary,
                 fontWeight = FontWeight.Bold,
                 fontSize = 22.sp
             )

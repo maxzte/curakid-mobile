@@ -8,6 +8,7 @@ import com.misterio.core.database.converter.DescriptionConverter
 import com.misterio.core.database.converter.ListConverter
 import com.misterio.core.database.dao.AssessmentDao
 import com.misterio.core.database.dao.ChartNormDao
+import com.misterio.core.database.dao.ChatDao
 import com.misterio.core.database.dao.ChildDao
 import com.misterio.core.database.dao.ChildReportDao
 import com.misterio.core.database.dao.EventDao
@@ -15,6 +16,7 @@ import com.misterio.core.database.dao.LifePeriodDao
 import com.misterio.core.database.dao.MeasurementDao
 import com.misterio.core.database.entity.AssessmentEntity
 import com.misterio.core.database.entity.ChartNormEntity
+import com.misterio.core.database.entity.ChatMessageEntity
 import com.misterio.core.database.entity.ChildSkillAssessmentEntity
 import com.misterio.core.database.entity.ChildEntity
 import com.misterio.core.database.entity.ChildReportEntity
@@ -31,10 +33,11 @@ import com.misterio.core.database.entity.MeasurementEntity
         LifePeriodEntity::class,
         ChildSkillAssessmentEntity::class,
         ChildReportEntity::class,
-        ChartNormEntity::class
+        ChartNormEntity::class,
+        ChatMessageEntity::class
     ],
-    version = 1,
-    exportSchema = false
+    version = 4,
+    exportSchema = true
 )
 @TypeConverters(DateConverters::class, ListConverter::class, DescriptionConverter::class)
 abstract class AppDatabase : RoomDatabase() {
@@ -52,5 +55,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun childReportDao(): ChildReportDao
 
     abstract fun chartNormDao(): ChartNormDao
+
+    abstract fun chatDao(): ChatDao
 
 }

@@ -6,7 +6,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import com.misterio.core.ui.R
+import com.misterio.core.ui.theme.CurakidTheme
 
 @Composable
 fun CuraKidAlertDialog(
@@ -14,9 +17,9 @@ fun CuraKidAlertDialog(
     onConfirm: () -> Unit,
     title: String,
     text: String,
-    confirmButtonText: String = "Підтвердити",
-    dismissButtonText: String = "Скасувати",
-    confirmButtonColor: Color = Color(0xFF6200EE)
+    confirmButtonText: String = stringResource(R.string.action_confirm),
+    dismissButtonText: String = stringResource(R.string.dialog_cancel),
+    confirmButtonColor: Color = CurakidTheme.colors.primary
 ) {
     CuraKidAlertDialog(
         onDismissRequest = onDismissRequest,
@@ -39,9 +42,9 @@ fun CuraKidAlertDialog(
     onDismissRequest: () -> Unit,
     onConfirm: () -> Unit,
     title: String,
-    confirmButtonText: String = "Підтвердити",
-    dismissButtonText: String = "Скасувати",
-    confirmButtonColor: Color = Color(0xFF6200EE),
+    confirmButtonText: String = stringResource(R.string.action_confirm),
+    dismissButtonText: String = stringResource(R.string.dialog_cancel),
+    confirmButtonColor: Color = CurakidTheme.colors.primary,
     content: @Composable () -> Unit
 ) {
     AlertDialog(
@@ -66,11 +69,11 @@ fun CuraKidAlertDialog(
             TextButton(onClick = onDismissRequest) {
                 Text(
                     text = dismissButtonText,
-                    color = Color.Gray,
+                    color = CurakidTheme.colors.onSurfaceVariant,
                     style = MaterialTheme.typography.labelLarge
                 )
             }
         },
-        containerColor = Color.White
+        containerColor = CurakidTheme.colors.surfaceContainer
     )
 }

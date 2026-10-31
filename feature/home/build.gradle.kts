@@ -27,6 +27,7 @@ android {
 
 dependencies {
     implementation(projects.core.domain)
+    implementation(projects.core.common)
     implementation(projects.core.ui)
     
     implementation(platform(libs.androidx.compose.bom))
@@ -47,4 +48,5 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.turbine)
 }

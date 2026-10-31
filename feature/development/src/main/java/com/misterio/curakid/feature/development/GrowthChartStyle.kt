@@ -34,7 +34,7 @@ internal class GrowthChartStyles(
 internal fun rememberGrowthChartStyles(): GrowthChartStyles {
     val mainLineColor = CurakidTheme.colors.primary
     val normLineColor = Color.LightGray.copy(alpha = 0.5f)
-    val warningLineColor = CuraKidColors.Amber30
+    val warningLineColor = CurakidTheme.colors.tertiary
     val criticalLineColor = CurakidTheme.colors.error
 
     val mainLineStyle = LineCartesianLayer.rememberLine(

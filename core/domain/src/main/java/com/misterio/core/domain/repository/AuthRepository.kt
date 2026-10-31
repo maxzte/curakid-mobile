@@ -1,6 +1,13 @@
 package com.misterio.core.domain.repository
 
+import com.misterio.core.domain.model.AuthState
+import kotlinx.coroutines.flow.Flow
+
 interface AuthRepository {
+
+    fun getAuthState(): Flow<AuthState>
+
+    fun isPasscodeEnabled(): Flow<Boolean>
 
     suspend fun login(email: String, password: String): Result<Unit>
 
@@ -19,5 +26,7 @@ interface AuthRepository {
     suspend fun logout(): Result<Unit>
 
     suspend fun deleteAccount(): Result<Unit>
+
+    suspend fun clearSession()
 
 }

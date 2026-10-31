@@ -17,7 +17,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.misterio.core.domain.model.Measurement
 import com.misterio.core.ui.theme.CurakidTheme
-import java.time.format.DateTimeFormatter
+import com.misterio.core.ui.toCompactFormatted
 
 @Composable
 fun MeasurementItem(measurement: Measurement) {
@@ -49,7 +49,7 @@ fun MeasurementItem(measurement: Measurement) {
 
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = measurement.date.format(DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm")),
+                    text = measurement.date.toCompactFormatted(),
                     style = MaterialTheme.typography.bodySmall.copy(color = CurakidTheme.colors.onSurfaceVariant)
                 )
 

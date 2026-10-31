@@ -9,11 +9,13 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.credentials.CredentialManager
@@ -22,16 +24,17 @@ import androidx.credentials.GetCredentialRequest
 import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.misterio.core.domain.util.suspendRunCatching
-import com.misterio.core.ui.theme.CuraKidColors
 import com.misterio.core.ui.theme.CurakidTheme
-import com.misterio.curakid.feature.signup.BuildConfig
 import kotlinx.coroutines.launch
 
 
 @Composable
-internal fun GoogleButton(onTokenReceived: (String) -> Unit) {
+internal fun GoogleButton(
+    onTokenReceived: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
     val context = LocalContext.current
-    val credentialManager = androidx.compose.runtime.remember(context) { CredentialManager.create(context) }
+    val credentialManager = remember(context) { CredentialManager.create(context) }
     val coroutineScope = rememberCoroutineScope()
 
     OutlinedButton(
@@ -75,20 +78,19 @@ internal fun GoogleButton(onTokenReceived: (String) -> Unit) {
                 }
             }
         },
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .height(52.dp),
         shape = CurakidTheme.Radius.md,
         border = BorderStroke(1.dp, CurakidTheme.colors.outline),
         colors = ButtonDefaults.outlinedButtonColors(
-            containerColor = CuraKidColors.White
+            containerColor = CurakidTheme.colors.surface
         )
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            horizontalArrangement = Arrangement.spacedBy(CurakidTheme.paddings.spaceSm)
         ) {
-            // Google G icon via text — replace with painterResource(R.drawable.ic_google)
             Text(
                 text = "G",
                 style = CurakidTheme.typography.bodyMedium.copy(
@@ -97,9 +99,9 @@ internal fun GoogleButton(onTokenReceived: (String) -> Unit) {
                 )
             )
             Text(
-                text = "Продовжити з Google",
+                text = stringResource(R.string.continue_with_google),
                 style = CurakidTheme.typography.bodyMedium.copy(
-                    color = CuraKidColors.Blue30,
+                    color = CurakidTheme.colors.primary,
                     fontSize = 15.sp
                 )
             )

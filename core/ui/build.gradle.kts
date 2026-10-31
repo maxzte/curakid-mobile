@@ -24,4 +24,6 @@ dependencies {
 
     implementation(libs.bundles.richtext)
     implementation(projects.core.domain)
+
+    testImplementation(libs.junit)
 }

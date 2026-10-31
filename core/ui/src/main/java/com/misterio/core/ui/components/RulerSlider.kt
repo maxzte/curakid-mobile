@@ -26,6 +26,8 @@ import kotlinx.coroutines.launch
 import kotlin.math.round
 import kotlin.math.roundToInt
 
+import com.misterio.core.ui.theme.CurakidTheme
+
 @Composable
 fun RulerSlider(
     value: Float,
@@ -33,9 +35,9 @@ fun RulerSlider(
     range: ClosedFloatingPointRange<Float>,
     modifier: Modifier = Modifier,
     step: Float = 0.1f,
-    indicatorColor: Color = Color(0xFF6200EE),
+    indicatorColor: Color = CurakidTheme.colors.primary,
     normRange: ClosedFloatingPointRange<Float>? = null,
-    normColor: Color = Color(0xFFE8F5E9)
+    normColor: Color = CurakidTheme.colors.secondaryContainer
 ) {
     val textMeasurer = rememberTextMeasurer()
     val density = LocalDensity.current
@@ -45,6 +47,9 @@ fun RulerSlider(
 
     val scope = rememberCoroutineScope()
     val animatableValue = remember { Animatable(value) }
+
+    val tickColor = CurakidTheme.colors.outline
+    val textColor = CurakidTheme.colors.onSurfaceVariant
 
     fun snapToTick(value: Float, step: Float): Float {
         return (round(value / step) * step)
@@ -134,7 +139,7 @@ fun RulerSlider(
                 val x = center + (tickValue - currentValue) / step * lineSpacing
                 val isMajor = tick % 10 == 0
                 val lineHeight = if (isMajor) majorLineHeight else minorLineHeight
-                val color = if (tickValue in range) Color.LightGray else Color.Transparent
+                val color = if (tickValue in range) tickColor else Color.Transparent
 
                 drawLine(
                     color = color,
@@ -145,7 +150,7 @@ fun RulerSlider(
 
                 if (isMajor && tickValue in range) {
                     val text = tickValue.toInt().toString()
-                    val textResult = textMeasurer.measure(text, TextStyle(fontSize = 12.sp, color = Color.Gray))
+                    val textResult = textMeasurer.measure(text, TextStyle(fontSize = 12.sp, color = textColor))
                     drawText(
                         textLayoutResult = textResult,
                         topLeft = Offset(x - textResult.size.width / 2, size.height / 2 + lineHeight / 2 + 4.dp.toPx())

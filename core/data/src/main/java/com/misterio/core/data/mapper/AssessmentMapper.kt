@@ -12,6 +12,7 @@ import com.misterio.core.network.dto.PeriodReadinessResponse
 import java.time.Instant.parse
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.UUID
 import kotlin.time.Instant
 
 private val dateFormatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")
@@ -29,9 +30,10 @@ fun AssessmentResponse.toDomain() = ChildAssessment(
     completedAt = null
 )
 
-fun AssessmentResponse.toEntity() = ChildSkillAssessmentEntity(
+fun AssessmentResponse.toEntity(periodId: UUID? = null) = ChildSkillAssessmentEntity(
     id = id,
     childId = childId,
+    periodId = periodId,
     answers = answers.map { it.toDomain() },
     assessmentDate = assessmentDate,
     completedAt = null,

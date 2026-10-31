@@ -55,9 +55,9 @@ fun LoginContent(
     onOAuthLogin: (String) -> Unit,
     onNavigateToSignUp: () -> Unit,
     onNavigateToForgotPassword: () -> Unit,
+    modifier: Modifier = Modifier,
     emailError: String? = null,
     passwordError: String? = null,
-    modifier: Modifier = Modifier,
 ) {
     var email by rememberSaveable { mutableStateOf("") }
     var password by rememberSaveable { mutableStateOf("") }
@@ -73,7 +73,7 @@ fun LoginContent(
         }
     }
 
-    AuthScaffold {
+    AuthScaffold(modifier = modifier) {
         AuthHeader(
             title = stringResource(R.string.login_welcome),
             subtitle = stringResource(R.string.login_subtitle)

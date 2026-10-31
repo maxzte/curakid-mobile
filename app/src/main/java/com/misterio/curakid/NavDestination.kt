@@ -45,8 +45,8 @@ sealed interface Route : NavKey {
     }
 
     @Serializable
-    data class CalendarFromHome(
-        @Serializable(UUIDSerializer::class) val eventId: UUID? = null
+    data class EventDetails(
+        @Serializable(UUIDSerializer::class) val eventId: UUID
     ) : Route
 
     @Serializable

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="chat_title">ШІ-Асистент</string>
+    <string name="chat_welcome_title">Вітаємо!\nЩо Вас цікавить?</string>
+    <string name="chat_input_placeholder">Запитайте щось...</string>
+    <string name="chat_send_button">Відправити</string>
+    <string name="chat_back">Назад</string>
+    <string name="chat_error_prefix">Помилка: %1$s</string>
+    <string name="chat_error_default">Не вдалося отримати відповідь</string>
+</resources>

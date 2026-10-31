@@ -5,8 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.misterio.core.domain.UiState
 import com.misterio.core.domain.model.DomainError
 import com.misterio.core.domain.usecase.DeleteProfileUseCase
-import com.misterio.curakid.core.common.SecurityManager
-import com.misterio.curakid.core.common.SettingsManager
+import com.misterio.core.domain.usecase.GetIsNotificationsEnabledUseCase
+import com.misterio.core.domain.usecase.GetIsPasscodeEnabledUseCase
+import com.misterio.core.domain.usecase.ToggleNotificationsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -18,9 +19,10 @@ import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val settingsManager: SettingsManager,
-    securityManager: SecurityManager,
-    private val deleteProfileUseCase: DeleteProfileUseCase
+    getIsNotificationsEnabledUseCase: GetIsNotificationsEnabledUseCase,
+    private val toggleNotificationsUseCase: ToggleNotificationsUseCase,
+    getIsPasscodeEnabledUseCase: GetIsPasscodeEnabledUseCase,
+    private val deleteProfileUseCase: DeleteProfileUseCase,
 ) : ViewModel() {
 
     private val _deleteState = MutableStateFlow<UiState<Unit>>(UiState.Initial)
@@ -29,14 +31,14 @@ class SettingsViewModel @Inject constructor(
     private val _showDeleteDialog = MutableStateFlow(false)
     val showDeleteDialog: StateFlow<Boolean> = _showDeleteDialog.asStateFlow()
 
-    val isNotificationsEnabled: StateFlow<Boolean> = settingsManager.isNotificationsEnabled
+    val isNotificationsEnabled: StateFlow<Boolean> = getIsNotificationsEnabledUseCase()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
             initialValue = true
         )
 
-    val isPasscodeEnabled: StateFlow<Boolean> = securityManager.isPasscodeEnabled
+    val isPasscodeEnabled: StateFlow<Boolean> = getIsPasscodeEnabledUseCase()
         .stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5000),
@@ -45,7 +47,7 @@ class SettingsViewModel @Inject constructor(
 
     fun setNotificationsEnabled(enabled: Boolean) {
         viewModelScope.launch {
-            settingsManager.saveNotificationsEnabled(enabled)
+            toggleNotificationsUseCase(enabled)
         }
     }
 

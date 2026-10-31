@@ -21,6 +21,9 @@ interface EventDao {
     @Query("SELECT * FROM events WHERE childId = :childId AND date = :date AND isDeleted = 0 ORDER BY date ASC")
     fun getEventsByDate(childId: UUID, date: LocalDateTime): Flow<List<EventEntity>>
 
+    @Query("SELECT * FROM events WHERE isDeleted = 0 ORDER BY date ASC")
+    fun getAllActiveEvents(): Flow<List<EventEntity>>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertEvent(event: EventEntity)
 

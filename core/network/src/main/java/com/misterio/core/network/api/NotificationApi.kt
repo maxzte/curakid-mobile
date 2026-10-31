@@ -7,6 +7,7 @@ import retrofit2.http.Body
 import retrofit2.http.DELETE
 import retrofit2.http.POST
 import retrofit2.http.Query
+import java.util.UUID
 
 interface NotificationApi {
 
@@ -19,4 +20,14 @@ interface NotificationApi {
     suspend fun removeDeviceToken(
         @Query("token") token: String
     ): Response<Unit>
+
+    @POST("api/v1/notifications/trigger-reminders")
+    suspend fun triggerReminders(): Response<Map<String, String>>
+
+    @POST("api/v1/notifications/test-push")
+    suspend fun sendTestPush(
+        @Query("userId") userId: UUID,
+        @Query("title") title: String? = null,
+        @Query("body") body: String? = null
+    ): Response<Map<String, String>>
 }

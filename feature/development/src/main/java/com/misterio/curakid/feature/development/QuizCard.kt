@@ -24,10 +24,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.misterio.core.domain.model.Question
-import com.misterio.core.ui.theme.CuraKidColors
 import com.misterio.core.ui.theme.CurakidTheme
 import kotlin.math.abs
 
@@ -59,19 +59,19 @@ fun QuizCard(
                     modifier = Modifier
                         .size(22.dp)
                         .clip(CurakidTheme.Radius.sm)
-                        .background(category.iconBg),
+                        .background(category.getIconBg()),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = category.icon,
                         contentDescription = null,
-                        tint = category.iconTint,
+                        tint = category.getIconTint(),
                         modifier = Modifier.size(13.dp)
                     )
                 }
                 Text(
                     text = category.label,
-                    style = CurakidTheme.typography.labelMedium.copy(color = CuraKidColors.Neutral40)
+                    style = CurakidTheme.typography.labelMedium.copy(color = CurakidTheme.colors.onSurfaceVariant)
                 )
             }
 
@@ -79,7 +79,7 @@ fun QuizCard(
             Text(
                 text = question.text,
                 style = CurakidTheme.typography.bodyMedium.copy(
-                    color = CuraKidColors.Blue30,
+                    color = CurakidTheme.colors.onSurface,
                     lineHeight = 20.sp
                 ),
                 modifier = Modifier.padding(bottom = 10.dp)
@@ -94,42 +94,42 @@ fun QuizCard(
                 ) {
                     AnswerBadge(optionValue = selectedOptionValue)
                     Text(
-                        text = "Змінити",
-                        style = CurakidTheme.typography.labelMedium.copy(color = CuraKidColors.Neutral40),
+                        text = stringResource(R.string.quiz_change),
+                        style = CurakidTheme.typography.labelMedium.copy(color = CurakidTheme.colors.onSurfaceVariant),
                         modifier = Modifier.clickable { onAnswerChange(null) }
                     )
                 }
             } else {
                 Row(
-                    horizontalArrangement = Arrangement.spacedBy(7.dp),
+                    horizontalArrangement = Arrangement.spacedBy(CurakidTheme.paddings.spaceSm),
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     AnswerOption(
-                        label = "Так",
+                        label = stringResource(R.string.answer_yes),
                         icon = Icons.Default.Check,
-                        activeColor = CuraKidColors.Teal40,
-                        activeBg = CuraKidColors.Teal90,
-                        activeBorder = CuraKidColors.Teal40,
+                        activeColor = CurakidTheme.colors.secondary,
+                        activeBg = CurakidTheme.colors.secondaryContainer,
+                        activeBorder = CurakidTheme.colors.secondary,
                         isSelected = abs((selectedOptionValue ?: -1.0) - 100.0) < 0.1,
                         modifier = Modifier.weight(1f),
                         onClick = { onAnswerChange(100.0) }
                     )
                     AnswerOption(
-                        label = "Частково",
+                        label = stringResource(R.string.answer_partially),
                         icon = Icons.Default.Remove,
-                        activeColor = CuraKidColors.Amber30,
-                        activeBg = CuraKidColors.Amber90,
-                        activeBorder = CuraKidColors.Amber30,
+                        activeColor = CurakidTheme.colors.tertiary,
+                        activeBg = CurakidTheme.colors.tertiaryContainer,
+                        activeBorder = CurakidTheme.colors.tertiary,
                         isSelected = abs((selectedOptionValue ?: -1.0) - 50.0) < 0.1,
                         modifier = Modifier.weight(1f),
                         onClick = { onAnswerChange(50.0) }
                     )
                     AnswerOption(
-                        label = "Ні",
+                        label = stringResource(R.string.answer_no),
                         icon = Icons.Default.Close,
-                        activeColor = CuraKidColors.Red30,
-                        activeBg = CuraKidColors.Red90,
-                        activeBorder = CuraKidColors.Red30,
+                        activeColor = CurakidTheme.colors.error,
+                        activeBg = CurakidTheme.colors.errorContainer,
+                        activeBorder = CurakidTheme.colors.error,
                         isSelected = abs((selectedOptionValue ?: -1.0) - 0.0) < 0.1,
                         modifier = Modifier.weight(1f),
                         onClick = { onAnswerChange(0.0) }
@@ -154,10 +154,10 @@ fun AnswerOption(
     Column(
         modifier = modifier
             .clip(CurakidTheme.Radius.md)
-            .background(if (isSelected) activeBg else CuraKidColors.White)
+            .background(if (isSelected) activeBg else CurakidTheme.colors.surfaceContainer)
             .border(
                 0.5.dp,
-                if (isSelected) activeBorder else CuraKidColors.Blue90,
+                if (isSelected) activeBorder else CurakidTheme.colors.outline,
                 CurakidTheme.Radius.md
             )
             .clickable { onClick() }
@@ -168,13 +168,13 @@ fun AnswerOption(
         Icon(
             imageVector = icon,
             contentDescription = label,
-            tint = if (isSelected) activeColor else CuraKidColors.Neutral40,
+            tint = if (isSelected) activeColor else CurakidTheme.colors.onSurfaceVariant,
             modifier = Modifier.size(16.dp)
         )
         Text(
             text = label,
             style = CurakidTheme.typography.labelSmall.copy(
-                color = if (isSelected) activeColor else CuraKidColors.Neutral40
+                color = if (isSelected) activeColor else CurakidTheme.colors.onSurfaceVariant
             )
         )
     }
@@ -184,26 +184,26 @@ fun AnswerOption(
 fun AnswerBadge(optionValue: Double, modifier: Modifier = Modifier) {
     val (bg, color, icon, text) = when (optionValue) {
         100.0 -> AnswerBadgeData(
-            CuraKidColors.Teal90,
-            CuraKidColors.Teal40,
+            CurakidTheme.colors.secondaryContainer,
+            CurakidTheme.colors.secondary,
             Icons.Default.Check,
             "Виконує"
         )
         50.0 -> AnswerBadgeData(
-            CuraKidColors.Amber90,
-            CuraKidColors.Amber30,
+            CurakidTheme.colors.tertiaryContainer,
+            CurakidTheme.colors.tertiary,
             Icons.Default.Remove,
             "Частково"
         )
         0.0 -> AnswerBadgeData(
-            CuraKidColors.Red90,
-            CuraKidColors.Red30,
+            CurakidTheme.colors.errorContainer,
+            CurakidTheme.colors.error,
             Icons.Default.Close,
             "Не виконує"
         )
         else -> AnswerBadgeData(
-            CuraKidColors.Blue95,
-            CuraKidColors.Blue40,
+            CurakidTheme.colors.primaryContainer,
+            CurakidTheme.colors.primary,
             Icons.AutoMirrored.Filled.HelpOutline,
             ""
         )

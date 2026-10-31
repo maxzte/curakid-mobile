@@ -13,7 +13,9 @@ import com.misterio.core.network.api.DevelopmentApi
 import com.misterio.core.network.dto.LifePeriodResponse
 import com.misterio.core.network.dto.LifePeriodMilestonesResponse
 import com.misterio.core.network.dto.LifePeriodDescriptionResponse
+import com.misterio.curakid.core.common.AppDataStore
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -22,6 +24,7 @@ import javax.inject.Singleton
 class DevelopmentRepositoryImpl @Inject constructor(
     private val dao: LifePeriodDao,
     private val developmentApi: DevelopmentApi,
+    private val appDataStore: AppDataStore,
 ) : DevelopmentRepository {
 
     override fun getLifePeriods(): Flow<List<LifePeriod>> {
@@ -30,10 +33,25 @@ class DevelopmentRepositoryImpl @Inject constructor(
         }
     }
 
-    override suspend fun syncLifePeriods(): Result<Unit> {
+    override suspend fun syncLifePeriods(force: Boolean): Result<Unit> {
+        if (!force) {
+            val lastSync = appDataStore.lastLifePeriodsSync.first()
+            val elapsed = System.currentTimeMillis() - lastSync
+            val currentEntities = dao.getLifePeriods().first()
+            val hasEmptyQuestions = currentEntities.isNotEmpty() && currentEntities.any { it.questions.isEmpty() }
+            
+            if (lastSync > 0 && elapsed < SYNC_INTERVAL_MS && currentEntities.isNotEmpty() && !hasEmptyQuestions) {
+                Log.d(TAG, "syncLifePeriods: Skipping, last sync was ${elapsed / 1000}s ago and cache is populated")
+                return Result.success(Unit)
+            }
+        }
+
         return safeApiCall { developmentApi.getLifePeriods() }.map { body ->
             Log.d(TAG, "Syncing ${body.size} periods from network")
-            dao.insertLifePeriods(body.map { it.toEntity() })
+            val entities = body.map { it.toEntity() }
+            dao.syncWithServer(entities)
+            appDataStore.setLastLifePeriodsSync(System.currentTimeMillis())
+            Unit
         }
     }
 
@@ -50,6 +68,7 @@ class DevelopmentRepositoryImpl @Inject constructor(
 
     private companion object {
         const val TAG = "DevelopmentRepository"
+        const val SYNC_INTERVAL_MS = 60 * 60 * 1000L // 1 hour TTL
     }
 
 }

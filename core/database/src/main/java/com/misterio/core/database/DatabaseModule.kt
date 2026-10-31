@@ -1,9 +1,11 @@
 package com.misterio.core.database
 
 import android.content.Context
+import android.content.pm.ApplicationInfo
 import androidx.room.Room
 import com.misterio.core.database.dao.AssessmentDao
 import com.misterio.core.database.dao.ChartNormDao
+import com.misterio.core.database.dao.ChatDao
 import com.misterio.core.database.dao.ChildDao
 import com.misterio.core.database.dao.ChildReportDao
 import com.misterio.core.database.dao.EventDao
@@ -23,11 +25,16 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun provideAppDatabase(@ApplicationContext context: Context): AppDatabase {
-        return Room.databaseBuilder(
+        val builder = Room.databaseBuilder(
             context,
             AppDatabase::class.java,
             "curakid_db"
-        ).build()
+        )
+        // Allow destructive migration only if explicitly running in debug/testing mode or before first store release
+        if (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {
+            builder.fallbackToDestructiveMigration(false)
+        }
+        return builder.build()
     }
 
     @Provides
@@ -50,5 +57,8 @@ object DatabaseModule {
 
     @Provides
     fun provideChartNormsDao(db: AppDatabase): ChartNormDao = db.chartNormDao()
+
+    @Provides
+    fun provideChatDao(db: AppDatabase): ChatDao = db.chatDao()
 
 }

@@ -1,0 +1,29 @@
+# Baseline Profile for CuraKid App
+
+# Startup and Core Application
+Lcom/misterio/curakid/MainActivity;
+Lcom/misterio/curakid/MainActivityKt;
+Lcom/misterio/curakid/MainViewModel;
+
+# Feature ViewModels and Screens
+Lcom/misterio/curakid/feature/home/HomeScreenKt;
+Lcom/misterio/curakid/feature/home/HomeViewModel;
+Lcom/misterio/curakid/feature/development/DevelopmentScreenKt;
+Lcom/misterio/curakid/feature/development/DevelopmentViewModel;
+Lcom/misterio/curakid/feature/calendar/CalendarScreenKt;
+Lcom/misterio/curakid/feature/calendar/CalendarViewModel;
+Lcom/misterio/curakid/feature/chat/ChatScreenKt;
+Lcom/misterio/curakid/feature/chat/ChatViewModel;
+Lcom/misterio/curakid/feature/profile/ProfileScreenKt;
+Lcom/misterio/curakid/feature/profile/ProfileViewModel;
+
+# Jetpack Compose and Navigation
+Landroidx/compose/runtime/Composable;
+Landroidx/compose/foundation/lazy/LazyColumn;
+Landroidx/compose/foundation/lazy/LazyRow;
+Landroidx/compose/material3/Scaffold;
+
+# Network and Database
+Lcom/misterio/core/network/AuthInterceptor;
+Lcom/misterio/core/network/TokenAuthenticator;
+Lcom/misterio/core/database/AppDatabase;

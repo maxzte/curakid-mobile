@@ -65,13 +65,13 @@ fun CuraKidButton(
             ) {
                 if (icon != null && iconPosition == IconPosition.Start) {
                     Icon(imageVector = icon, contentDescription = contentDescription)
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(CurakidTheme.paddings.spaceSm))
                 }
 
                 Text(text = text, style = CurakidTheme.typography.labelLarge)
 
                 if (icon != null && iconPosition == IconPosition.End) {
-                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.width(CurakidTheme.paddings.spaceSm))
                     Icon(imageVector = icon, contentDescription = null)
                 }
             }

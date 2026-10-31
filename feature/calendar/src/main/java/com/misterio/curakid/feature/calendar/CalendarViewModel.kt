@@ -17,6 +17,7 @@ import com.misterio.core.domain.usecase.GetChildUseCase
 import com.misterio.core.domain.usecase.GetEventsUseCase
 import com.misterio.core.domain.usecase.SyncEventsUseCase
 import com.misterio.core.domain.usecase.UpdateEventUseCase
+import com.misterio.core.ui.util.UiText
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
@@ -41,8 +42,9 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import com.misterio.core.domain.usecase.GetEventQuickPreviewUseCase
 import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
+import com.misterio.core.ui.toDayMonth
 import java.util.UUID
 
 @HiltViewModel(assistedFactory = CalendarViewModel.Factory::class)
@@ -54,6 +56,7 @@ class CalendarViewModel @AssistedInject constructor(
     private val addEventUseCase: AddEventUseCase,
     private val updateEventUseCase: UpdateEventUseCase,
     private val deleteEventUseCase: DeleteEventUseCase,
+    private val getEventQuickPreviewUseCase: GetEventQuickPreviewUseCase,
 ) : ViewModel() {
 
     private val _selectedMonth = MutableStateFlow(LocalDate.now().withDayOfMonth(1))
@@ -61,7 +64,7 @@ class CalendarViewModel @AssistedInject constructor(
     private val _isEventSheetOpen = MutableStateFlow(false)
     private val _isEventsExpanded = MutableStateFlow(false)
     private val _eventForm = MutableStateFlow(EventFormState())
-    private val _toastMessage = Channel<String>(Channel.BUFFERED)
+    private val _toastMessage = Channel<UiText>(Channel.BUFFERED)
     val toastMessage = _toastMessage.receiveAsFlow()
     private var eventIdHandled = false
     private val _sheetClosed = Channel<Unit>(Channel.BUFFERED)
@@ -186,22 +189,18 @@ class CalendarViewModel @AssistedInject constructor(
         .distinctUntilChanged()
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Lazily,
             initialValue = UiState.Initial
         )
 
-    private fun getQuickPreview(date: LocalDate, events: List<Event>): String? {
-        if (events.isEmpty()) return null
-
-        val count = events.size
-        val firstEvent = events.first().title
-        val dateStr = date.format(DateTimeFormatter.ofPattern("d MMMM"))
-        val eventWord = when {
-            count % 10 == 1 && count % 100 != 11 -> "подія"
-            count % 10 in 2..4 && count % 100 !in 12..14 -> "події"
-            else -> "подій"
-        }
-        return "$dateStr • $count $eventWord • $firstEvent"
+    private fun getQuickPreview(date: LocalDate, events: List<Event>): UiText? {
+        val preview = getEventQuickPreviewUseCase(date, events) ?: return null
+        return UiText.StringResource(
+            R.string.events_summary_pattern,
+            preview.date.toDayMonth(),
+            preview.totalEventsCount,
+            preview.firstEventTitle
+        )
     }
 
     fun onDateSelected(date: LocalDate) {
@@ -258,10 +257,10 @@ class CalendarViewModel @AssistedInject constructor(
         viewModelScope.launch {
             val result = deleteEventUseCase(eventId)
             if (result.isSuccess) {
-                _toastMessage.send("Подію видалено")
+                _toastMessage.send(UiText.StringResource(R.string.event_deleted))
                 onCloseEventSheet()
             } else {
-                _toastMessage.send("Помилка при видаленні події")
+                _toastMessage.send(UiText.StringResource(R.string.event_deletion_error))
             }
         }
     }
@@ -276,7 +275,7 @@ class CalendarViewModel @AssistedInject constructor(
 
         if (form.title.isBlank()) {
             viewModelScope.launch {
-                _toastMessage.send("Введіть назву події")
+                _toastMessage.send(UiText.StringResource(R.string.event_title_required))
             }
             return
         }
@@ -284,17 +283,12 @@ class CalendarViewModel @AssistedInject constructor(
         val originalEvent = allEvents.value.find { it.id == form.id }
         if (originalEvent != null && originalEvent.status == EventStatus.DONE && originalEvent.date != form.date) {
             viewModelScope.launch {
-                _toastMessage.send("Неможливо змінити дату виконаної події")
+                _toastMessage.send(UiText.StringResource(R.string.event_done_date_immutable))
             }
             return
         }
 
-        val finalStatus =
-            if (form.status == EventStatus.PLANNED && form.date.isBefore(LocalDateTime.now())) {
-                EventStatus.SKIPPED
-            } else {
-                form.status
-            }
+        val finalStatus = form.status
 
         val event: Event = if (originalEvent is Event.Vaccine) {
             originalEvent.copy(
@@ -323,14 +317,14 @@ class CalendarViewModel @AssistedInject constructor(
             }
 
             if (result.isSuccess) {
-                val message =
-                    if (form.id == null) "Подію успішно створено" else "Подію успішно оновлено"
-                _toastMessage.send(message)
+                val messageRes =
+                    if (form.id == null) R.string.event_created else R.string.event_updated
+                _toastMessage.send(UiText.StringResource(messageRes))
                 onCloseEventSheet()
             } else {
-                val message =
-                    if (form.id == null) "Помилка при створенні події" else "Помилка при оновленні події"
-                _toastMessage.send(message)
+                val messageRes =
+                    if (form.id == null) R.string.event_creation_error else R.string.event_update_error
+                _toastMessage.send(UiText.StringResource(messageRes))
             }
         }
     }

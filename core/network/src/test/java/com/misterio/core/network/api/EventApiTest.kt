@@ -17,18 +17,25 @@ class EventApiTest : BaseApiTest<EventApi>() {
     fun `getEvents sends correct request`() = runTest {
         val childId = UUID.randomUUID()
         enqueueResponse("""
-            [
-                {"id": "${UUID.randomUUID()}", "title": "Checkup", "type": "MEDICAL"}
-            ]
+            {
+                "content": [
+                    {"id": "${UUID.randomUUID()}", "childId": "$childId", "title": "Checkup", "type": "MEDICAL", "date": "2024-01-01T10:00:00", "status": "PLANNED"}
+                ],
+                "pageNumber": 0,
+                "pageSize": 100,
+                "totalElements": 1,
+                "totalPages": 1,
+                "last": true
+            }
         """.trimIndent())
 
         val response = api.getEvents(childId)
         val request = mockWebServer.takeRequest()
 
-        assertEquals("/api/children/$childId/events", request.path)
+        assertEquals("/api/v1/children/$childId/events?page=0&size=100", request.path)
         assertEquals("GET", request.method)
         assertTrue(response.isSuccessful)
-        assertEquals(1, response.body()?.size)
+        assertEquals(1, response.body()?.content?.size)
     }
 
     @Test
@@ -51,7 +58,7 @@ class EventApiTest : BaseApiTest<EventApi>() {
         val response = api.createEvent(childId, eventRequest)
         val request = mockWebServer.takeRequest()
 
-        assertEquals("/api/children/$childId/events", request.path)
+        assertEquals("/api/v1/children/$childId/events", request.path)
         assertEquals("POST", request.method)
         assertEquals("Vaccine", response.body()?.title)
     }

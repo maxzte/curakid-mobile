@@ -1,0 +1,833 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 4,
+    "identityHash": "a8847efef5cfbf74cb68776d49fca099",
+    "entities": [
+      {
+        "tableName": "children",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` BLOB NOT NULL, `name` TEXT NOT NULL, `birthDate` TEXT NOT NULL, `gender` TEXT NOT NULL, `isPremature` INTEGER NOT NULL, `gestationalWeeks` INTEGER, `allergies` TEXT NOT NULL, `chronicDiseases` TEXT NOT NULL, `pastDiseases` TEXT NOT NULL, `specialFeatures` TEXT NOT NULL, `isSynced` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "birthDate",
+            "columnName": "birthDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "gender",
+            "columnName": "gender",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isPremature",
+            "columnName": "isPremature",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "gestationalWeeks",
+            "columnName": "gestationalWeeks",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "allergies",
+            "columnName": "allergies",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "chronicDiseases",
+            "columnName": "chronicDiseases",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "pastDiseases",
+            "columnName": "pastDiseases",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "specialFeatures",
+            "columnName": "specialFeatures",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isSynced",
+            "columnName": "isSynced",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "measurements",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` BLOB NOT NULL, `childId` BLOB NOT NULL, `measurementDate` TEXT NOT NULL, `aiReportId` BLOB, `weightKg` REAL, `heightCm` REAL, `headCircCm` REAL, `wfaZscore` REAL, `hfaZscore` REAL, `wfhZscore` REAL, `bmiZscore` REAL, `hcfaZscore` REAL, `wfaPercentile` REAL, `hfaPercentile` REAL, `wfhPercentile` REAL, `bmiPercentile` REAL, `hcfaPercentile` REAL, `isSynced` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`childId`) REFERENCES `children`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "childId",
+            "columnName": "childId",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "measurementDate",
+            "columnName": "measurementDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "aiReportId",
+            "columnName": "aiReportId",
+            "affinity": "BLOB"
+          },
+          {
+            "fieldPath": "weightKg",
+            "columnName": "weightKg",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "heightCm",
+            "columnName": "heightCm",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "headCircCm",
+            "columnName": "headCircCm",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "wfaZscore",
+            "columnName": "wfaZscore",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "hfaZscore",
+            "columnName": "hfaZscore",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "wfhZscore",
+            "columnName": "wfhZscore",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "bmiZscore",
+            "columnName": "bmiZscore",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "hcfaZscore",
+            "columnName": "hcfaZscore",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "wfaPercentile",
+            "columnName": "wfaPercentile",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "hfaPercentile",
+            "columnName": "hfaPercentile",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "wfhPercentile",
+            "columnName": "wfhPercentile",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "bmiPercentile",
+            "columnName": "bmiPercentile",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "hcfaPercentile",
+            "columnName": "hcfaPercentile",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "isSynced",
+            "columnName": "isSynced",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_measurements_childId",
+            "unique": false,
+            "columnNames": [
+              "childId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_measurements_childId` ON `${TABLE_NAME}` (`childId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "children",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "childId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "assessments",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` BLOB NOT NULL, `childId` BLOB NOT NULL, `text` TEXT NOT NULL, `domain` TEXT NOT NULL, `ageInMonths` INTEGER NOT NULL, `achieved` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "childId",
+            "columnName": "childId",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "text",
+            "columnName": "text",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "domain",
+            "columnName": "domain",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ageInMonths",
+            "columnName": "ageInMonths",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "achieved",
+            "columnName": "achieved",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "events",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` BLOB NOT NULL, `childId` BLOB NOT NULL, `title` TEXT NOT NULL, `type` TEXT NOT NULL, `date` TEXT NOT NULL, `description` TEXT, `status` TEXT NOT NULL, `isSynced` INTEGER NOT NULL, `isDeleted` INTEGER NOT NULL, `location` TEXT, `disease` TEXT, `doseNumber` INTEGER, `totalDoses` INTEGER, `vaccineType` TEXT, `scheduledAgeMonths` INTEGER, `scheduledAgeDays` INTEGER, `notes` TEXT, PRIMARY KEY(`id`), FOREIGN KEY(`childId`) REFERENCES `children`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "childId",
+            "columnName": "childId",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "title",
+            "columnName": "title",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "type",
+            "columnName": "type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "date",
+            "columnName": "date",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "description",
+            "columnName": "description",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "status",
+            "columnName": "status",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isSynced",
+            "columnName": "isSynced",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isDeleted",
+            "columnName": "isDeleted",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "location",
+            "columnName": "location",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "disease",
+            "columnName": "disease",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "doseNumber",
+            "columnName": "doseNumber",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "totalDoses",
+            "columnName": "totalDoses",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "vaccineType",
+            "columnName": "vaccineType",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "scheduledAgeMonths",
+            "columnName": "scheduledAgeMonths",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "scheduledAgeDays",
+            "columnName": "scheduledAgeDays",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "notes",
+            "columnName": "notes",
+            "affinity": "TEXT"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_events_childId",
+            "unique": false,
+            "columnNames": [
+              "childId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_events_childId` ON `${TABLE_NAME}` (`childId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "children",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "childId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "life_periods",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` BLOB NOT NULL, `code` TEXT NOT NULL, `label` TEXT NOT NULL, `about` TEXT, `minMonths` INTEGER NOT NULL, `maxMonths` INTEGER NOT NULL, `questions` TEXT NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "code",
+            "columnName": "code",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "label",
+            "columnName": "label",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "about",
+            "columnName": "about",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "minMonths",
+            "columnName": "minMonths",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "maxMonths",
+            "columnName": "maxMonths",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "questions",
+            "columnName": "questions",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "child_skill_assessments",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` BLOB NOT NULL, `childId` BLOB NOT NULL, `periodId` BLOB, `answers` TEXT NOT NULL, `assessmentDate` TEXT NOT NULL, `completedAt` TEXT, `isSynced` INTEGER NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`childId`) REFERENCES `children`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "childId",
+            "columnName": "childId",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "periodId",
+            "columnName": "periodId",
+            "affinity": "BLOB"
+          },
+          {
+            "fieldPath": "answers",
+            "columnName": "answers",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "assessmentDate",
+            "columnName": "assessmentDate",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "completedAt",
+            "columnName": "completedAt",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "isSynced",
+            "columnName": "isSynced",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_child_skill_assessments_childId",
+            "unique": false,
+            "columnNames": [
+              "childId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_child_skill_assessments_childId` ON `${TABLE_NAME}` (`childId`)"
+          },
+          {
+            "name": "index_child_skill_assessments_childId_periodId",
+            "unique": true,
+            "columnNames": [
+              "childId",
+              "periodId"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_child_skill_assessments_childId_periodId` ON `${TABLE_NAME}` (`childId`, `periodId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "children",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "childId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "child_reports",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` BLOB NOT NULL, `childId` BLOB NOT NULL, `lifePeriodId` BLOB, `triggerMeasurementId` BLOB, `reportText` TEXT, `recommendations` TEXT, `isFallback` INTEGER NOT NULL, `urgencyScore` REAL, `createdAt` TEXT NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`childId`) REFERENCES `children`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "childId",
+            "columnName": "childId",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "lifePeriodId",
+            "columnName": "lifePeriodId",
+            "affinity": "BLOB"
+          },
+          {
+            "fieldPath": "triggerMeasurementId",
+            "columnName": "triggerMeasurementId",
+            "affinity": "BLOB"
+          },
+          {
+            "fieldPath": "reportText",
+            "columnName": "reportText",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "recommendations",
+            "columnName": "recommendations",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "isFallback",
+            "columnName": "isFallback",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "urgencyScore",
+            "columnName": "urgencyScore",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_child_reports_childId",
+            "unique": false,
+            "columnNames": [
+              "childId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_child_reports_childId` ON `${TABLE_NAME}` (`childId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "children",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "childId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      },
+      {
+        "tableName": "chart_norms",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`chartType` TEXT NOT NULL, `gender` TEXT NOT NULL, `x` REAL NOT NULL, `p01` REAL NOT NULL, `p1` REAL NOT NULL, `p3` REAL NOT NULL, `p5` REAL NOT NULL, `p10` REAL NOT NULL, `p15` REAL NOT NULL, `p25` REAL NOT NULL, `p50` REAL NOT NULL, `p75` REAL NOT NULL, `p85` REAL NOT NULL, `p90` REAL NOT NULL, `p95` REAL NOT NULL, `p97` REAL NOT NULL, `p99` REAL NOT NULL, `p999` REAL NOT NULL, PRIMARY KEY(`chartType`, `gender`, `x`))",
+        "fields": [
+          {
+            "fieldPath": "chartType",
+            "columnName": "chartType",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "gender",
+            "columnName": "gender",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "x",
+            "columnName": "x",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "p01",
+            "columnName": "p01",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "p1",
+            "columnName": "p1",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "p3",
+            "columnName": "p3",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "p5",
+            "columnName": "p5",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "p10",
+            "columnName": "p10",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "p15",
+            "columnName": "p15",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "p25",
+            "columnName": "p25",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "p50",
+            "columnName": "p50",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "p75",
+            "columnName": "p75",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "p85",
+            "columnName": "p85",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "p90",
+            "columnName": "p90",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "p95",
+            "columnName": "p95",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "p97",
+            "columnName": "p97",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "p99",
+            "columnName": "p99",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "p999",
+            "columnName": "p999",
+            "affinity": "REAL",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "chartType",
+            "gender",
+            "x"
+          ]
+        }
+      },
+      {
+        "tableName": "chat_messages",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` BLOB NOT NULL, `childId` BLOB NOT NULL, `userText` TEXT NOT NULL, `aiText` TEXT NOT NULL, `createdAt` TEXT NOT NULL, `isStreaming` INTEGER NOT NULL, `hasError` INTEGER NOT NULL, `urgencyLevel` TEXT NOT NULL, `verifiedSources` TEXT NOT NULL, PRIMARY KEY(`id`), FOREIGN KEY(`childId`) REFERENCES `children`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "childId",
+            "columnName": "childId",
+            "affinity": "BLOB",
+            "notNull": true
+          },
+          {
+            "fieldPath": "userText",
+            "columnName": "userText",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "aiText",
+            "columnName": "aiText",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "createdAt",
+            "columnName": "createdAt",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isStreaming",
+            "columnName": "isStreaming",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hasError",
+            "columnName": "hasError",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "urgencyLevel",
+            "columnName": "urgencyLevel",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "verifiedSources",
+            "columnName": "verifiedSources",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_chat_messages_childId",
+            "unique": false,
+            "columnNames": [
+              "childId"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_chat_messages_childId` ON `${TABLE_NAME}` (`childId`)"
+          }
+        ],
+        "foreignKeys": [
+          {
+            "table": "children",
+            "onDelete": "CASCADE",
+            "onUpdate": "NO ACTION",
+            "columns": [
+              "childId"
+            ],
+            "referencedColumns": [
+              "id"
+            ]
+          }
+        ]
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'a8847efef5cfbf74cb68776d49fca099')"
+    ]
+  }
+}

@@ -24,7 +24,7 @@ class AssessmentApiTest : BaseApiTest<AssessmentApi>() {
         val response = api.getAssessments(childId)
         val request = mockWebServer.takeRequest()
 
-        assertEquals("/api/children/$childId/assessments", request.path)
+        assertEquals("/api/v1/children/$childId/assessments", request.path)
         assertEquals("GET", request.method)
         assertTrue(response.isSuccessful)
         assertEquals(1, response.body()?.size)

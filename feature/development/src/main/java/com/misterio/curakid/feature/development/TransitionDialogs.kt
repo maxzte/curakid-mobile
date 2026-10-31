@@ -24,7 +24,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.misterio.core.domain.model.PeriodReadiness
 import com.misterio.core.ui.components.CuraKidAlertDialog
-import com.misterio.core.ui.theme.CuraKidColors
 import com.misterio.core.ui.theme.CurakidTheme
 
 @Composable
@@ -39,7 +38,7 @@ fun AgeTransitionDialog(
         title = "Новий етап!",
         confirmButtonText = "Завершити",
         dismissButtonText = "Дозаповнити",
-        confirmButtonColor = CuraKidColors.Blue40
+        confirmButtonColor = CurakidTheme.colors.primary
     ) {
         if (readiness != null) {
             TransitionReadinessContent(
@@ -65,22 +64,37 @@ fun EarlyTransitionDialog(
     onDismiss: () -> Unit
 ) {
     val canTransitionEarly = readiness?.canTransitionEarly ?: false
+    val hasAgeRestriction = readiness?.reasons?.any { it.contains("занадто мала") } ?: false
+    val hasUnclosedPreceding = readiness?.reasons?.any { it.contains("ще не завершено") } ?: false
+
+    val title = when {
+        canTransitionEarly -> "Ранній перехід"
+        hasAgeRestriction || hasUnclosedPreceding -> "Перехід недоступний"
+        else -> "Недостатньо даних"
+    }
 
     CuraKidAlertDialog(
         onDismissRequest = onDismiss,
         onConfirm = { if (canTransitionEarly) onConfirm() else onDismiss() },
-        title = if (canTransitionEarly) "Ранній перехід" else "Недостатньо даних",
+        title = title,
         confirmButtonText = if (canTransitionEarly) "Так, продовжити" else "Зрозуміло",
         dismissButtonText = if (canTransitionEarly) "Скасувати" else "",
-        confirmButtonColor = CuraKidColors.Blue40
+        confirmButtonColor = CurakidTheme.colors.primary
     ) {
         if (readiness != null) {
+            val unclosedReason = readiness.reasons.firstOrNull { it.contains("ще не завершено") }
+            val ageReason = readiness.reasons.firstOrNull { it.contains("занадто мала") }
+
+            val message = when {
+                unclosedReason != null -> unclosedReason
+                ageReason != null -> "$ageReason Перехід на цей етап можливий після досягнення відповідного віку."
+                canTransitionEarly -> "Ви ще не досягли необхідного віку або не відповіли на всі питання. Бажаєте продовжити?"
+                else -> "Даних ще занадто мало для проведення аналізу. Будь ласка, дайте відповіді на більше запитань, щоб отримати звіт."
+            }
+
             TransitionReadinessContent(
                 readiness = readiness,
-                message = if (canTransitionEarly)
-                    "Ви ще не досягли необхідного віку або не відповіли на всі питання. Бажаєте продовжити?"
-                else
-                    "Даних ще занадто мало для проведення аналізу. Будь ласка, дайте відповіді на більше запитань, щоб отримати звіт."
+                message = message
             )
         } else {
             Text(
@@ -128,8 +142,8 @@ fun TransitionReadinessContent(
                     .fillMaxWidth()
                     .height(8.dp)
                     .clip(RoundedCornerShape(4.dp)),
-                color = if (readiness.isReady) CuraKidColors.Teal40 else CuraKidColors.Blue40,
-                trackColor = CuraKidColors.Blue90,
+                color = if (readiness.isReady) CurakidTheme.colors.secondary else CurakidTheme.colors.primary,
+                trackColor = CurakidTheme.colors.outlineVariant,
                 strokeCap = StrokeCap.Round
             )
         }
@@ -151,13 +165,13 @@ fun TransitionReadinessContent(
                         modifier = Modifier
                             .size(24.dp)
                             .clip(CurakidTheme.Radius.sm)
-                            .background(category.iconBg),
+                            .background(category.getIconBg()),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = category.icon,
                             contentDescription = null,
-                            tint = category.iconTint,
+                            tint = category.getIconTint(),
                             modifier = Modifier.size(14.dp)
                         )
                     }
@@ -173,8 +187,8 @@ fun TransitionReadinessContent(
                                 .fillMaxWidth()
                                 .height(4.dp)
                                 .clip(RoundedCornerShape(2.dp)),
-                            color = if (allReady) CuraKidColors.Teal40 else category.iconTint,
-                            trackColor = category.iconBg,
+                            color = if (allReady) CurakidTheme.colors.secondary else category.getIconTint(),
+                            trackColor = category.getIconBg(),
                             strokeCap = StrokeCap.Round
                         )
                     }
@@ -183,13 +197,13 @@ fun TransitionReadinessContent(
                         Icon(
                             imageVector = Icons.Default.Check,
                             contentDescription = null,
-                            tint = CuraKidColors.Teal40,
+                            tint = CurakidTheme.colors.secondary,
                             modifier = Modifier.size(16.dp)
                         )
                     } else {
                         Text(
                             text = "$avgCompletion%",
-                            style = CurakidTheme.typography.labelSmall.copy(color = CuraKidColors.Neutral40)
+                            style = CurakidTheme.typography.labelSmall.copy(color = CurakidTheme.colors.onSurfaceVariant)
                         )
                     }
                 }

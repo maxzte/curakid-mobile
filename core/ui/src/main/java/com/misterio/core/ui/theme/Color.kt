@@ -5,7 +5,61 @@ import androidx.compose.ui.graphics.Color
 
 object CuraKidColors {
 
-    // Blue family
+    // DESIGN.md Design System Tokens (Dark Mode)
+    val Primary = Color(0xFF90CAF9)
+    val OnPrimary = Color(0xFF003258)
+    val PrimaryContainer = Color(0xFF00497D)
+    val OnPrimaryContainer = Color(0xFFD1E4FF)
+    val InversePrimary = Color(0xFF565D79)
+
+    val Secondary = Color(0xFF81C784)
+    val OnSecondary = Color(0xFF003910)
+    val SecondaryContainer = Color(0xFF00531A)
+    val OnSecondaryContainer = Color(0xFFA3F3A3)
+
+    val Tertiary = Color(0xFFFFB74D)
+    val OnTertiary = Color(0xFF4B2D00)
+    val TertiaryContainer = Color(0xFF693F00)
+    val OnTertiaryContainer = Color(0xFFFFDCC1)
+
+    val Error = Color(0xFFFFB4AB)
+    val OnError = Color(0xFF690005)
+    val ErrorContainer = Color(0xFF93000A)
+    val OnErrorContainer = Color(0xFFFFDAD6)
+
+    val Background = Color(0xFF0F141A)
+    val OnBackground = Color(0xFFE1E2E8)
+
+    val Surface = Color(0xFF0F141A)
+    val SurfaceDim = Color(0xFF0F141A)
+    val SurfaceBright = Color(0xFF282C32)
+    val SurfaceContainerLowest = Color(0xFF0B0F14)
+    val SurfaceContainerLow = Color(0xFF181C22)
+    val SurfaceContainer = Color(0xFF1E2228)
+    val SurfaceContainerHigh = Color(0xFF282C32)
+    val SurfaceContainerHighest = Color(0xFF33373E)
+
+    val SurfaceVariant = Color(0xFF42474E)
+    val OnSurface = Color(0xFFE1E2E8)
+    val OnSurfaceVariant = Color(0xFFC2C7CF)
+
+    val Outline = Color(0xFF8C9199)
+    val OutlineVariant = Color(0xFF42474E)
+
+    val InverseSurface = Color(0xFFE1E2E8)
+    val InverseOnSurface = Color(0xFF181C22)
+    val SurfaceTint = Color(0xFF90CAF9)
+
+    // Custom Project Design Tokens
+    val SurfaceCard = Color(0xFF1E2228)
+    val SurfaceElevated = Color(0xFF282C32)
+    val AccentSuccess = Color(0xFF81C784)
+    val TextPrimary = Color(0xFFFFFFFF)
+    val TextSecondary = Color(0xFF9BA1A6)
+    val BadgeBg = Color(0xFF00531A)
+    val NavBg = Color(0xFF181C22)
+
+    // Legacy / Palette Colors (for component compatibility)
     val Blue10 = Color(0xFF0A1A4A)
     val Blue20 = Color(0xFF102460)
     val Blue30 = Color(0xFF1A3A8A)   // DeepBlue — primary text, hero names

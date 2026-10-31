@@ -2,18 +2,25 @@ package com.misterio.core.network.api
 
 import com.misterio.core.network.dto.EventRequest
 import com.misterio.core.network.dto.EventResponse
+import com.misterio.core.network.dto.PagedResponse
 import com.misterio.core.network.dto.UpdateEventRequest
 import com.misterio.core.network.dto.VaccineEventResponse
 import retrofit2.Response
 import retrofit2.http.*
 import java.util.UUID
 
-private const val prefix = "/api/children/{childId}/events"
+private const val prefix = "api/v1/children/{childId}/events"
 
 interface EventApi {
 
     @GET(prefix)
-    suspend fun getEvents(@Path("childId") childId: UUID): Response<List<EventResponse>>
+    suspend fun getEvents(
+        @Path("childId") childId: UUID,
+        @Query("startDate") startDate: String? = null,
+        @Query("endDate") endDate: String? = null,
+        @Query("page") page: Int = 0,
+        @Query("size") size: Int = 100
+    ): Response<PagedResponse<EventResponse>>
 
     @GET("$prefix/vaccines")
     suspend fun getVaccineEventsFor(@Path("childId") childId: UUID): Response<List<VaccineEventResponse>>

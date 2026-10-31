@@ -1,10 +1,32 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="event_type_vaccine">Вакцинація</string>
-    <string name="event_type_doctor">Лікар</string>
-    <string name="event_type_user">Подія</string>
-    <string name="date_picker_title">Виберіть дату</string>
-    <string name="time_picker_title">Виберіть час</string>
+    <string name="event_type_vaccine">Vaccination</string>
+    <string name="event_type_doctor">Doctor</string>
+    <string name="event_type_user">Event</string>
+    <string name="date_picker_title">Select date</string>
+    <string name="time_picker_title">Select time</string>
     <string name="dialog_confirm">OK</string>
-    <string name="dialog_cancel">Скасувати</string>
+    <string name="dialog_cancel">Cancel</string>
+
+    <string name="action_confirm">Confirm</string>
+    <string name="action_retry">Try again</string>
+    <string name="action_edit">Edit</string>
+
+    <string name="cd_chat">Chat</string>
+    <string name="cd_show_password">Show password</string>
+    <string name="cd_hide_password">Hide password</string>
+    <string name="cd_ai_report">AI Report</string>
+
+    <string name="ai_report_analysis">Analysis:</string>
+    <string name="ai_report_recommendations">Recommendations:</string>
+    <string name="error_generic">An error occurred</string>
+    <string name="error_network">No internet connection</string>
+    <string name="error_server_unreachable">Server is unreachable. Please check your connection</string>
+    <string name="error_server">Server error. Please try again later</string>
+    <string name="error_session_expired">Session expired. Please log in again</string>
+    <string name="error_not_found">Resource not found</string>
+    <string name="error_bad_request">Invalid request</string>
+    <string name="error_forbidden">Access denied</string>
+    <string name="error_conflict">Resource already exists or data conflict</string>
+    <string name="error_rate_limit">Too many requests. Please wait a moment</string>
 </resources>

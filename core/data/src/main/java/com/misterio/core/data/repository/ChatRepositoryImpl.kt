@@ -3,7 +3,10 @@ package com.misterio.core.data.repository
 import org.json.JSONObject
 import com.misterio.core.data.mapper.toDomain
 import com.misterio.core.data.util.safeApiCall
+import com.misterio.core.database.dao.ChatDao
+import com.misterio.core.database.entity.ChatMessageEntity
 import com.misterio.core.domain.model.ChatMessage
+import com.misterio.core.domain.model.ChatStreamEvent
 import com.misterio.core.domain.model.DomainError
 import com.misterio.core.domain.repository.ChatRepository
 import com.misterio.core.network.di.BASE_URL
@@ -12,6 +15,7 @@ import com.misterio.core.network.api.ChatApi
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.map
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -25,22 +29,70 @@ import javax.inject.Inject
 
 class ChatRepositoryImpl @Inject constructor(
     private val chatApi: ChatApi,
+    private val chatDao: ChatDao,
     @param:SseClient private val okHttpClient: OkHttpClient,
 ) : ChatRepository {
 
-    override suspend fun getChatHistory(childId: UUID): Result<List<ChatMessage>> {
+    override fun getChatMessages(childId: UUID): Flow<List<ChatMessage>> {
+        return chatDao.getMessagesForChild(childId).map { entities ->
+            entities.map { entity ->
+                ChatMessage(
+                    id = entity.id,
+                    childId = entity.childId,
+                    userText = entity.userText,
+                    aiText = entity.aiText,
+                    createdAt = entity.createdAt,
+                    isStreaming = entity.isStreaming,
+                    urgencyLevel = entity.urgencyLevel,
+                    verifiedSources = entity.verifiedSources
+                )
+            }
+        }
+    }
+
+    override suspend fun syncChatHistory(childId: UUID): Result<Unit> {
         return safeApiCall {
             chatApi.getChatHistory(childId)
-        }.map { body ->
-            body.map { it.toDomain() }
+        }.map { page ->
+            val dtos = page.content
+            val entities = dtos.map { dto ->
+                ChatMessageEntity(
+                    id = dto.id,
+                    childId = dto.childId,
+                    userText = dto.userText,
+                    aiText = dto.aiText,
+                    createdAt = dto.createdAt,
+                    isStreaming = false,
+                    hasError = false,
+                    urgencyLevel = dto.urgencyLevel,
+                    verifiedSources = dto.verifiedSources
+                )
+            }
+            chatDao.insertMessages(entities)
         }
+    }
+
+    override suspend fun saveMessage(message: ChatMessage) {
+        chatDao.insertMessage(
+            ChatMessageEntity(
+                id = message.id,
+                childId = message.childId,
+                userText = message.userText,
+                aiText = message.aiText,
+                createdAt = message.createdAt,
+                isStreaming = message.isStreaming,
+                hasError = false,
+                urgencyLevel = message.urgencyLevel,
+                verifiedSources = message.verifiedSources
+            )
+        )
     }
 
     override fun startChatStream(
         id: UUID,
         childId: UUID,
         text: String,
-    ): Flow<String> = callbackFlow {
+    ): Flow<ChatStreamEvent> = callbackFlow {
         val json = JSONObject().apply {
             put("id", id.toString())
             put("childId", childId.toString())
@@ -49,7 +101,7 @@ class ChatRepositoryImpl @Inject constructor(
         val requestBody = json.toRequestBody("application/json".toMediaType())
 
         val request = Request.Builder()
-            .url("${BASE_URL}api/chat/stream")
+            .url("${BASE_URL}api/v1/chat/stream")
             .post(requestBody)
             .build()
 
@@ -66,7 +118,41 @@ class ChatRepositoryImpl @Inject constructor(
                 type: String?,
                 data: String
             ) {
-                trySend(data)   // Each chunk is emitted to Flow
+                if (type == "metadata") {
+                    try {
+                        val metaObj = JSONObject(data)
+                        val urgency = metaObj.optString("urgencyLevel", "ROUTINE")
+                        val intent = metaObj.optString("intent", "SYMPTOM_OR_ILLNESS")
+                        val status = metaObj.optString("statusMessage", "Звіряю з медичними протоколами ВООЗ...")
+                        val sourcesArr = metaObj.optJSONArray("verifiedSources")
+                        val sources = mutableListOf<String>()
+                        if (sourcesArr != null) {
+                            for (i in 0 until sourcesArr.length()) {
+                                sources.add(sourcesArr.getString(i))
+                            }
+                        }
+                        val promptsArr = metaObj.optJSONArray("suggestedPrompts")
+                        val prompts = mutableListOf<String>()
+                        if (promptsArr != null) {
+                            for (i in 0 until promptsArr.length()) {
+                                prompts.add(promptsArr.getString(i))
+                            }
+                        }
+                        trySend(
+                            ChatStreamEvent.Metadata(
+                                urgencyLevel = urgency,
+                                intent = intent,
+                                statusMessage = status,
+                                verifiedSources = sources,
+                                suggestedPrompts = prompts
+                            )
+                        )
+                    } catch (e: Exception) {
+                        // ignore malformed metadata
+                    }
+                } else {
+                    trySend(ChatStreamEvent.Chunk(data))
+                }
             }
 
             override fun onClosed(eventSource: EventSource) {

@@ -54,7 +54,7 @@ fun VerifyEmailContent(
 ) {
     var code by rememberSaveable { mutableStateOf("") }
 
-    AuthScaffold {
+    AuthScaffold(modifier = modifier) {
         AuthHeader(
             title = stringResource(R.string.verify_email_title),
             subtitle = stringResource(R.string.verify_email_subtitle, email)
@@ -74,7 +74,7 @@ fun VerifyEmailContent(
             keyboardActions = KeyboardActions(
                 onDone = { onVerify(code) }
             ),
-            error = if (uiState is UiState.Error) (uiState as UiState.Error).errorMessage else null
+            error = if (uiState is UiState.Error) uiState.errorMessage else null
         )
 
         Spacer(Modifier.height(24.dp))

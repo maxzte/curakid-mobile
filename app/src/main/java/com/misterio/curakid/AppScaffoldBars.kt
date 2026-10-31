@@ -31,6 +31,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CloudOff
+import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -53,19 +54,36 @@ import com.misterio.core.ui.TopBarConfiguration
 import com.misterio.core.ui.theme.CurakidTheme
 
 @Composable
-fun OfflineIndicator(isConnected: Boolean, modifier: Modifier = Modifier) {
+fun OfflineIndicator(
+    isConnected: Boolean,
+    isSyncing: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    val showBanner = !isConnected || isSyncing
+
     AnimatedVisibility(
-        visible = !isConnected,
+        visible = showBanner,
         enter = expandVertically() + fadeIn(),
         exit = shrinkVertically() + fadeOut(),
         modifier = modifier
             .fillMaxWidth()
             .statusBarsPadding()
     ) {
+        val backgroundColor = if (!isConnected) {
+            CurakidTheme.colors.errorContainer
+        } else {
+            CurakidTheme.colors.surfaceVariant
+        }
+        val contentColor = if (!isConnected) {
+            CurakidTheme.colors.onErrorContainer
+        } else {
+            CurakidTheme.colors.onSurfaceVariant
+        }
+
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(CurakidTheme.colors.errorContainer)
+                .background(backgroundColor)
                 .padding(horizontal = 16.dp, vertical = 6.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -74,15 +92,19 @@ fun OfflineIndicator(isConnected: Boolean, modifier: Modifier = Modifier) {
                 horizontalArrangement = Arrangement.Center
             ) {
                 Icon(
-                    imageVector = Icons.Default.CloudOff,
+                    imageVector = if (!isConnected) Icons.Default.CloudOff else Icons.Default.Refresh,
                     contentDescription = null,
-                    tint = CurakidTheme.colors.onErrorContainer,
+                    tint = contentColor,
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = stringResource(R.string.offline_mode),
-                    color = CurakidTheme.colors.onErrorContainer,
+                    text = if (!isConnected) {
+                        stringResource(R.string.offline_mode)
+                    } else {
+                        "Синхронізація даних з сервером..."
+                    },
+                    color = contentColor,
                     style = CurakidTheme.typography.labelSmall
                 )
             }
@@ -302,7 +324,7 @@ fun LiquidTabItem(
     )
 
     val contentColor by animateColorAsState(
-        targetValue = if (isSelected) CurakidTheme.colors.primary else Color.Gray,
+        targetValue = if (isSelected) CurakidTheme.colors.primary else CurakidTheme.colors.onSurfaceVariant,
     )
 
     Column(

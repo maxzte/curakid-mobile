@@ -16,17 +16,24 @@ class MeasurementApiTest : BaseApiTest<MeasurementApi>() {
     fun `getMeasurements sends correct request`() = runTest {
         val childId = UUID.randomUUID()
         enqueueResponse("""
-            [
-                {"id": "${UUID.randomUUID()}", "childId": "$childId", "weight": 5.0, "height": 60.0, "headCircumference": 40.0, "measuredAt": "2024-01-01"}
-            ]
+            {
+                "content": [
+                    {"id": "${UUID.randomUUID()}", "childId": "$childId", "weightKg": 5.0, "heightCm": 60.0, "headCircCm": 40.0, "measurementDate": "2024-01-01T10:00:00"}
+                ],
+                "pageNumber": 0,
+                "pageSize": 100,
+                "totalElements": 1,
+                "totalPages": 1,
+                "last": true
+            }
         """.trimIndent())
 
         val response = api.getMeasurements(childId)
         val request = mockWebServer.takeRequest()
 
-        assertEquals("/api/children/$childId/measurements", request.path)
+        assertEquals("/api/v1/children/$childId/measurements?page=0&size=100", request.path)
         assertEquals("GET", request.method)
         assertTrue(response.isSuccessful)
-        assertEquals(1, response.body()?.size)
+        assertEquals(1, response.body()?.content?.size)
     }
 }

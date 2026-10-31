@@ -1,8 +1,14 @@
 package com.misterio.core.data.repository
 
+import com.misterio.core.domain.repository.ChildRepository
+import com.misterio.core.domain.repository.EventRepository
 import com.misterio.core.domain.repository.NotificationRepository
+import com.misterio.core.domain.util.EventNotificationScheduler
+import com.misterio.core.domain.util.FcmRegistrar
 import com.misterio.core.network.api.NotificationApi
 import com.misterio.core.network.dto.RegisterDeviceTokenRequest
+import com.misterio.curakid.core.common.AppDataStore
+import com.misterio.curakid.core.common.SettingsManager
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -16,15 +22,30 @@ import retrofit2.Response
 class NotificationRepositoryImplTest {
 
     private val notificationApi: NotificationApi = mockk(relaxed = true)
+    private val appDataStore: AppDataStore = mockk(relaxed = true)
+    private val settingsManager: SettingsManager = mockk(relaxed = true)
+    private val childRepository: ChildRepository = mockk(relaxed = true)
+    private val eventRepository: EventRepository = mockk(relaxed = true)
+    private val eventNotificationScheduler: EventNotificationScheduler = mockk(relaxed = true)
+    private val fcmRegistrar: FcmRegistrar = mockk(relaxed = true)
+
     private lateinit var repository: NotificationRepository
 
     @Before
     fun setUp() {
-        repository = NotificationRepositoryImpl(notificationApi)
+        repository = NotificationRepositoryImpl(
+            notificationApi = notificationApi,
+            appDataStore = appDataStore,
+            settingsManager = settingsManager,
+            childRepository = childRepository,
+            eventRepository = eventRepository,
+            eventNotificationScheduler = eventNotificationScheduler,
+            fcmRegistrar = fcmRegistrar,
+        )
     }
 
     @Test
-    fun `registerDeviceToken returns Success when api returns successful response`() = runTest {
+    fun registerDeviceToken_successfulApiCall_returnsSuccess() = runTest {
         val token = "sample_fcm_token"
         coEvery {
             notificationApi.registerDeviceToken(RegisterDeviceTokenRequest(token = token, deviceType = "ANDROID"))
@@ -39,7 +60,7 @@ class NotificationRepositoryImplTest {
     }
 
     @Test
-    fun `registerDeviceToken returns Failure when api returns error response`() = runTest {
+    fun registerDeviceToken_apiError_returnsFailure() = runTest {
         val token = "sample_fcm_token"
         coEvery {
             notificationApi.registerDeviceToken(any())
@@ -51,7 +72,7 @@ class NotificationRepositoryImplTest {
     }
 
     @Test
-    fun `removeDeviceToken returns Success when api returns 204`() = runTest {
+    fun removeDeviceToken_successfulApiCall_returnsSuccess() = runTest {
         val token = "token_to_remove"
         coEvery {
             notificationApi.removeDeviceToken(token)

@@ -2,13 +2,17 @@ package com.misterio.curakid.feature.profile
 
 import com.misterio.core.domain.model.Child
 import com.misterio.core.domain.model.Gender
+import com.misterio.core.domain.model.User
 import com.misterio.core.domain.usecase.AddChildUseCase
+import com.misterio.core.domain.usecase.GetCurrentUserUseCase
 import com.misterio.core.domain.usecase.GetChildUseCase
 import com.misterio.core.domain.usecase.GetChildrenUseCase
 import com.misterio.core.domain.usecase.LogoutUseCase
 import com.misterio.core.domain.usecase.SelectChildUseCase
 import com.misterio.core.domain.usecase.SyncChildrenUseCase
 import com.misterio.core.domain.usecase.UpdateChildUseCase
+import com.misterio.core.domain.usecase.UpdateCurrentUserUseCase
+import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
@@ -39,6 +43,8 @@ class ProfileViewModelTest {
     private val updateChildUseCase: UpdateChildUseCase = mockk(relaxed = true)
     private val getChildUseCase: GetChildUseCase = mockk()
     private val logoutUseCase: LogoutUseCase = mockk(relaxed = true)
+    private val getCurrentUserUseCase: GetCurrentUserUseCase = mockk()
+    private val updateCurrentUserUseCase: UpdateCurrentUserUseCase = mockk(relaxed = true)
 
     private val sampleChild1 = Child(
         id = UUID.randomUUID(),
@@ -69,6 +75,16 @@ class ProfileViewModelTest {
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
+        coEvery { getCurrentUserUseCase() } returns Result.success(
+            User(
+                id = UUID.randomUUID(),
+                email = "test@example.com",
+                name = "Test User",
+                role = "USER",
+                onboardingCompleted = true,
+                active = true
+            )
+        )
     }
 
     @After
@@ -88,7 +104,9 @@ class ProfileViewModelTest {
             addChildUseCase,
             updateChildUseCase,
             getChildUseCase,
-            logoutUseCase
+            logoutUseCase,
+            getCurrentUserUseCase,
+            updateCurrentUserUseCase
         )
 
         val job1 = launch { viewModel.children.collect {} }
@@ -115,7 +133,9 @@ class ProfileViewModelTest {
             addChildUseCase,
             updateChildUseCase,
             getChildUseCase,
-            logoutUseCase
+            logoutUseCase,
+            getCurrentUserUseCase,
+            updateCurrentUserUseCase
         )
         advanceUntilIdle()
 
@@ -137,7 +157,9 @@ class ProfileViewModelTest {
             addChildUseCase,
             updateChildUseCase,
             getChildUseCase,
-            logoutUseCase
+            logoutUseCase,
+            getCurrentUserUseCase,
+            updateCurrentUserUseCase
         )
         advanceUntilIdle()
 

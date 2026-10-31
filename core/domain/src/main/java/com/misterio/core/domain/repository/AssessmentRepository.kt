@@ -4,10 +4,11 @@ import com.misterio.core.domain.model.Answer
 import com.misterio.core.domain.model.ChildAssessment
 import com.misterio.core.domain.model.CompletePeriodResult
 import com.misterio.core.domain.model.PeriodReadiness
+import com.misterio.core.domain.sync.Syncable
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID
 
-interface AssessmentRepository {
+interface AssessmentRepository : Syncable {
 
     fun getChildAssessments(childId: UUID): Flow<List<ChildAssessment>>
 

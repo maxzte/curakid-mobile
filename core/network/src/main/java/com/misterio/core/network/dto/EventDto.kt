@@ -51,7 +51,6 @@ data class VaccineEventResponse(
     val totalDoses: Int?,
     val scheduledAgeMonths: Int?,
     val scheduledAgeDays: Int?,
-    val administeredDate: String?,
     val vaccineType: VaccineType,
     val notes: String?,
     val description: String?,

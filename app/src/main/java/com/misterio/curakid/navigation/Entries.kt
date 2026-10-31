@@ -1,3 +1,5 @@
+@file:OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+
 package com.misterio.curakid.navigation
 
 import androidx.navigation3.runtime.EntryProviderScope
@@ -5,6 +7,7 @@ import androidx.navigation3.runtime.NavKey
 import com.misterio.curakid.Route
 import com.misterio.curakid.core.common.PasscodeMode
 import com.misterio.curakid.feature.calendar.CalendarScreen
+import com.misterio.curakid.feature.calendar.EventDetailsSheet
 import com.misterio.curakid.feature.chat.ChatScreen
 import com.misterio.curakid.feature.development.ChildDetailsScreen
 import com.misterio.curakid.feature.development.DevelopmentScreen
@@ -32,12 +35,6 @@ fun EntryProviderScope<NavKey>.homeEntry(
             onShowAllUpcoming = onShowAllUpcoming,
             onChatClick = onChatClick,
             onAiReportClick = onAiReportClick
-        )
-    }
-    entry<Route.CalendarFromHome> { key ->
-        CalendarScreen(
-            eventId = key.eventId,
-            onVaccinationClick = onVaccinationClick
         )
     }
     entry<Route.VaccinationDetail> { key ->
@@ -123,6 +120,14 @@ fun EntryProviderScope<NavKey>.growthEntry(
 fun EntryProviderScope<NavKey>.commonEntries(
     onBack: () -> Unit
 ) {
+    entry<Route.EventDetails>(
+        metadata = BottomSheetSceneStrategy.bottomSheet()
+    ) { key ->
+        EventDetailsSheet(
+            eventId = key.eventId,
+            onDismiss = onBack
+        )
+    }
     entry<Route.Chat> {
         ChatScreen(
             onBack = onBack

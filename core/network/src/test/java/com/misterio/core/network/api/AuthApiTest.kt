@@ -25,7 +25,7 @@ class AuthApiTest : BaseApiTest<AuthApi>() {
         val response = api.login(LoginRequest("test@test.com", "password"))
         val request = mockWebServer.takeRequest()
 
-        assertEquals("/api/auth/login", request.path)
+        assertEquals("/api/v1/auth/login", request.path)
         assertEquals("POST", request.method)
         assertTrue(response.isSuccessful)
         assertEquals("access-token", response.body()?.accessToken)
@@ -45,7 +45,7 @@ class AuthApiTest : BaseApiTest<AuthApi>() {
         val response = api.refresh(RefreshTokenRequest("old-refresh-token"))
         val request = mockWebServer.takeRequest()
 
-        assertEquals("/api/auth/refresh", request.path)
+        assertEquals("/api/v1/auth/refresh", request.path)
         assertEquals("POST", request.method)
         assertTrue(response.isSuccessful)
         assertEquals("new-access-token", response.body()?.accessToken)

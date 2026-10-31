@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="calendar">Календар</string>
+    <string name="upcoming_events_for">Майбутні події для %1$s</string>
+    <string name="upcoming_events">Майбутні події</string>
+    <string name="add">Додати</string>
+    <string name="create_event">Створити подію</string>
+    <string name="edit_event">Редагувати подію</string>
+    <string name="create">Створити</string>
+    <string name="title">Назва</string>
+    <string name="date">Дата</string>
+    <string name="location">Місце проведення</string>
+    <string name="description">Опис</string>
+    <string name="select_time">Оберіть час</string>
+    <string name="is_done">Виконано</string>
+    <string name="delete">Видалити</string>
+    <string name="save">Зберегти</string>
+    <string name="vaccination_progress">Завершено вакцинацій</string>
+    <string name="no_events_on_this_day">На цей день подій немає</string>
+    <string name="add_event_short">Додати подію</string>
+    <string name="more_events">Ще %1$d подій</string>
+    <string name="events_on">Події на %1$s</string>
+    <string name="event_created">Подію успішно створено</string>
+    <string name="event_updated">Подію успішно оновлено</string>
+    <string name="event_creation_error">Помилка при створенні події</string>
+    <string name="event_update_error">Помилка при оновленні події</string>
+    <string name="event_deleted">Подію видалено</string>
+    <string name="event_deletion_error">Помилка при видаленні події</string>
+    <string name="event_title_required">Введіть назву події</string>
+    <string name="event_done_date_immutable">Неможливо змінити дату виконаної події</string>
+    <string name="events_summary_pattern">%1$s • %2$d подій • %3$s</string>
+
+    <string name="cd_previous_month">Попередній місяць</string>
+    <string name="cd_next_month">Наступний місяць</string>
+</resources>

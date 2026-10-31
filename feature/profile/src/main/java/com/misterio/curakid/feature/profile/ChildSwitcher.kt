@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -51,7 +52,11 @@ fun ChildSwitcher(
         }
 
         if (children.isNotEmpty()) {
-            items(children) { child ->
+            items(
+                items = children,
+                key = { it.id },
+                contentType = { "child" }
+            ) { child ->
                 ChildAvatarItem(
                     child = child,
                     isSelected = child.id == selectedId,
@@ -98,7 +103,7 @@ fun ChildAvatarItem(
         Spacer(Modifier.height(5.dp))
         Text(
             text = child.name,
-            fontSize = 11.sp,
+            fontSize = 12.sp,
             fontWeight = FontWeight.Medium,
             color = if (isSelected) CurakidTheme.colors.primary else CurakidTheme.colors.onSurfaceVariant,
             maxLines = 1,
@@ -109,6 +114,8 @@ fun ChildAvatarItem(
 
 @Composable
 fun AddChildItem(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val addText = stringResource(R.string.add)
+    val addChildTitle = stringResource(R.string.add_child_title)
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier.clickable(
@@ -126,15 +133,15 @@ fun AddChildItem(onClick: () -> Unit, modifier: Modifier = Modifier) {
         ) {
             Icon(
                 Icons.Default.Add,
-                contentDescription = "Додати дитину",
+                contentDescription = addChildTitle,
                 tint = CurakidTheme.colors.onSurfaceVariant,
                 modifier = Modifier.size(22.dp)
             )
         }
         Spacer(Modifier.height(5.dp))
         Text(
-            "Додати",
-            fontSize = 11.sp,
+            addText,
+            fontSize = 12.sp,
             color = CurakidTheme.colors.onSurfaceVariant,
             fontWeight = FontWeight.Medium
         )

@@ -12,8 +12,10 @@ import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import com.misterio.core.data.worker.EventNotificationWorker
 import com.misterio.core.domain.repository.NotificationRepository
+import com.misterio.core.domain.sync.SyncController
 import com.misterio.core.domain.util.suspendRunCatching
 import com.misterio.curakid.MainActivity
+import com.misterio.curakid.core.common.AppDataStore
 import com.misterio.curakid.core.common.SettingsManager
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.CoroutineScope
@@ -31,7 +33,13 @@ class CurakidFirebaseMessagingService : FirebaseMessagingService() {
     lateinit var notificationRepository: NotificationRepository
 
     @Inject
+    lateinit var appDataStore: AppDataStore
+
+    @Inject
     lateinit var settingsManager: SettingsManager
+
+    @Inject
+    lateinit var syncController: SyncController
 
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -40,6 +48,17 @@ class CurakidFirebaseMessagingService : FirebaseMessagingService() {
         serviceScope.launch {
             suspendRunCatching {
                 notificationRepository.registerDeviceToken(token)
+                appDataStore.saveFcmToken(token)
+            }
+        }
+    }
+
+    override fun onRegistered(installationId: String) {
+        super.onRegistered(installationId)
+        serviceScope.launch {
+            suspendRunCatching {
+                notificationRepository.registerDeviceToken(installationId)
+                appDataStore.saveFcmToken(installationId)
             }
         }
     }
@@ -48,6 +67,13 @@ class CurakidFirebaseMessagingService : FirebaseMessagingService() {
         super.onMessageReceived(remoteMessage)
 
         serviceScope.launch {
+            // Check for silent push sync
+            val type = remoteMessage.data["type"]
+            if (type == "DATA_SYNC") {
+                syncController.triggerSync()
+                return@launch
+            }
+
             val isEnabled = settingsManager.isNotificationsEnabled.first()
             if (!isEnabled) {
                 return@launch
@@ -84,7 +110,7 @@ class CurakidFirebaseMessagingService : FirebaseMessagingService() {
         data: Map<String, String>,
         eventId: String?
     ) {
-        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val channel = NotificationChannel(
@@ -120,7 +146,7 @@ class CurakidFirebaseMessagingService : FirebaseMessagingService() {
             .setContentTitle(title)
             .setContentText(body)
             .setSmallIcon(smallIcon)
-            .setColor(0xFF4CAF50.toInt())
+            .setColor(0xFF90CAF9.toInt())
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)

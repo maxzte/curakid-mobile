@@ -1,5 +1,3 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
-
 package com.misterio.curakid.feature.development
 
 import androidx.compose.animation.AnimatedVisibility
@@ -16,7 +14,6 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -36,6 +33,7 @@ import com.misterio.core.domain.model.ChartNormPoint
 import com.misterio.core.domain.model.Child
 import com.misterio.core.domain.model.Measurement
 import com.misterio.core.domain.model.MeasurementAiReport
+import com.misterio.core.domain.util.AgeCalculator
 import com.misterio.core.ui.TrackFab
 import com.misterio.core.ui.components.AiReportCard
 import com.misterio.core.ui.components.LoadingScreen
@@ -45,7 +43,7 @@ import com.misterio.core.ui.components.itemWrapper
 import com.misterio.core.ui.components.rememberListContentPadding
 import com.misterio.core.ui.theme.CurakidTheme
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
-import com.patrykandpatrick.vico.compose.cartesian.data.lineSeries
+import com.patrykandpatrick.vico.compose.cartesian.data.lineModel
 import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarker
 import com.patrykandpatrick.vico.compose.cartesian.marker.CartesianMarkerVisibilityListener
 import kotlinx.coroutines.Dispatchers
@@ -53,8 +51,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.time.LocalDate
-import java.time.temporal.ChronoUnit
 import kotlin.math.abs
 
 @Composable
@@ -153,13 +149,14 @@ private fun ScreenContent(
     selectedChartType: GrowthChartType,
     lifePeriods: List<String>,
     onChartTypeChange: (GrowthChartType) -> Unit,
-    onAddMeasurementClick: () -> Unit
+    onAddMeasurementClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     TrackFab(show = true, icon = Icons.Default.Add, onClick = onAddMeasurementClick)
 
     val currentAgeMonths = remember(child) {
         if (child == null) 0.0
-        else ChronoUnit.DAYS.between(child.birthDate, LocalDate.now()).toDouble() / 30.44
+        else AgeCalculator.calculateAgeInMonthsExact(child.effectiveBirthDate)
     }
 
     val autoPeriodLabel = remember(currentAgeMonths, lifePeriods) {
@@ -183,14 +180,13 @@ private fun ScreenContent(
 
         val filtered = if (selectedChartType == GrowthChartType.WeightForHeight) {
             baseData.filter { m ->
-                val days = ChronoUnit.DAYS.between(child.birthDate, m.date.toLocalDate()).toDouble()
-                days / 30.44 <= maxAgeMonths
+                val month = AgeCalculator.calculateAgeInMonthsExact(child.effectiveBirthDate, m.date.toLocalDate())
+                month <= maxAgeMonths
             }
         } else {
             val period = GrowthChartCalculator.parsePeriod(autoPeriodLabel, lifePeriods)
             baseData.filter { m ->
-                val days = ChronoUnit.DAYS.between(child.birthDate, m.date.toLocalDate()).toDouble()
-                val month = days / 30.44
+                val month = AgeCalculator.calculateAgeInMonthsExact(child.effectiveBirthDate, m.date.toLocalDate())
                 month >= period.start && month <= period.end
             }
         }
@@ -223,7 +219,7 @@ private fun ScreenContent(
                 if (isWfh) {
                     m.height ?: 0.0
                 } else {
-                    val days = ChronoUnit.DAYS.between(child.birthDate, m.date.toLocalDate()).toDouble()
+                    val days = AgeCalculator.calculateAgeInDays(child.effectiveBirthDate, m.date.toLocalDate()).toDouble()
                     GrowthChartCalculator.roundForChart((days - (period.start * 30.44)) / xUnitScale)
                 }
             }
@@ -262,25 +258,24 @@ private fun ScreenContent(
 
         chartJob.value = scope.launch {
             if (child == null || norms.isEmpty()) return@launch
-            val capturedType = selectedChartType
 
             val result = withContext(Dispatchers.Default) {
                 GrowthChartCalculator.computeChartData(
                     child = child,
                     chartData = chartData,
                     norms = norms,
-                    chartType = capturedType,
+                    chartType = selectedChartType,
                     autoPeriodLabel = autoPeriodLabel,
                     lifePeriods = lifePeriods
                 )
             }
 
-            if (isActive && capturedType == selectedChartType) {
+            if (isActive) {
                 chartRangeY = (result.minY * 0.95) to (result.maxY * 1.05)
                 hasNormsDrawn = result.filteredNorms.isNotEmpty()
 
                 modelProducer.runTransaction {
-                    lineSeries {
+                    lineModel {
                         if (result.filteredNorms.isNotEmpty()) {
                             val normXValues = result.filteredNorms.map { it.x }
                             series(x = normXValues, y = result.filteredNorms.map { it.p3 })
@@ -307,7 +302,7 @@ private fun ScreenContent(
     }
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize(),
         verticalArrangement = Arrangement.spacedBy(CurakidTheme.paddings.medium),
         contentPadding = rememberListContentPadding()
     ) {
@@ -386,7 +381,11 @@ private fun ScreenContent(
                 EmptyMeasurementsState()
             }
         } else {
-            items(measurements) { measurement ->
+            items(
+                items = measurements,
+                key = { it.id },
+                contentType = { "measurement" }
+            ) { measurement ->
                 MeasurementItem(measurement)
             }
         }

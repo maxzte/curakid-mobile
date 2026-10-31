@@ -16,7 +16,7 @@ android {
     buildTypes {
         debug {
             val debugBaseUrl = providers.gradleProperty("API_BASE_URL")
-                .getOrElse("https://stopped-longitude-new-andrew.trycloudflare.com/")
+                .getOrElse("https://theressa-unspellable-unprotrusively.ngrok-free.dev/")
             buildConfigField("String", "BASE_URL", "\"$debugBaseUrl\"")
         }
         release {

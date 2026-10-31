@@ -49,6 +49,9 @@ class ScaffoldController(
         topBarStack.removeAll { it.first == key }
     }
 
+    suspend fun showSnackbar(message: String) {
+        snackbarHostState.showSnackbar(message)
+    }
 }
 
 val LocalScaffoldController = staticCompositionLocalOf<ScaffoldController> {

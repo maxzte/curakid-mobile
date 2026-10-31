@@ -13,4 +13,6 @@ interface EventNotificationScheduler {
 
     suspend fun cancelAll(childId: UUID)
 
+    suspend fun cancelAllEvents()
+
 }

@@ -23,7 +23,11 @@ fun GrowthChartTypeChips(
         contentPadding = PaddingValues(horizontal = CurakidTheme.paddings.medium),
         modifier = modifier.fillMaxWidth()
     ) {
-        items(GrowthChartType.entries.toTypedArray()) { type ->
+        items(
+            GrowthChartType.entries.toTypedArray(),
+            key = { it.name },
+            contentType = { "chart_type" }
+        ) { type ->
             FilterChip(
                 selected = selectedType == type,
                 onClick = { onTypeSelected(type) },

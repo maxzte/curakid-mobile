@@ -1,8 +1,9 @@
 package com.misterio.curakid.feature.profile
 
 import com.misterio.core.domain.usecase.DeleteProfileUseCase
-import com.misterio.curakid.core.common.SecurityManager
-import com.misterio.curakid.core.common.SettingsManager
+import com.misterio.core.domain.usecase.GetIsNotificationsEnabledUseCase
+import com.misterio.core.domain.usecase.GetIsPasscodeEnabledUseCase
+import com.misterio.core.domain.usecase.ToggleNotificationsUseCase
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
@@ -26,13 +27,23 @@ import org.junit.Test
 class SettingsViewModelTest {
 
     private val testDispatcher = StandardTestDispatcher()
-    private val settingsManager: SettingsManager = mockk(relaxed = true)
-    private val securityManager: SecurityManager = mockk(relaxed = true)
+    private val getIsNotificationsEnabledUseCase: GetIsNotificationsEnabledUseCase = mockk()
+    private val toggleNotificationsUseCase: ToggleNotificationsUseCase = mockk(relaxed = true)
+    private val getIsPasscodeEnabledUseCase: GetIsPasscodeEnabledUseCase = mockk()
     private val deleteProfileUseCase: DeleteProfileUseCase = mockk(relaxed = true)
+
+    private fun createViewModel() = SettingsViewModel(
+        getIsNotificationsEnabledUseCase = getIsNotificationsEnabledUseCase,
+        toggleNotificationsUseCase = toggleNotificationsUseCase,
+        getIsPasscodeEnabledUseCase = getIsPasscodeEnabledUseCase,
+        deleteProfileUseCase = deleteProfileUseCase,
+    )
 
     @Before
     fun setUp() {
         Dispatchers.setMain(testDispatcher)
+        every { getIsNotificationsEnabledUseCase() } returns flowOf(true)
+        every { getIsPasscodeEnabledUseCase() } returns flowOf(false)
     }
 
     @After
@@ -41,11 +52,8 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `observes settings and toggle notifications`() = runTest(testDispatcher) {
-        every { settingsManager.isNotificationsEnabled } returns flowOf(true)
-        every { securityManager.isPasscodeEnabled } returns flowOf(false)
-
-        val viewModel = SettingsViewModel(settingsManager, securityManager, deleteProfileUseCase)
+    fun observeSettings_toggleNotifications_updatesStateAndCallsUseCase() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
         val job1 = launch { viewModel.isNotificationsEnabled.collect {} }
         val job2 = launch { viewModel.isPasscodeEnabled.collect {} }
         advanceUntilIdle()
@@ -56,18 +64,15 @@ class SettingsViewModelTest {
         viewModel.setNotificationsEnabled(false)
         advanceUntilIdle()
 
-        coVerify { settingsManager.saveNotificationsEnabled(false) }
+        coVerify { toggleNotificationsUseCase(false) }
 
         job1.cancel()
         job2.cancel()
     }
 
     @Test
-    fun `setShowDeleteDialog updates state`() = runTest(testDispatcher) {
-        every { settingsManager.isNotificationsEnabled } returns flowOf(true)
-        every { securityManager.isPasscodeEnabled } returns flowOf(false)
-
-        val viewModel = SettingsViewModel(settingsManager, securityManager, deleteProfileUseCase)
+    fun setShowDeleteDialog_flagChanged_updatesState() = runTest(testDispatcher) {
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         viewModel.setShowDeleteDialog(true)
@@ -78,12 +83,10 @@ class SettingsViewModelTest {
     }
 
     @Test
-    fun `deleteAccount calls deleteProfileUseCase`() = runTest(testDispatcher) {
-        every { settingsManager.isNotificationsEnabled } returns flowOf(true)
-        every { securityManager.isPasscodeEnabled } returns flowOf(false)
+    fun deleteAccount_invoked_callsDeleteProfileUseCase() = runTest(testDispatcher) {
         coEvery { deleteProfileUseCase() } returns Result.success(Unit)
 
-        val viewModel = SettingsViewModel(settingsManager, securityManager, deleteProfileUseCase)
+        val viewModel = createViewModel()
         advanceUntilIdle()
 
         viewModel.deleteAccount()

@@ -15,10 +15,13 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Backspace
 import androidx.compose.material.icons.filled.Fingerprint
 import androidx.compose.material3.AlertDialog
@@ -97,7 +100,8 @@ fun PasscodeScreen(
         onDigitClick = viewModel::onDigitClick,
         onDeleteClick = viewModel::onDeleteClick,
         onBiometricClick = ::triggerBiometrics,
-        onForgotPasscode = onForgotPasscode
+        onForgotPasscode = onForgotPasscode,
+        onBack = onBack
     )
 }
 
@@ -112,6 +116,7 @@ fun PasscodeContent(
     onDeleteClick: () -> Unit,
     onBiometricClick: () -> Unit,
     onForgotPasscode: () -> Unit,
+    onBack: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     var showResetDialog by remember { mutableStateOf(false) }
@@ -119,79 +124,101 @@ fun PasscodeContent(
     val title = when (mode) {
         PasscodeMode.SETUP -> if (isConfirming) stringResource(R.string.passcode_confirm_title) else stringResource(R.string.passcode_create_title)
         PasscodeMode.UNLOCK -> stringResource(R.string.passcode_unlock_title)
-        PasscodeMode.DISABLE -> stringResource(R.string.passcode_unlock_title)
+        PasscodeMode.DISABLE -> stringResource(R.string.passcode_disable_title)
     }
 
-    Column(
+    Box(
         modifier = modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            .statusBarsPadding()
+            .navigationBarsPadding()
     ) {
-        Text(
-            text = title,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onBackground
-        )
+        if (mode != PasscodeMode.UNLOCK) {
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(16.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = stringResource(R.string.back),
+                    tint = MaterialTheme.colorScheme.onBackground
+                )
+            }
+        }
 
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            modifier = Modifier.padding(vertical = 16.dp)
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            repeat(4) { index ->
-                val isFilled = index < passcodeLength
-                Box(
-                    modifier = Modifier
-                        .size(16.dp)
-                        .clip(CircleShape)
-                        .background(
-                            if (isFilled) MaterialTheme.colorScheme.primary
-                            else MaterialTheme.colorScheme.outlineVariant
-                        )
-                )
-            }
-        }
-
-        AnimatedContent(
-            targetState = errorMessage,
-            transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(300)) },
-            label = "error_message"
-        ) { msg ->
-            if (msg != null) {
-                Text(
-                    text = msg,
-                    color = MaterialTheme.colorScheme.error,
-                    fontSize = 14.sp,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
-            } else {
-                Spacer(modifier = Modifier.height(24.dp))
-            }
-        }
-
-        Spacer(modifier = Modifier.height(48.dp))
-
-        Keypad(
-            onDigitClick = onDigitClick,
-            onDeleteClick = onDeleteClick,
-            showBiometric = mode == PasscodeMode.UNLOCK && isBiometricAvailable,
-            onBiometricClick = onBiometricClick
-        )
-
-        if (mode == PasscodeMode.UNLOCK) {
-            Spacer(modifier = Modifier.height(32.dp))
             Text(
-                text = stringResource(R.string.passcode_forgot),
-                color = MaterialTheme.colorScheme.primary,
-                fontSize = 14.sp,
-                textDecoration = TextDecoration.Underline,
-                modifier = Modifier.clickable { showResetDialog = true }
+                text = title,
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onBackground
             )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.padding(vertical = 16.dp)
+            ) {
+                repeat(4) { index ->
+                    val isFilled = index < passcodeLength
+                    Box(
+                        modifier = Modifier
+                            .size(16.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (isFilled) MaterialTheme.colorScheme.primary
+                                else MaterialTheme.colorScheme.outlineVariant
+                            )
+                    )
+                }
+            }
+
+            AnimatedContent(
+                targetState = errorMessage,
+                transitionSpec = { fadeIn(tween(300)) togetherWith fadeOut(tween(300)) },
+                label = "error_message"
+            ) { msg ->
+                if (msg != null) {
+                    Text(
+                        text = msg,
+                        color = MaterialTheme.colorScheme.error,
+                        fontSize = 14.sp,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                } else {
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
+            }
+
+            Spacer(modifier = Modifier.height(48.dp))
+
+            Keypad(
+                onDigitClick = onDigitClick,
+                onDeleteClick = onDeleteClick,
+                showBiometric = mode == PasscodeMode.UNLOCK && isBiometricAvailable,
+                onBiometricClick = onBiometricClick
+            )
+
+            if (mode == PasscodeMode.UNLOCK) {
+                Spacer(modifier = Modifier.height(32.dp))
+                Text(
+                    text = stringResource(R.string.passcode_forgot),
+                    color = MaterialTheme.colorScheme.primary,
+                    fontSize = 14.sp,
+                    textDecoration = TextDecoration.Underline,
+                    modifier = Modifier.clickable { showResetDialog = true }
+                )
+            }
         }
     }
 

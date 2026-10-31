@@ -9,7 +9,6 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
-import com.misterio.core.ui.theme.CuraKidColors
 import com.misterio.core.ui.theme.CurakidTheme
 
 @Composable
@@ -19,8 +18,8 @@ internal fun AuthSwitchText(
     onClick: () -> Unit
 ) {
     val annotated = buildAnnotatedString {
-        withStyle(SpanStyle(color = CuraKidColors.Neutral40)) { append(text) }
-        withStyle(SpanStyle(color = CuraKidColors.Blue40, fontWeight = FontWeight.Medium)) {
+        withStyle(SpanStyle(color = CurakidTheme.colors.onSurfaceVariant)) { append(text) }
+        withStyle(SpanStyle(color = CurakidTheme.colors.primary, fontWeight = FontWeight.Medium)) {
             append(
                 actionText
             )

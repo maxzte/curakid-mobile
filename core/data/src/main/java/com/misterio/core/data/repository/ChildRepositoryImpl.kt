@@ -5,6 +5,10 @@ package com.misterio.core.data.repository
 import android.util.Log
 import com.misterio.core.data.mapper.toDomain
 import com.misterio.core.data.mapper.toEntity
+import com.misterio.core.data.mapper.toUpdateRequest
+import com.misterio.core.domain.model.DomainError
+import com.misterio.core.domain.sync.SyncResult
+import com.misterio.core.network.dto.CreateChildRequest
 import com.misterio.core.data.util.SyncManager
 import com.misterio.core.data.util.safeApiCall
 import com.misterio.core.database.dao.ChildDao
@@ -120,14 +124,64 @@ class ChildRepositoryImpl @Inject constructor(
 
     override fun getSelectedChild(): Flow<Child?> {
         return appDataStore.selectedChildId.flatMapLatest { id ->
-            id?.let {
-                childDao.getChildByIdFlow(UUID.fromString(it)).map { entity -> entity?.toDomain() }
-            } ?: childDao.getAllChildren().map { entities -> entities.firstOrNull()?.toDomain() }
+            if (id != null) {
+                childDao.getChildByIdFlow(UUID.fromString(id)).map { entity -> entity?.toDomain() }
+            } else {
+                childDao.getAllChildren().map { entities ->
+                    entities.firstOrNull()?.toDomain()
+                }
+            }
         }
     }
 
     override suspend fun setSelectedChildId(id: UUID) {
         appDataStore.saveSelectedChildId(id.toString())
+    }
+
+    override suspend fun syncPending(): SyncResult {
+        val unsynced = childDao.getUnsyncedChildren()
+        if (unsynced.isEmpty()) return SyncResult.Success
+
+        var transientFailure: Throwable? = null
+        var permanentFailure: Throwable? = null
+
+        for (child in unsynced) {
+            val request = CreateChildRequest(
+                id = child.id,
+                name = child.name,
+                birthDate = child.birthDate.toString(),
+                gender = child.gender,
+                isPremature = child.isPremature,
+                gestationalWeeks = child.gestationalWeeks,
+                allergies = child.allergies,
+                chronicDiseases = child.chronicDiseases,
+                pastDiseases = child.pastDiseases,
+                specialFeatures = child.specialFeatures,
+            )
+            val createResult = safeApiCall { childApi.createChild(request) }
+
+            val result = if (createResult.isFailure && createResult.exceptionOrNull() is DomainError.BadRequestError) {
+                safeApiCall { childApi.updateChild(child.id, child.toUpdateRequest()) }
+            } else {
+                createResult
+            }
+
+            result.onSuccess { createdChild ->
+                childDao.insertChild(createdChild.toEntity())
+            }.onFailure { error ->
+                if (error is DomainError.NetworkError || error is DomainError.ServerError) {
+                    transientFailure = error
+                } else {
+                    permanentFailure = error
+                }
+            }
+        }
+
+        return when {
+            transientFailure != null -> SyncResult.TransientFailure(transientFailure)
+            permanentFailure != null -> SyncResult.PermanentFailure(permanentFailure)
+            else -> SyncResult.Success
+        }
     }
 
     private companion object {

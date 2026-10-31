@@ -32,10 +32,16 @@ fun ChatScreen(
 ) {
     val messages by viewModel.messages.collectAsStateWithLifecycle()
     val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
+    val streamingStatusText by viewModel.streamingStatusText.collectAsStateWithLifecycle()
+    val activeRedFlag by viewModel.activeRedFlag.collectAsStateWithLifecycle()
+    val suggestedPrompts by viewModel.suggestedPrompts.collectAsStateWithLifecycle()
 
     ChatContent(
         messages = messages,
         isLoading = isLoading,
+        streamingStatusText = streamingStatusText,
+        activeRedFlag = activeRedFlag,
+        suggestedPrompts = suggestedPrompts,
         onSendMessage = viewModel::sendMessage,
         onBack = onBack
     )
@@ -45,6 +51,9 @@ fun ChatScreen(
 fun ChatContent(
     messages: List<ChatMessageUiModel>,
     isLoading: Boolean,
+    streamingStatusText: String? = null,
+    activeRedFlag: Boolean = false,
+    suggestedPrompts: List<String> = emptyList(),
     onSendMessage: (String) -> Unit,
     onBack: () -> Unit,
     modifier: Modifier = Modifier
@@ -73,7 +82,11 @@ fun ChatContent(
             MessageList(
                 messages = messages,
                 isLoading = isLoading,
-                listState = listState
+                listState = listState,
+                streamingStatusText = streamingStatusText,
+                activeRedFlag = activeRedFlag,
+                suggestedPrompts = suggestedPrompts,
+                onSuggestedPromptClick = onSendMessage
             )
 
             ScrollToBottomFAB(
@@ -91,7 +104,8 @@ fun ChatContent(
 
         ChatInputSection(
             isLoading = isLoading,
-            onSendMessage = onSendMessage
+            onSendMessage = onSendMessage,
+            suggestedPrompts = if (messages.isNotEmpty()) suggestedPrompts else emptyList()
         )
     }
 }

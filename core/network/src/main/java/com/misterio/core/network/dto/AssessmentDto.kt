@@ -4,6 +4,11 @@ import com.google.gson.annotations.SerializedName
 import java.util.UUID
 
 
+data class SaveAnswersResponse(
+    @SerializedName("assessments") val assessments: List<AssessmentResponse>,
+    @SerializedName("warnings") val warnings: List<String> = emptyList()
+)
+
 data class AssessmentResponse(
     @SerializedName("assessmentId") val id: UUID,
     @SerializedName("childId") val childId: UUID,

@@ -1,5 +1,3 @@
-@file:OptIn(ExperimentalMaterial3Api::class)
-
 package com.misterio.curakid.feature.development
 
 import androidx.compose.animation.AnimatedVisibility
@@ -12,15 +10,12 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.runtime.Composable
@@ -39,11 +34,11 @@ import com.misterio.core.ui.LocalScaffoldController
 import com.misterio.core.ui.TrackFab
 import com.misterio.core.ui.components.AiReportCard
 import com.misterio.core.ui.components.CuraKidButton
+import com.misterio.core.ui.components.CuraKidPullToRefreshBox
 import com.misterio.core.ui.components.ErrorView
 import com.misterio.core.ui.components.ScreenHeader
 import com.misterio.core.ui.components.itemWrapper
 import com.misterio.core.ui.components.rememberListContentPadding
-import com.misterio.core.ui.theme.CuraKidColors
 import com.misterio.core.ui.theme.CurakidTheme
 import java.util.UUID
 
@@ -76,26 +71,27 @@ fun DevelopmentScreen(
         }
     }
 
-    Scaffold(
-        floatingActionButton = {
-            TrackFab(
-                show = true,
-                icon = Icons.Default.Add,
-                onClick = { onAddMeasurements(uiState.lifePeriods.map { it.label }) }
+    TrackFab(
+        show = true,
+        icon = Icons.Default.Add,
+        onClick = { onAddMeasurements(uiState.lifePeriods.map { it.label }) }
+    )
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        if (uiState.isLoading && uiState.lifePeriods.isEmpty()) {
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else if (uiState.error != null && uiState.lifePeriods.isEmpty()) {
+            ErrorView(
+                error = uiState.error!!,
+                onRetry = { viewModel.refresh() }
             )
-        }
-    ) { paddingValues ->
-        Box(modifier = Modifier.padding(paddingValues)) {
-            if (uiState.isLoading && uiState.lifePeriods.isEmpty()) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-            } else if (uiState.error != null && uiState.lifePeriods.isEmpty()) {
-                ErrorView(
-                    error = uiState.error!!,
-                    onRetry = { viewModel.refresh() }
-                )
-            } else {
+        } else {
+            CuraKidPullToRefreshBox(
+                isRefreshing = uiState.isRefreshing,
+                onRefresh = { viewModel.refresh() }
+            ) {
                 DevelopmentContent(
                     uiState = uiState,
                     selectedChild = selectedChild,
@@ -132,14 +128,15 @@ private fun DevelopmentContent(
     onPeriodSelect: (LifePeriod) -> Unit,
     onAnswerChange: (UUID, Double?) -> Unit,
     onCompletePeriod: () -> Unit,
-    onChatClick: () -> Unit
+    onChatClick: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val listState = rememberLazyListState()
     val currentPeriod = uiState.currentPeriod
 
     LazyColumn(
         state = listState,
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize(),
         contentPadding = rememberListContentPadding(),
         verticalArrangement = Arrangement.spacedBy(CurakidTheme.paddings.medium)
     ) {
@@ -165,7 +162,8 @@ private fun DevelopmentContent(
 
         itemsIndexed(
             items = currentPeriod?.questions.orEmpty(),
-            key = { _, it -> it.id }
+            key = { _, it -> it.id },
+            contentType = { _, _ -> "question" }
         ) { _, question ->
             QuizCard(
                 question = question,
@@ -208,7 +206,7 @@ private fun DevelopmentContent(
                         modifier = Modifier.fillMaxWidth(),
                         text = if (readiness != null) "Завершити (${readiness.completionPercent}%)" else "Завершити період",
                         loading = uiState.isLoading,
-                        containerColor = if (isMinMet) CurakidTheme.colors.primary else CuraKidColors.Neutral80
+                        containerColor = if (isMinMet) CurakidTheme.colors.primary else CurakidTheme.colors.surfaceContainerHigh
                     )
                 }
             }

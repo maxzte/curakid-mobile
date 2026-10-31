@@ -14,9 +14,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.IntSize
+import com.misterio.core.ui.theme.CurakidTheme
 
 fun Modifier.shimmerEffect(): Modifier = composed {
     var size by remember { mutableStateOf(IntSize.Zero) }
@@ -31,12 +31,15 @@ fun Modifier.shimmerEffect(): Modifier = composed {
         label = "shimmer"
     )
 
+    val baseColor = CurakidTheme.colors.surfaceContainerHigh
+    val highlightColor = CurakidTheme.colors.surfaceContainerHighest
+
     background(
         brush = Brush.linearGradient(
             colors = listOf(
-                Color(0xFFEBEBF4),
-                Color(0xFFF4F4F4),
-                Color(0xFFEBEBF4),
+                baseColor,
+                highlightColor,
+                baseColor,
             ),
             start = Offset(startOffsetX, 0f),
             end = Offset(startOffsetX + size.width.toFloat(), size.height.toFloat())

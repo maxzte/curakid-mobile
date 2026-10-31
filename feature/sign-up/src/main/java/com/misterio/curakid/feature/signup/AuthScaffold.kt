@@ -17,9 +17,12 @@ import androidx.compose.ui.unit.dp
 import com.misterio.core.ui.theme.CurakidTheme
 
 @Composable
-internal fun AuthScaffold(content: @Composable ColumnScope.() -> Unit) {
+internal fun AuthScaffold(
+    modifier: Modifier = Modifier,
+    content: @Composable ColumnScope.() -> Unit
+) {
     Surface(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .background(CurakidTheme.colors.surfaceContainer)
     ) {

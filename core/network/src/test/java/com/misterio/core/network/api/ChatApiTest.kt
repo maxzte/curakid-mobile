@@ -15,19 +15,26 @@ class ChatApiTest : BaseApiTest<ChatApi>() {
     fun `getChatHistory sends correct request`() = runTest {
         val childId = UUID.randomUUID()
         enqueueResponse("""
-            [
-                {"id": "${UUID.randomUUID()}", "childId": "$childId", "userText": "Hi", "aiText": "Hello", "createdAt": "2024-01-01T10:00:00"}
-            ]
+            {
+                "content": [
+                    {"id": "${UUID.randomUUID()}", "childId": "$childId", "userText": "Hi", "aiText": "Hello", "createdAt": "2024-01-01T10:00:00"}
+                ],
+                "pageNumber": 0,
+                "pageSize": 20,
+                "totalElements": 1,
+                "totalPages": 1,
+                "last": true
+            }
         """.trimIndent())
 
         val response = api.getChatHistory(childId)
         val history = response.body()!!
         val request = mockWebServer.takeRequest()
 
-        assertEquals("/api/chat/history/$childId", request.path)
+        assertEquals("/api/v1/chat/history/$childId?page=0&size=20", request.path)
         assertEquals("GET", request.method)
-        assertEquals(1, history.size)
-        assertEquals("Hi", history[0].userText)
+        assertEquals(1, history.content.size)
+        assertEquals("Hi", history.content[0].userText)
     }
 
     @Test
@@ -41,8 +48,7 @@ class ChatApiTest : BaseApiTest<ChatApi>() {
         api.streamChat(chatRequest).execute()
         val request = mockWebServer.takeRequest()
 
-        assertEquals("/api/chat/stream", request.path)
+        assertEquals("/api/v1/chat/stream", request.path)
         assertEquals("POST", request.method)
-        // Verify method is called, but we don't necessarily need to drain the stream here
     }
 }

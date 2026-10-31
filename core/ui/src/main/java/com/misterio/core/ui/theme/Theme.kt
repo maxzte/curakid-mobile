@@ -5,7 +5,6 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ShapeDefaults
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -45,37 +44,40 @@ object CurakidTheme {
         val lg = RoundedCornerShape(16.dp)
         val xl = RoundedCornerShape(20.dp)
         val xxl = RoundedCornerShape(24.dp)
+        val xxxl = RoundedCornerShape(32.dp)
         val full = RoundedCornerShape(50)      // pill / circle
     }
-
 }
 
+val CuraKidShapes = Shapes(
+    extraSmall = RoundedCornerShape(4.dp),
+    small = RoundedCornerShape(8.dp),
+    medium = RoundedCornerShape(12.dp),
+    large = RoundedCornerShape(16.dp),
+    extraLarge = RoundedCornerShape(24.dp)
+)
+
 private val LightColorScheme = lightColorScheme(
-    // Primary — blue (main actions, FAB, selected nav, progress)
     primary = CuraKidColors.Blue40,
     onPrimary = CuraKidColors.White,
     primaryContainer = CuraKidColors.Blue95,
     onPrimaryContainer = CuraKidColors.Blue30,
 
-    // Secondary — teal (doctor visits, success badges)
     secondary = CuraKidColors.Teal40,
     onSecondary = CuraKidColors.White,
     secondaryContainer = CuraKidColors.Teal90,
     onSecondaryContainer = CuraKidColors.Teal30,
 
-    // Tertiary — green (exercises, progress bars)
     tertiary = CuraKidColors.Green30,
     onTertiary = CuraKidColors.White,
     tertiaryContainer = CuraKidColors.Green90,
     onTertiaryContainer = CuraKidColors.Green10,
 
-    // Error — red (overdue, alerts)
     error = CuraKidColors.Red30,
     onError = CuraKidColors.White,
     errorContainer = CuraKidColors.Red90,
     onErrorContainer = CuraKidColors.Red10,
 
-    // Surfaces
     background = CuraKidColors.Blue99,
     onBackground = CuraKidColors.Blue30,
     surface = CuraKidColors.White,
@@ -85,51 +87,58 @@ private val LightColorScheme = lightColorScheme(
     surfaceContainerLow = CuraKidColors.Blue99,
     surfaceContainer = CuraKidColors.Blue99,
 
-    // Outlines
     outline = CuraKidColors.Blue90,
     outlineVariant = CuraKidColors.Blue90,
 
-    // Inverse
     inverseSurface = CuraKidColors.Blue30,
     inverseOnSurface = CuraKidColors.Blue95,
     inversePrimary = CuraKidColors.Blue80,
 )
 
 private val DarkColorScheme = darkColorScheme(
-    primary = CuraKidColors.Blue80,
-    onPrimary = CuraKidColors.Blue10,
-    primaryContainer = CuraKidColors.Blue20,
-    onPrimaryContainer = CuraKidColors.Blue90,
+    primary = CuraKidColors.Primary,
+    onPrimary = CuraKidColors.OnPrimary,
+    primaryContainer = CuraKidColors.PrimaryContainer,
+    onPrimaryContainer = CuraKidColors.OnPrimaryContainer,
+    inversePrimary = CuraKidColors.InversePrimary,
 
-    secondary = CuraKidColors.Teal80,
-    onSecondary = CuraKidColors.Teal10,
-    secondaryContainer = CuraKidColors.Teal20,
-    onSecondaryContainer = CuraKidColors.Teal90,
+    secondary = CuraKidColors.Secondary,
+    onSecondary = CuraKidColors.OnSecondary,
+    secondaryContainer = CuraKidColors.SecondaryContainer,
+    onSecondaryContainer = CuraKidColors.OnSecondaryContainer,
 
-    tertiary = CuraKidColors.Green80,
-    onTertiary = CuraKidColors.Green10,
-    tertiaryContainer = CuraKidColors.Green10,
-    onTertiaryContainer = CuraKidColors.Green90,
+    tertiary = CuraKidColors.Tertiary,
+    onTertiary = CuraKidColors.OnTertiary,
+    tertiaryContainer = CuraKidColors.TertiaryContainer,
+    onTertiaryContainer = CuraKidColors.OnTertiaryContainer,
 
-    error = CuraKidColors.Red80,
-    onError = CuraKidColors.Red10,
-    errorContainer = CuraKidColors.Red30,
-    onErrorContainer = CuraKidColors.Red90,
+    error = CuraKidColors.Error,
+    onError = CuraKidColors.OnError,
+    errorContainer = CuraKidColors.ErrorContainer,
+    onErrorContainer = CuraKidColors.OnErrorContainer,
 
-    background = CuraKidColors.Blue10,
-    onBackground = CuraKidColors.Blue90,
-    surface = CuraKidColors.Neutral10,
-    onSurface = CuraKidColors.Blue90,
-    surfaceVariant = CuraKidColors.Blue20,
-    onSurfaceVariant = CuraKidColors.Blue80,
-    surfaceContainer = CuraKidColors.Blue20,
+    background = CuraKidColors.Background,
+    onBackground = CuraKidColors.OnBackground,
 
-    outline = CuraKidColors.Blue30,
-    outlineVariant = CuraKidColors.Blue20,
+    surface = CuraKidColors.Surface,
+    onSurface = CuraKidColors.OnSurface,
+    surfaceVariant = CuraKidColors.SurfaceVariant,
+    onSurfaceVariant = CuraKidColors.OnSurfaceVariant,
 
-    inverseSurface = CuraKidColors.Blue90,
-    inverseOnSurface = CuraKidColors.Blue30,
-    inversePrimary = CuraKidColors.Blue40,
+    surfaceDim = CuraKidColors.SurfaceDim,
+    surfaceBright = CuraKidColors.SurfaceBright,
+    surfaceContainerLowest = CuraKidColors.SurfaceContainerLowest,
+    surfaceContainerLow = CuraKidColors.SurfaceContainerLow,
+    surfaceContainer = CuraKidColors.SurfaceContainer,
+    surfaceContainerHigh = CuraKidColors.SurfaceContainerHigh,
+    surfaceContainerHighest = CuraKidColors.SurfaceContainerHighest,
+
+    outline = CuraKidColors.Outline,
+    outlineVariant = CuraKidColors.OutlineVariant,
+
+    inverseSurface = CuraKidColors.InverseSurface,
+    inverseOnSurface = CuraKidColors.InverseOnSurface,
+    surfaceTint = CuraKidColors.SurfaceTint,
 )
 
 @Composable
@@ -161,6 +170,7 @@ fun CurakidTheme(
         MaterialTheme(
             colorScheme = colorScheme,
             typography = Typography,
+            shapes = CuraKidShapes,
             content = content
         )
     }

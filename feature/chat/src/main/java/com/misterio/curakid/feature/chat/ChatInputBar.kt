@@ -59,20 +59,54 @@ fun ChatTopBar(
 fun ChatInputSection(
     isLoading: Boolean,
     onSendMessage: (String) -> Unit,
+    suggestedPrompts: List<String> = emptyList(),
     modifier: Modifier = Modifier
 ) {
     var inputText by rememberSaveable { mutableStateOf("") }
 
-    ChatInput(
-        text = inputText,
-        onTextChange = { inputText = it },
-        onSend = {
-            onSendMessage(inputText)
-            inputText = ""
-        },
-        isLoading = isLoading,
-        modifier = modifier.fillMaxWidth()
-    )
+    androidx.compose.foundation.layout.Column(modifier = modifier) {
+        if (suggestedPrompts.isNotEmpty()) {
+            androidx.compose.foundation.lazy.LazyRow(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp, vertical = 4.dp),
+                horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)
+            ) {
+                items(
+                    count = suggestedPrompts.size,
+                    key = { index -> suggestedPrompts[index] },
+                    contentType = { "prompt" }
+                ) { index ->
+                    val prompt = suggestedPrompts[index]
+                    androidx.compose.material3.SuggestionChip(
+                        onClick = { onSendMessage(prompt) },
+                        label = {
+                            Text(
+                                text = prompt,
+                                style = CurakidTheme.typography.bodySmall,
+                                maxLines = 1
+                            )
+                        },
+                        colors = androidx.compose.material3.SuggestionChipDefaults.suggestionChipColors(
+                            containerColor = CurakidTheme.colors.surfaceVariant
+                        ),
+                        border = null
+                    )
+                }
+            }
+        }
+
+        ChatInput(
+            text = inputText,
+            onTextChange = { inputText = it },
+            onSend = {
+                onSendMessage(inputText)
+                inputText = ""
+            },
+            isLoading = isLoading,
+            modifier = Modifier.fillMaxWidth()
+        )
+    }
 }
 
 @Composable

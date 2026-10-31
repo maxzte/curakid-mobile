@@ -9,7 +9,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.misterio.core.domain.model.Child
-import com.misterio.core.ui.theme.CuraKidColors
 import com.misterio.core.ui.theme.CurakidTheme
 
 enum class MedicalCategory(
@@ -34,10 +33,10 @@ enum class MedicalCategory(
     ),
     CHRONIC(
         title = "Хронічні хвороби",
-        getIconBg = { CuraKidColors.Amber90 },
-        getIconTint = { CuraKidColors.Amber30 },
-        getChipBg = { CuraKidColors.Amber90 },
-        getChipText = { CuraKidColors.Amber30 },
+        getIconBg = { CurakidTheme.colors.tertiaryContainer },
+        getIconTint = { CurakidTheme.colors.tertiary },
+        getChipBg = { CurakidTheme.colors.tertiaryContainer },
+        getChipText = { CurakidTheme.colors.tertiary },
         suggestions = listOf(
             "Бронхіальна астма", "Цукровий діабет 1 типу",
             "Атопічний дерматит", "Епілепсія",
@@ -59,10 +58,10 @@ enum class MedicalCategory(
     ),
     FEATURES(
         title = "Особливості",
-        getIconBg = { CuraKidColors.Purple90 },
-        getIconTint = { CuraKidColors.Purple30 },
-        getChipBg = { CuraKidColors.Purple90 },
-        getChipText = { CuraKidColors.Purple30 },
+        getIconBg = { CurakidTheme.colors.primaryContainer },
+        getIconTint = { CurakidTheme.colors.primary },
+        getChipBg = { CurakidTheme.colors.primaryContainer },
+        getChipText = { CurakidTheme.colors.primary },
         suggestions = listOf(
             "Недоношена/ний", "Носить окуляри",
             "Слуховий апарат", "Вегетаріанець",

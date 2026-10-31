@@ -32,6 +32,10 @@ The application is divided into three logical layers to separate business logic 
 | **Networking** | Retrofit 2 + OkHttp | Requests to Spring Boot and JWT handling. |
 | **Async / Stream** | Coroutines & Flow | Asynchronous work and data streams. |
 | **Local DB** | Room | Data caching for offline mode. |
+| **Background Sync** | WorkManager | Guaranteed background synchronization and reminders. |
+| **Biometrics** | BiometricPrompt | Hardware-backed biometric user authentication. |
+| **Push Notifications** | Firebase Cloud Messaging (FCM) | Remote alerts and reminders. |
+| **Localization** | Multi-locale XML (`en`, `uk`) | English and Ukrainian strings and plurals. |
 | **Charts** | Compose-Charts / Vico | Child development chart visualization. |
 
 ---

@@ -11,6 +11,7 @@ import com.misterio.core.network.api.EventApi
 import com.misterio.core.network.api.MeasurementApi
 import com.misterio.core.network.api.DevelopmentApi
 import com.misterio.core.network.api.LegalDocumentApi
+import com.misterio.core.network.api.UserApi
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -25,6 +26,7 @@ import javax.inject.Qualifier
 import javax.inject.Singleton
 
 import com.misterio.core.network.BuildConfig
+import com.misterio.core.network.api.NotificationApi
 
 const val BASE_URL = BuildConfig.BASE_URL
 
@@ -43,7 +45,7 @@ object NetworkModule {
         return HttpLoggingInterceptor().apply {
             redactHeader("Authorization")
             level = if (BuildConfig.DEBUG) {
-                HttpLoggingInterceptor.Level.BODY
+                HttpLoggingInterceptor.Level.BASIC
             } else {
                 HttpLoggingInterceptor.Level.NONE
             }
@@ -170,8 +172,14 @@ object NetworkModule {
 
     @Provides
     @Singleton
-    fun provideNotificationApi(retrofit: Retrofit): com.misterio.core.network.api.NotificationApi {
-        return retrofit.create(com.misterio.core.network.api.NotificationApi::class.java)
+    fun provideNotificationApi(retrofit: Retrofit): NotificationApi {
+        return retrofit.create(NotificationApi::class.java)
+    }
+
+    @Provides
+    @Singleton
+    fun provideUserApi(retrofit: Retrofit): UserApi {
+        return retrofit.create(UserApi::class.java)
     }
 
 }

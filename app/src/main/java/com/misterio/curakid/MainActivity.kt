@@ -5,6 +5,7 @@ package com.misterio.curakid
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
+import android.view.WindowManager
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -35,19 +36,24 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.fragment.app.FragmentActivity
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
+import androidx.navigation3.scene.SinglePaneSceneStrategy
 import androidx.navigation3.ui.NavDisplay
 import com.misterio.core.data.worker.EventNotificationWorker
 import com.misterio.core.ui.LocalScaffoldController
 import com.misterio.core.ui.ScaffoldController
 import com.misterio.core.ui.theme.CurakidTheme
+import com.misterio.curakid.core.common.PasscodeMode
 import com.misterio.curakid.feature.profile.AddChildScreen
 import com.misterio.curakid.feature.profile.PasscodeScreen
 import com.misterio.curakid.navigation.AuthNavHost
+import com.misterio.curakid.navigation.BottomSheetSceneStrategy
 import com.misterio.curakid.navigation.Navigator
 import com.misterio.curakid.navigation.calendarEntry
 import com.misterio.curakid.navigation.commonEntries
@@ -85,6 +91,11 @@ class MainActivity : FragmentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             window.isNavigationBarContrastEnforced = false
         }
+
+        window.setFlags(
+            WindowManager.LayoutParams.FLAG_SECURE,
+            WindowManager.LayoutParams.FLAG_SECURE
+        )
 
         setContent {
             CurakidTheme(dynamicColor = false) {
@@ -134,6 +145,7 @@ fun MainNavigation(
 ) {
     val startDestination by viewModel.startDestination.collectAsStateWithLifecycle()
     val isConnected by viewModel.isConnected.collectAsStateWithLifecycle(initialValue = true)
+    val isSyncing by viewModel.isSyncing.collectAsStateWithLifecycle(initialValue = false)
     val scaffoldController = remember { ScaffoldController() }
     val pendingEventId by viewModel.pendingEventId.collectAsStateWithLifecycle()
     val pendingReportId by viewModel.pendingReportId.collectAsStateWithLifecycle()
@@ -172,7 +184,6 @@ fun MainNavigation(
             when (navigationState.topLevelRoute) {
                 Route.HomeRoot -> BottomTab.HOME
                 is Route.CalendarRoot -> BottomTab.CALENDAR
-                is Route.CalendarFromHome -> BottomTab.HOME
                 Route.GrowthRoot -> BottomTab.GROWTH
                 Route.ProfileRoot -> BottomTab.PROFILE
                 else -> BottomTab.HOME
@@ -180,15 +191,31 @@ fun MainNavigation(
         }
     }
 
+    val context = LocalContext.current
     val currentStack = navigationState.backStacks[navigationState.topLevelRoute] ?: emptyList()
     val currentEntry = currentStack.lastOrNull()
+
+    // Secure sensitive screens (medical reports, chat, passcode) against screen recording / recent task snapshots
+    LaunchedEffect(currentEntry) {
+        val isSensitiveScreen = currentEntry is Route.Passcode ||
+                currentEntry is Route.AiReport ||
+                currentEntry is Route.Chat
+        (context as? android.app.Activity)?.window?.let { window ->
+            if (isSensitiveScreen) {
+                window.addFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            } else {
+                window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
+            }
+        }
+    }
     val showBottomBar = currentEntry !is Route.AddChild
             && currentEntry !is Route.RegisterChild
             && currentEntry !is Route.Chat
+            && currentEntry !is Route.Passcode
 
     val entryProvider = entryProvider {
         homeEntry(
-            onEventClick = { navigator.navigate(Route.CalendarFromHome(eventId = it)) },
+            onEventClick = { navigator.navigate(Route.EventDetails(eventId = it)) },
             onVaccinationClick = { navigator.navigate(Route.VaccinationDetail(it)) },
             onShowAllUpcoming = { navigator.navigate(Route.UpcomingEvents) },
             onChatClick = { navigator.navigate(Route.Chat) },
@@ -214,7 +241,12 @@ fun MainNavigation(
         entry<Route.Passcode> {
             PasscodeScreen(
                 mode = it.mode,
-                onSuccess = { navigator.goBack() },
+                onSuccess = {
+                    if (it.mode == PasscodeMode.SETUP) {
+                        viewModel.onPasscodeSuccess()
+                    }
+                    navigator.goBack()
+                },
                 onBack = { navigator.goBack() }
             )
         }
@@ -296,6 +328,10 @@ fun MainNavigation(
                         ) {
                             NavDisplay(
                                 entries = navigationState.toDecoratedEntries(entryProvider),
+                                sceneStrategies = listOf(
+                                    remember { BottomSheetSceneStrategy<NavKey>() },
+                                    remember { SinglePaneSceneStrategy<NavKey>() }
+                                ),
                                 onBack = { navigator.goBack() },
                                 transitionSpec = {
                                     val initialTab =
@@ -325,10 +361,14 @@ fun MainNavigation(
                     }
                 }
 
+                null -> {
+                    com.misterio.core.ui.components.LoadingScreen()
+                }
+
                 else -> Unit
             }
 
-            OfflineIndicator(isConnected = isConnected)
+            OfflineIndicator(isConnected = isConnected, isSyncing = isSyncing)
         }
     }
 }

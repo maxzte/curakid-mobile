@@ -27,7 +27,7 @@ class ChildApiTest : BaseApiTest<ChildApi>() {
         val response = api.getChildren()
         val request = mockWebServer.takeRequest()
 
-        assertEquals("/api/children", request.path)
+        assertEquals("/api/v1/children", request.path)
         assertEquals("GET", request.method)
         assertTrue(response.isSuccessful)
         assertEquals(2, response.body()?.size)
@@ -44,7 +44,7 @@ class ChildApiTest : BaseApiTest<ChildApi>() {
         val response = api.getChild(childId)
         val request = mockWebServer.takeRequest()
 
-        assertEquals("/api/children/$childId", request.path)
+        assertEquals("/api/v1/children/$childId", request.path)
         assertEquals("GET", request.method)
         assertEquals("Test Child", response.body()?.name)
     }
@@ -71,7 +71,7 @@ class ChildApiTest : BaseApiTest<ChildApi>() {
         val response = api.createChild(createRequest)
         val request = mockWebServer.takeRequest()
 
-        assertEquals("/api/children", request.path)
+        assertEquals("/api/v1/children", request.path)
         assertEquals("POST", request.method)
         assertTrue(response.isSuccessful)
         assertEquals(newId, response.body()?.id)

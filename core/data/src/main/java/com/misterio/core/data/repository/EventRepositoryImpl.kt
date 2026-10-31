@@ -5,19 +5,23 @@ import com.misterio.core.data.mapper.toDomain
 import com.misterio.core.data.mapper.toEntity
 import com.misterio.core.data.util.SyncManager
 import com.misterio.core.data.util.safeApiCall
+import com.misterio.core.database.dao.ChildDao
 import com.misterio.core.database.dao.EventDao
+import com.misterio.core.domain.model.DomainError
 import com.misterio.core.domain.model.Event
+import com.misterio.core.domain.model.EventType
 import com.misterio.core.domain.repository.EventRepository
+import com.misterio.core.domain.sync.SyncResult
 import com.misterio.core.domain.util.EventNotificationScheduler
 import com.misterio.core.network.api.EventApi
 import com.misterio.core.network.dto.toRequest
+import com.misterio.core.network.dto.toUpdateRequest
 import kotlinx.coroutines.async
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.time.LocalDateTime
-import java.time.ZoneId
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -25,6 +29,7 @@ import javax.inject.Singleton
 @Singleton
 class EventRepositoryImpl @Inject constructor(
     private val eventDao: EventDao,
+    private val childDao: ChildDao,
     private val eventApi: EventApi,
     private val notificationScheduler: EventNotificationScheduler,
     private val syncManager: SyncManager,
@@ -120,7 +125,7 @@ class EventRepositoryImpl @Inject constructor(
         }
 
         val remoteEvents = mutableListOf<Event>()
-        generalResult.onSuccess { body -> remoteEvents.addAll(body.map { it.toDomain() }) }
+        generalResult.onSuccess { page -> remoteEvents.addAll(page.content.map { it.toDomain() }) }
         vaccineResult.onSuccess { body -> remoteEvents.addAll(body.map { it.toDomain() }) }
 
         val entities = remoteEvents.map { it.toEntity(childId) }
@@ -151,6 +156,84 @@ class EventRepositoryImpl @Inject constructor(
         }
 
         return Result.success(Unit)
+    }
+
+    override suspend fun syncPending(): SyncResult {
+        val unsynced = eventDao.getAllUnsyncedEvents()
+        val pendingDeletes = eventDao.getPendingDeleteEvents()
+
+        if (unsynced.isEmpty() && pendingDeletes.isEmpty()) return SyncResult.Success
+
+        var transientFailure: Throwable? = null
+        var permanentFailure: Throwable? = null
+
+        // Sync Deletions
+        for (event in pendingDeletes) {
+            val result = safeApiCall { eventApi.deleteEvent(event.id) }
+            result.onSuccess {
+                eventDao.hardDeleteEvent(event.id)
+            }.onFailure { error ->
+                if (error is DomainError.NetworkError || error is DomainError.ServerError) {
+                    transientFailure = error
+                } else if (error is DomainError.NotFoundError) {
+                    eventDao.hardDeleteEvent(event.id)
+                } else {
+                    permanentFailure = error
+                }
+            }
+        }
+
+        // Sync Creations/Updates
+        for (event in unsynced) {
+            val child = childDao.getChildById(event.childId)
+            if (child == null || !child.isSynced) continue
+
+            val domainEvent = event.toDomain()
+            val result = if (domainEvent.type == EventType.VACCINE) {
+                safeApiCall {
+                    eventApi.updateEvent(
+                        event.childId,
+                        event.id,
+                        domainEvent.toUpdateRequest()
+                    )
+                }
+            } else {
+                val createResult = safeApiCall {
+                    eventApi.createEvents(
+                        event.childId,
+                        listOf(domainEvent.toRequest(event.childId))
+                    )
+                }
+
+                if (createResult.isFailure && createResult.exceptionOrNull() is DomainError.BadRequestError) {
+                    safeApiCall {
+                        eventApi.updateEvent(
+                            event.childId,
+                            event.id,
+                            domainEvent.toUpdateRequest()
+                        )
+                    }
+                } else {
+                    createResult
+                }
+            }
+
+            result.onSuccess {
+                eventDao.markAsSynced(event.id)
+            }.onFailure { error ->
+                if (error is DomainError.NetworkError || error is DomainError.ServerError) {
+                    transientFailure = error
+                } else {
+                    permanentFailure = error
+                }
+            }
+        }
+
+        return when {
+            transientFailure != null -> SyncResult.TransientFailure(transientFailure!!)
+            permanentFailure != null -> SyncResult.PermanentFailure(permanentFailure!!)
+            else -> SyncResult.Success
+        }
     }
 
     private companion object {

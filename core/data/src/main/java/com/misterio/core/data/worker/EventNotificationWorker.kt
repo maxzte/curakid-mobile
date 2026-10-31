@@ -54,7 +54,7 @@ class EventNotificationWorker @AssistedInject constructor(
 
         val pendingIntent = PendingIntent.getActivity(
             applicationContext,
-            eventId?.hashCode() ?: 0,
+            eventId.hashCode(),
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -66,7 +66,7 @@ class EventNotificationWorker @AssistedInject constructor(
             .setContentTitle(title)
             .setContentText(message)
             .setSmallIcon(smallIcon)
-            .setColor(0xFF4CAF50.toInt())
+            .setColor(0xFF90CAF9.toInt())
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setAutoCancel(true)
             .setContentIntent(pendingIntent)

@@ -41,7 +41,7 @@ import com.misterio.core.ui.components.CuraKidTimePickerDialog
 import com.misterio.core.ui.components.FutureOrTodaySelectableDates
 import com.misterio.core.ui.components.toStyle
 import com.misterio.core.ui.theme.CurakidTheme
-import java.time.format.DateTimeFormatter
+import com.misterio.core.ui.toFormatted
 
 @Composable
 fun EventCreationSheet(
@@ -150,7 +150,7 @@ fun EventCreationSheet(
                 )
         ) {
             OutlinedTextField(
-                value = state.date.format(DateTimeFormatter.ofPattern("d MMMM yyyy, HH:mm")),
+                value = state.date.toFormatted(),
                 onValueChange = { },
                 label = { Text(stringResource(R.string.date)) },
                 modifier = Modifier.fillMaxWidth(),

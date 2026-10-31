@@ -9,5 +9,7 @@ internal fun ChatMessageResponse.toDomain() = ChatMessage(
     userText = userText,
     aiText = aiText,
     isStreaming = false,
-    createdAt = createdAt
+    createdAt = createdAt,
+    urgencyLevel = urgencyLevel,
+    verifiedSources = verifiedSources
 )

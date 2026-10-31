@@ -2,10 +2,11 @@ package com.misterio.core.domain.repository
 
 import com.misterio.core.domain.model.Child
 import com.misterio.core.domain.model.Gender
+import com.misterio.core.domain.sync.Syncable
 import kotlinx.coroutines.flow.Flow
 import java.util.UUID
 
-interface ChildRepository {
+interface ChildRepository : Syncable {
 
     fun getChildren(): Flow<List<Child>>
 

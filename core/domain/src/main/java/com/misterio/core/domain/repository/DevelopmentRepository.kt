@@ -7,6 +7,6 @@ interface DevelopmentRepository {
 
     fun getLifePeriods(): Flow<List<LifePeriod>>
 
-    suspend fun syncLifePeriods(): Result<Unit>
+    suspend fun syncLifePeriods(force: Boolean = false): Result<Unit>
 
 }

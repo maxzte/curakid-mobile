@@ -20,7 +20,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.misterio.core.ui.theme.CuraKidColors
 import com.misterio.core.ui.theme.CurakidTheme
 
 @Composable
@@ -32,9 +31,9 @@ fun PeriodSummaryCard(
 
     val hasIssues = summary.answeredNo > 0
     val (titleColor, icon) = if (hasIssues) Pair(
-        CuraKidColors.Red30, Icons.Default.Info
+        CurakidTheme.colors.error, Icons.Default.Info
     ) else Pair(
-        CuraKidColors.Teal30, Icons.Default.CheckCircle
+        CurakidTheme.colors.secondary, Icons.Default.CheckCircle
     )
 
     OutlinedCard(
@@ -62,20 +61,20 @@ fun PeriodSummaryCard(
                 SummaryStatChip(
                     count = summary.answeredYes,
                     label = "Виконує",
-                    bg = CuraKidColors.Teal90,
-                    color = CuraKidColors.Teal40
+                    bg = CurakidTheme.colors.secondaryContainer,
+                    color = CurakidTheme.colors.secondary
                 )
                 SummaryStatChip(
                     count = summary.answeredPartial,
                     label = "Частково",
-                    bg = CuraKidColors.Amber90,
-                    color = CuraKidColors.Amber30
+                    bg = CurakidTheme.colors.tertiaryContainer,
+                    color = CurakidTheme.colors.tertiary
                 )
                 SummaryStatChip(
                     count = summary.answeredNo,
                     label = "Не виконує",
-                    bg = CuraKidColors.Red90,
-                    color = CuraKidColors.Red30
+                    bg = CurakidTheme.colors.errorContainer,
+                    color = CurakidTheme.colors.error
                 )
             }
 

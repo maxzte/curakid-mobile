@@ -1,5 +1,6 @@
 package com.misterio.curakid.feature.home
 
+import app.cash.turbine.test
 import com.misterio.core.domain.UiState
 import com.misterio.core.domain.model.Child
 import com.misterio.core.domain.model.Event
@@ -9,41 +10,60 @@ import com.misterio.core.domain.model.Gender
 import com.misterio.core.domain.usecase.GetChildAiReportsUseCase
 import com.misterio.core.domain.usecase.GetChildUseCase
 import com.misterio.core.domain.usecase.GetEventsUseCase
-import com.misterio.core.domain.usecase.SyncChildAiReportsUseCase
-import com.misterio.core.domain.usecase.SyncChildrenUseCase
-import com.misterio.core.domain.usecase.SyncEventsUseCase
+import com.misterio.core.domain.usecase.GetHomeEventsOverviewUseCase
+import com.misterio.core.domain.usecase.GetNotificationPermissionRequestedUseCase
+import com.misterio.core.domain.usecase.SetNotificationPermissionRequestedUseCase
+import com.misterio.core.domain.usecase.SyncHomeDataUseCase
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
+import kotlinx.coroutines.test.TestDispatcher
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
-import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TestWatcher
+import org.junit.runner.Description
 import java.time.LocalDate
 import java.time.LocalDateTime
 import java.util.UUID
 
 @OptIn(ExperimentalCoroutinesApi::class)
+class MainDispatcherRule(
+    val testDispatcher: TestDispatcher = StandardTestDispatcher()
+) : TestWatcher() {
+    override fun starting(description: Description) {
+        Dispatchers.setMain(testDispatcher)
+    }
+
+    override fun finished(description: Description) {
+        Dispatchers.resetMain()
+    }
+}
+
+@OptIn(ExperimentalCoroutinesApi::class)
 class HomeViewModelTest {
 
-    private val testDispatcher = StandardTestDispatcher()
-    private val syncChildrenUseCase: SyncChildrenUseCase = mockk(relaxed = true)
+    @get:Rule
+    val mainDispatcherRule = MainDispatcherRule()
+
     private val getChildUseCase: GetChildUseCase = mockk()
     private val getEventsUseCase: GetEventsUseCase = mockk()
-    private val syncEventsUseCase: SyncEventsUseCase = mockk(relaxed = true)
     private val getChildAiReportsUseCase: GetChildAiReportsUseCase = mockk()
-    private val syncChildAiReportsUseCase: SyncChildAiReportsUseCase = mockk(relaxed = true)
+    private val getHomeEventsOverviewUseCase = GetHomeEventsOverviewUseCase()
+    private val syncHomeDataUseCase: SyncHomeDataUseCase = mockk(relaxed = true)
+    private val getNotificationPermissionRequestedUseCase: GetNotificationPermissionRequestedUseCase = mockk(relaxed = true)
+    private val setNotificationPermissionRequestedUseCase: SetNotificationPermissionRequestedUseCase = mockk(relaxed = true)
 
     private val sampleChild = Child(
         id = UUID.randomUUID(),
@@ -55,55 +75,50 @@ class HomeViewModelTest {
         allergies = emptyList(),
         chronicDiseases = emptyList(),
         pastDiseases = emptyList(),
-        specialFeatures = emptyList()
+        specialFeatures = emptyList(),
     )
 
-    @Before
-    fun setUp() {
-        Dispatchers.setMain(testDispatcher)
-    }
-
-    @After
-    fun tearDown() {
-        Dispatchers.resetMain()
-    }
+    private fun createViewModel() = HomeViewModel(
+        getChildUseCase = getChildUseCase,
+        getEventsUseCase = getEventsUseCase,
+        getChildAiReportsUseCase = getChildAiReportsUseCase,
+        getHomeEventsOverviewUseCase = getHomeEventsOverviewUseCase,
+        syncHomeDataUseCase = syncHomeDataUseCase,
+        getNotificationPermissionRequestedUseCase = getNotificationPermissionRequestedUseCase,
+        setNotificationPermissionRequestedUseCase = setNotificationPermissionRequestedUseCase,
+    )
 
     @Test
-    fun `when child is null, uiState has empty state`() = runTest(testDispatcher) {
+    fun uiState_childIsNull_emitsSuccessWithEmptyData() = runTest {
         every { getChildUseCase() } returns flowOf(null)
 
-        val viewModel = HomeViewModel(
-            syncChildrenUseCase,
-            getChildUseCase,
-            getEventsUseCase,
-            syncEventsUseCase,
-            getChildAiReportsUseCase,
-            syncChildAiReportsUseCase
-        )
+        val viewModel = createViewModel()
 
-        val collectJob = launch { viewModel.uiState.collect {} }
-        advanceUntilIdle()
+        viewModel.uiState.test {
+            advanceUntilIdle()
 
-        assertTrue(viewModel.uiState.value is UiState.Success)
-        val data = (viewModel.uiState.value as UiState.Success).data
-        assertNull(data.selectedChild)
-        assertNull(data.vaccineEvent)
-        assertNull(data.doctorEvent)
-        assertTrue(data.upcomingItems.isEmpty())
-        assertTrue(data.aiReports.isEmpty())
+            val state = expectMostRecentItem()
+            assertTrue(state is UiState.Success)
+            val data = (state as UiState.Success).data
+            assertNull(data.selectedChild)
+            assertNull(data.vaccineEvent)
+            assertNull(data.doctorEvent)
+            assertTrue(data.upcomingItems.isEmpty())
+            assertTrue(data.aiReports.isEmpty())
 
-        collectJob.cancel()
+            cancelAndIgnoreRemainingEvents()
+        }
     }
 
     @Test
-    fun `when child and events present, uiState correctly separates hero cards and upcoming events`() = runTest(testDispatcher) {
+    fun uiState_childAndEventsPresent_separatesHeroCardsAndUpcomingEvents() = runTest {
         val plannedVaccine = Event.Vaccine(
             id = UUID.randomUUID(),
             title = "Гепатит В",
             date = LocalDateTime.now().plusDays(2),
             description = "Щеплення",
             status = EventStatus.PLANNED,
-            disease = "Гепатит В"
+            disease = "Гепатит В",
         )
         val doctorVisit = Event.General(
             id = UUID.randomUUID(),
@@ -112,7 +127,7 @@ class HomeViewModelTest {
             date = LocalDateTime.now().plusDays(3),
             location = "Поліклініка",
             description = "Плановий огляд",
-            status = EventStatus.PLANNED
+            status = EventStatus.PLANNED,
         )
         val otherUpcoming = Event.General(
             id = UUID.randomUUID(),
@@ -121,36 +136,91 @@ class HomeViewModelTest {
             date = LocalDateTime.now().plusDays(5),
             location = null,
             description = null,
-            status = EventStatus.PLANNED
+            status = EventStatus.PLANNED,
         )
-
         every { getChildUseCase() } returns flowOf(sampleChild)
         every { getEventsUseCase(sampleChild.id) } returns flowOf(listOf(plannedVaccine, doctorVisit, otherUpcoming))
         every { getChildAiReportsUseCase(sampleChild.id) } returns flowOf(emptyList())
 
-        val viewModel = HomeViewModel(
-            syncChildrenUseCase,
-            getChildUseCase,
-            getEventsUseCase,
-            syncEventsUseCase,
-            getChildAiReportsUseCase,
-            syncChildAiReportsUseCase
-        )
+        val viewModel = createViewModel()
 
-        val collectJob = launch { viewModel.uiState.collect {} }
+        viewModel.uiState.test {
+            advanceUntilIdle()
+
+            val state = expectMostRecentItem()
+            assertTrue(state is UiState.Success)
+            val data = (state as UiState.Success).data
+            assertEquals(sampleChild, data.selectedChild)
+            assertEquals(plannedVaccine, data.vaccineEvent)
+            assertEquals(doctorVisit, data.doctorEvent)
+            assertEquals(1, data.upcomingItems.size)
+            assertEquals(otherUpcoming, data.upcomingItems.first())
+
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        coVerify { syncHomeDataUseCase(childId = sampleChild.id, force = false) }
+    }
+
+    @Test
+    fun onNotificationPermissionHandled_triggersSetPermissionRequestedUseCase() = runTest {
+        every { getChildUseCase() } returns flowOf(null)
+        val viewModel = createViewModel()
+
+        viewModel.onNotificationPermissionHandled()
         advanceUntilIdle()
 
-        assertTrue(viewModel.uiState.value is UiState.Success)
-        val data = (viewModel.uiState.value as UiState.Success).data
-        assertEquals(sampleChild, data.selectedChild)
-        assertEquals(plannedVaccine, data.vaccineEvent)
-        assertEquals(doctorVisit, data.doctorEvent)
-        assertEquals(1, data.upcomingItems.size)
-        assertEquals(otherUpcoming, data.upcomingItems.first())
+        coVerify { setNotificationPermissionRequestedUseCase(true) }
+    }
 
-        coVerify { syncEventsUseCase(sampleChild.id) }
-        coVerify { syncChildAiReportsUseCase(sampleChild.id) }
+    @Test
+    fun notificationPermissionRequested_emitsValueFromUseCase() = runTest {
+        every { getChildUseCase() } returns flowOf(null)
+        every { getNotificationPermissionRequestedUseCase() } returns flowOf(false)
 
-        collectJob.cancel()
+        val viewModel = createViewModel()
+
+        viewModel.notificationPermissionRequested.test {
+            advanceUntilIdle()
+            assertFalse(expectMostRecentItem())
+            cancelAndIgnoreRemainingEvents()
+        }
+    }
+
+    @Test
+    fun isInitialSyncing_initialSyncFinished_emitsFalse() = runTest {
+        every { getChildUseCase() } returns flowOf(null)
+
+        val viewModel = createViewModel()
+
+        assertTrue(viewModel.isInitialSyncing.value)
+
+        advanceUntilIdle()
+
+        assertFalse(viewModel.isInitialSyncing.value)
+    }
+
+    @Test
+    fun refresh_triggersSyncHomeDataUseCaseWithForceTrueAndManagesIsRefreshing() = runTest {
+        every { getChildUseCase() } returns flowOf(sampleChild)
+        every { getEventsUseCase(sampleChild.id) } returns flowOf(emptyList())
+        every { getChildAiReportsUseCase(sampleChild.id) } returns flowOf(emptyList())
+
+        val viewModel = createViewModel()
+        advanceUntilIdle()
+
+        viewModel.isRefreshing.test {
+            assertFalse(awaitItem()) // initial false
+
+            viewModel.refresh()
+            assertTrue(awaitItem()) // becomes true during refresh
+
+            advanceUntilIdle()
+            assertFalse(awaitItem()) // becomes false after sync finishes
+
+            cancelAndIgnoreRemainingEvents()
+        }
+
+        coVerify { syncHomeDataUseCase(childId = sampleChild.id, force = true) }
     }
 }

@@ -52,7 +52,7 @@ fun ForgotPasswordContent(
     var code by rememberSaveable { mutableStateOf("") }
     var newPassword by rememberSaveable { mutableStateOf("") }
 
-    AuthScaffold {
+    AuthScaffold(modifier = modifier) {
         AuthHeader(
             title = stringResource(R.string.forgot_password_title),
             subtitle = when (step) {

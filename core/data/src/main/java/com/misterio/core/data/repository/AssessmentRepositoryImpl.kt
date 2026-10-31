@@ -6,14 +6,17 @@ import com.misterio.core.data.mapper.toEntity
 import com.misterio.core.data.util.SyncManager
 import com.misterio.core.data.util.safeApiCall
 import com.misterio.core.database.dao.AssessmentDao
+import com.misterio.core.database.dao.ChildDao
 import com.misterio.core.database.dao.LifePeriodDao
 import com.misterio.core.database.entity.ChildSkillAssessmentEntity
 import com.misterio.core.domain.model.Answer
 import com.misterio.core.domain.model.AssessmentAnswer
 import com.misterio.core.domain.model.ChildAssessment
 import com.misterio.core.domain.model.CompletePeriodResult
+import com.misterio.core.domain.model.DomainError
 import com.misterio.core.domain.model.PeriodReadiness
 import com.misterio.core.domain.repository.AssessmentRepository
+import com.misterio.core.domain.sync.SyncResult
 import com.misterio.core.network.api.AssessmentApi
 import com.misterio.core.network.dto.AnswerRequest
 import com.misterio.core.network.dto.CompletePeriodAssessmentRequest
@@ -30,6 +33,7 @@ import kotlin.time.Clock
 class AssessmentRepositoryImpl @Inject constructor(
     private val api: AssessmentApi,
     private val dao: AssessmentDao,
+    private val childDao: ChildDao,
     private val lifePeriodDao: LifePeriodDao,
     private val syncManager: SyncManager,
 ) : AssessmentRepository {
@@ -60,7 +64,16 @@ class AssessmentRepositoryImpl @Inject constructor(
         childId: UUID,
         periodCode: String
     ): Result<PeriodReadiness> {
-        return safeApiCall { api.getReadiness(childId, periodCode) }.map { it.toDomain() }
+        return safeApiCall { api.getReadiness(childId, periodCode) }.map { body ->
+            Log.d(
+                TAG,
+                "getPeriodReadiness RAW: childId=$childId periodCode=$periodCode " +
+                "isReady=${body.isReady} completionPercent=${body.completionPercent} " +
+                "requiredPercent=${body.requiredPercent} canTransitionEarly=${body.canTransitionEarly} " +
+                "reasons=${body.reasons} domainStatus=${body.domainStatus}"
+            )
+            body.toDomain()
+        }
     }
 
     override suspend fun saveAnswerForChild(
@@ -106,12 +119,12 @@ class AssessmentRepositoryImpl @Inject constructor(
             val request = SaveAnswersRequest(answers = listOf(answer.toDto()))
             api.saveAssessmentAnswers(childId, periodId, request)
         }.map { body ->
-            val savedDto = body.lastOrNull()
+            val savedDto = body.assessments.lastOrNull()
             if (savedDto != null) {
                 if (savedDto.id != periodId) {
                     dao.deleteChildAssessment(periodId)
                 }
-                dao.insertChildAssessment(savedDto.toEntity())
+                dao.insertChildAssessment(savedDto.toEntity(periodId))
                 savedDto.toDomain()
             } else {
                 tempEntity.toDomain()
@@ -156,7 +169,7 @@ class AssessmentRepositoryImpl @Inject constructor(
 
         return safeApiCall { api.updateAssessmentAnswers(childId, skillAssessmentId, answer.toDto()) }
             .onSuccess { updatedDto ->
-                dao.insertChildAssessment(updatedDto.toEntity())
+                dao.insertChildAssessment(updatedDto.toEntity(originalEntity?.periodId))
             }
             .onFailure {
                 // Schedule sync only if network failed
@@ -173,12 +186,15 @@ class AssessmentRepositoryImpl @Inject constructor(
         periodCode: String,
         allowEarlyTransition: Boolean
     ): Result<CompletePeriodResult> {
+        Log.d(TAG, "completePeriod REQUEST: childId=$childId periodCode=$periodCode allowEarlyTransition=$allowEarlyTransition")
         return safeApiCall {
             val request = CompletePeriodAssessmentRequest(periodCode, allowEarlyTransition)
             api.completeAssessment(childId, request)
         }.map { body ->
+            Log.d(TAG, "completePeriod RESPONSE: periodCode=${body.periodCode} completionPercent=${body.completionPercent} requiredPercent=${body.requiredPercent} reportId=${body.reportId}")
             // After completion, assessments might change, so we sync them
-            dao.insertChildAssessments(body.assessments.map { it.toEntity() })
+            val period = lifePeriodDao.getLifePeriods().firstOrNull()?.find { it.code == periodCode }
+            dao.insertChildAssessments(body.assessments.map { it.toEntity(period?.id) })
             CompletePeriodResult(
                 periodCode = body.periodCode,
                 completionPercent = body.completionPercent,
@@ -189,10 +205,67 @@ class AssessmentRepositoryImpl @Inject constructor(
                 },
                 reportId = body.reportId,
             )
+        }.onFailure { error ->
+            Log.e(TAG, "completePeriod ERROR: childId=$childId periodCode=$periodCode allowEarlyTransition=$allowEarlyTransition error=$error")
         }
     }
 
     // Mapping extensions - DELETED, moved to AssessmentMapper.kt
+
+    override suspend fun syncPending(): SyncResult {
+        val unsynced = dao.getUnsyncedAssessments()
+        if (unsynced.isEmpty()) return SyncResult.Success
+
+        var transientFailure: Throwable? = null
+        var permanentFailure: Throwable? = null
+
+        for (assessment in unsynced) {
+            val child = childDao.getChildById(assessment.childId)
+            if (child == null || !child.isSynced) continue
+
+            val answersRequests = assessment.answers.mapNotNull {
+                val qId = it.question?.id ?: return@mapNotNull null
+                val optId = it.selectedOption?.id ?: return@mapNotNull null
+                AnswerRequest(
+                    questionId = qId,
+                    selectedOptionId = optId,
+                    answeredAt = it.answeredAt.toString()
+                )
+            }
+
+            val result = safeApiCall {
+                api.saveAssessmentAnswers(
+                    assessment.childId,
+                    assessment.id,
+                    SaveAnswersRequest(answersRequests)
+                )
+            }
+
+            result.onSuccess { saveResponse ->
+                val savedDto = saveResponse.assessments.lastOrNull()
+                if (savedDto != null) {
+                    if (savedDto.id != assessment.id) {
+                        dao.deleteChildAssessment(assessment.id)
+                    }
+                    dao.insertChildAssessment(savedDto.toEntity())
+                } else {
+                    dao.markAsSynced(assessment.id)
+                }
+            }.onFailure { error ->
+                if (error is DomainError.NetworkError || error is DomainError.ServerError) {
+                    transientFailure = error
+                } else {
+                    permanentFailure = error
+                }
+            }
+        }
+
+        return when {
+            transientFailure != null -> SyncResult.TransientFailure(transientFailure!!)
+            permanentFailure != null -> SyncResult.PermanentFailure(permanentFailure!!)
+            else -> SyncResult.Success
+        }
+    }
 
     private fun Answer.toDto() = AnswerRequest(
         questionId = questionId,

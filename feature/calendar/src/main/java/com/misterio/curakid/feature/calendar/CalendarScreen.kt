@@ -3,7 +3,6 @@
 package com.misterio.curakid.feature.calendar
 
 import android.view.HapticFeedbackConstants
-import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.animateFloatAsState
@@ -38,6 +37,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshotFlow
@@ -62,6 +62,7 @@ import com.kizitonwose.calendar.core.daysOfWeek
 import com.misterio.core.domain.UiState
 import com.misterio.core.domain.model.Event
 import com.misterio.core.domain.model.EventType
+import com.misterio.core.ui.LocalScaffoldController
 import com.misterio.core.ui.TrackFab
 import com.misterio.core.ui.components.ErrorView
 import com.misterio.core.ui.components.LoadingScreen
@@ -73,7 +74,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import java.time.YearMonth
-import java.time.format.DateTimeFormatter
+import com.misterio.core.ui.toDayMonth
 import java.time.format.TextStyle
 import java.util.UUID
 
@@ -90,11 +91,12 @@ fun CalendarScreen(
         factory.create(eventId)
     }
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val scaffoldController = LocalScaffoldController.current
     val context = LocalContext.current
 
     LaunchedEffect(Unit) {
-        viewModel.toastMessage.collectLatest { message ->
-            Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+        viewModel.toastMessage.collectLatest { uiText ->
+            scaffoldController.showSnackbar(uiText.asString(context))
         }
     }
 
@@ -156,9 +158,10 @@ private fun CalendarScreenContent(
     onEditEvent: (Event) -> Unit,
     onToggleExpand: () -> Unit,
     onAddEvent: () -> Unit,
+    modifier: Modifier = Modifier,
     onChatClick: () -> Unit = {}
 ) {
-    val currentMonth = remember { YearMonth.from(uiState.selectedMonth) }
+    val currentMonth = remember(uiState.selectedMonth) { YearMonth.from(uiState.selectedMonth) }
     val startMonth = remember { currentMonth.minusMonths(100) }
     val endMonth = remember { currentMonth.plusMonths(100) }
     val daysOfWeek = remember { daysOfWeek() }
@@ -186,7 +189,7 @@ private fun CalendarScreenContent(
     }
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = CurakidTheme.paddings.medium) + rememberListContentPadding(),
         verticalArrangement = Arrangement.spacedBy(CurakidTheme.paddings.medium),
     ) {
@@ -260,7 +263,7 @@ private fun CalendarScreenContent(
         }
 
         item {
-            QuickPreview(preview = uiState.quickPreview)
+            QuickPreview(preview = uiState.quickPreview?.asString())
         }
 
         if (uiState.vaccinesQuantity > 0) {
@@ -273,7 +276,7 @@ private fun CalendarScreenContent(
         }
 
         item {
-            val dateStr = uiState.selectedDate.format(DateTimeFormatter.ofPattern("d MMMM"))
+            val dateStr = uiState.selectedDate.toDayMonth()
             SectionHeader(
                 title = stringResource(R.string.events_on, dateStr).uppercase(),
                 actionLabel = "",
@@ -301,11 +304,13 @@ private fun CalendarScreenContent(
                         else events.take(2)
 
                         visibleEvents.forEach { event ->
-                            EventCard(
-                                event = event,
-                                onClick = { onEventClick(event) },
-                                onEditClick = { onEditEvent(event) }
-                            )
+                            key(event.id) {
+                                EventCard(
+                                    event = event,
+                                    onClick = { onEventClick(event) },
+                                    onEditClick = { onEditEvent(event) }
+                                )
+                            }
                         }
 
                         if (!uiState.isEventsExpanded && events.size > 2) {

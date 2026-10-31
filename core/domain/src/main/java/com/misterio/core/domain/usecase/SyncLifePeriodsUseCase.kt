@@ -6,7 +6,7 @@ import javax.inject.Inject
 class SyncLifePeriodsUseCase @Inject constructor(
     private val repository: DevelopmentRepository,
 ) {
-    suspend operator fun invoke(): Result<Unit> {
-        return repository.syncLifePeriods()
+    suspend operator fun invoke(force: Boolean = false): Result<Unit> {
+        return repository.syncLifePeriods(force = force)
     }
 }

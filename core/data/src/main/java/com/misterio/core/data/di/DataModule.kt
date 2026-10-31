@@ -10,7 +10,12 @@ import com.misterio.core.data.repository.DevelopmentRepositoryImpl
 import com.misterio.core.data.repository.EventRepositoryImpl
 import com.misterio.core.data.repository.LegalDocumentRepositoryImpl
 import com.misterio.core.data.repository.MeasurementRepositoryImpl
+import com.misterio.core.data.repository.NotificationRepositoryImpl
+import com.misterio.core.data.repository.SecurityRepositoryImpl
+import com.misterio.core.data.repository.UserRepositoryImpl
 import com.misterio.core.data.repository.VaccineRepositoryImpl
+import com.misterio.core.data.util.SyncManager
+import com.misterio.core.data.worker.EventNotificationSchedulerImpl
 import com.misterio.core.domain.repository.AiRepository
 import com.misterio.core.domain.repository.AssessmentRepository
 import com.misterio.core.domain.repository.AuthRepository
@@ -21,7 +26,12 @@ import com.misterio.core.domain.repository.DevelopmentRepository
 import com.misterio.core.domain.repository.EventRepository
 import com.misterio.core.domain.repository.LegalDocumentRepository
 import com.misterio.core.domain.repository.MeasurementRepository
+import com.misterio.core.domain.repository.NotificationRepository
+import com.misterio.core.domain.repository.SecurityRepository
+import com.misterio.core.domain.repository.UserRepository
 import com.misterio.core.domain.repository.VaccineRepository
+import com.misterio.core.domain.sync.SyncController
+import com.misterio.core.domain.util.EventNotificationScheduler
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -100,15 +110,32 @@ abstract class DataModule {
 
     @Binds
     @Singleton
+    abstract fun bindSecurityRepository(
+        securityRepositoryImpl: SecurityRepositoryImpl
+    ): SecurityRepository
+
+    @Binds
+    @Singleton
     abstract fun bindEventNotificationScheduler(
-        impl: com.misterio.core.data.worker.EventNotificationSchedulerImpl
-    ): com.misterio.core.domain.util.EventNotificationScheduler
+        impl: EventNotificationSchedulerImpl
+    ): EventNotificationScheduler
 
     @Binds
     @Singleton
     abstract fun bindNotificationRepository(
-        notificationRepositoryImpl: com.misterio.core.data.repository.NotificationRepositoryImpl
-    ): com.misterio.core.domain.repository.NotificationRepository
+        notificationRepositoryImpl: NotificationRepositoryImpl
+    ): NotificationRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindSyncController(
+        syncManager: SyncManager
+    ): SyncController
+
+    @Binds
+    @Singleton
+    abstract fun bindUserRepository(
+        userRepositoryImpl: UserRepositoryImpl
+    ): UserRepository
 
 }
-

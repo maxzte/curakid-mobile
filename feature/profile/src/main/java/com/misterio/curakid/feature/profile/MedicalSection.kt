@@ -12,7 +12,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -32,6 +31,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -42,12 +42,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.misterio.core.ui.theme.CurakidTheme
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun MedicalSection(
     category: MedicalCategory,
@@ -57,10 +57,11 @@ fun MedicalSection(
     modifier: Modifier = Modifier
 ) {
     var expanded by rememberSaveable { mutableStateOf(items.isNotEmpty()) }
+    val notSpecifiedText = stringResource(R.string.not_specified)
 
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = CurakidTheme.Radius.lg,
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = CurakidTheme.colors.surface),
         border = BorderStroke(0.5.dp, CurakidTheme.colors.outline),
         elevation = CardDefaults.cardElevation(0.dp)
@@ -70,7 +71,7 @@ fun MedicalSection(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable { expanded = !expanded }
-                    .padding(horizontal = 14.dp, vertical = 13.dp),
+                    .padding(horizontal = CurakidTheme.paddings.medium, vertical = 13.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
@@ -119,7 +120,7 @@ fun MedicalSection(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 14.dp, end = 14.dp, bottom = 14.dp)
+                        .padding(start = CurakidTheme.paddings.medium, end = CurakidTheme.paddings.medium, bottom = CurakidTheme.paddings.medium)
                 ) {
                     HorizontalDivider(
                         thickness = 0.5.dp,
@@ -129,8 +130,9 @@ fun MedicalSection(
 
                     if (items.isEmpty()) {
                         Text(
-                            "Не вказано",
+                            notSpecifiedText,
                             fontSize = 12.sp,
+                            color = CurakidTheme.colors.onSurfaceVariant,
                             modifier = Modifier.padding(bottom = 8.dp)
                         )
                     }
@@ -163,6 +165,7 @@ fun MedicalChip(
     onRemove: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val deleteDesc = stringResource(R.string.delete)
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(20.dp))
@@ -181,7 +184,7 @@ fun MedicalChip(
         ) {
             Icon(
                 Icons.Default.Close,
-                contentDescription = "Видалити",
+                contentDescription = deleteDesc,
                 tint = chipText,
                 modifier = Modifier.size(12.dp)
             )
@@ -191,6 +194,7 @@ fun MedicalChip(
 
 @Composable
 fun AddChip(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val addText = stringResource(R.string.add)
     Row(
         modifier = modifier
             .clip(RoundedCornerShape(20.dp))
@@ -203,10 +207,10 @@ fun AddChip(onClick: () -> Unit, modifier: Modifier = Modifier) {
     ) {
         Icon(
             Icons.Default.Add,
-            contentDescription = "Додати",
+            contentDescription = addText,
             tint = CurakidTheme.colors.onSurfaceVariant,
             modifier = Modifier.size(13.dp)
         )
-        Text("Додати", fontSize = 12.sp, color = CurakidTheme.colors.onSurfaceVariant)
+        Text(addText, fontSize = 12.sp, color = CurakidTheme.colors.onSurfaceVariant)
     }
 }

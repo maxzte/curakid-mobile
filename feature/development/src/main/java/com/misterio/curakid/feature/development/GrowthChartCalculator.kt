@@ -82,7 +82,7 @@ object GrowthChartCalculator {
             val x = if (isWfh) {
                 m.height!!
             } else {
-                val days = ChronoUnit.DAYS.between(child.birthDate, m.date.toLocalDate()).toDouble()
+                val days = ChronoUnit.DAYS.between(child.effectiveBirthDate, m.date.toLocalDate()).toDouble()
                 (days - (period.start * 30.44)) / xUnitScale
             }
             roundForChart(x) to y

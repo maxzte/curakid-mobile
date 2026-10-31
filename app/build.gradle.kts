@@ -21,8 +21,21 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
 
+    signingConfigs {
+        create("release") {
+            storeFile = providers.gradleProperty("KEYSTORE_PATH").map { file(it) }.orNull
+            storePassword = providers.gradleProperty("KEYSTORE_PASSWORD").orNull
+            keyAlias = providers.gradleProperty("KEY_ALIAS").orNull
+            keyPassword = providers.gradleProperty("KEY_PASSWORD").orNull
+        }
+    }
+
     buildTypes {
         release {
+            val releaseSigning = signingConfigs.getByName("release")
+            if (releaseSigning.storeFile != null) {
+                signingConfig = releaseSigning
+            }
             isMinifyEnabled = true
             isShrinkResources = true
             proguardFiles(
@@ -93,6 +106,7 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.mockk)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.turbine)
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)

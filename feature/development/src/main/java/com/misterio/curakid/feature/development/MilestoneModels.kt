@@ -7,22 +7,47 @@ import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.People
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.RecordVoiceOver
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.misterio.core.domain.model.Question
-import com.misterio.core.ui.theme.CuraKidColors
+import com.misterio.core.ui.theme.CurakidTheme
 
 enum class MilestoneCategory(
     val label: String,
-    val iconBg: Color,
-    val iconTint: Color
+    val getIconBg: @Composable () -> Color,
+    val getIconTint: @Composable () -> Color
 ) {
-    MOTOR(label = "Моторика", iconBg = CuraKidColors.Blue95, iconTint = CuraKidColors.Blue40),
-    SPEECH(label = "Мовлення", iconBg = CuraKidColors.Purple90, iconTint = CuraKidColors.Purple30),
-    COGNITION(label = "Когніція", iconBg = CuraKidColors.Teal90, iconTint = CuraKidColors.Teal30),
-    SOCIAL(label = "Соціальний", iconBg = CuraKidColors.Amber90, iconTint = CuraKidColors.Amber30),
-    SENSORY(label = "Сенсорика", iconBg = CuraKidColors.Red90, iconTint = CuraKidColors.Red30),
-    SELF_CARE(label = "Самообслуговування", iconBg = CuraKidColors.Teal90, iconTint = CuraKidColors.Teal30);
+    MOTOR(
+        label = "Моторика",
+        getIconBg = { CurakidTheme.colors.primaryContainer },
+        getIconTint = { CurakidTheme.colors.primary }
+    ),
+    SPEECH(
+        label = "Мовлення",
+        getIconBg = { CurakidTheme.colors.tertiaryContainer },
+        getIconTint = { CurakidTheme.colors.tertiary }
+    ),
+    COGNITION(
+        label = "Когніція",
+        getIconBg = { CurakidTheme.colors.secondaryContainer },
+        getIconTint = { CurakidTheme.colors.secondary }
+    ),
+    SOCIAL(
+        label = "Соціальний",
+        getIconBg = { CurakidTheme.colors.tertiaryContainer },
+        getIconTint = { CurakidTheme.colors.tertiary }
+    ),
+    SENSORY(
+        label = "Сенсорика",
+        getIconBg = { CurakidTheme.colors.errorContainer },
+        getIconTint = { CurakidTheme.colors.error }
+    ),
+    SELF_CARE(
+        label = "Самообслуговування",
+        getIconBg = { CurakidTheme.colors.secondaryContainer },
+        getIconTint = { CurakidTheme.colors.secondary }
+    );
 
     val icon: ImageVector
         get() = when (this) {

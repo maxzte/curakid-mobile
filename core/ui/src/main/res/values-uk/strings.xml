@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="event_type_vaccine">Вакцинація</string>
+    <string name="event_type_doctor">Лікар</string>
+    <string name="event_type_user">Подія</string>
+    <string name="date_picker_title">Виберіть дату</string>
+    <string name="time_picker_title">Виберіть час</string>
+    <string name="dialog_confirm">OK</string>
+    <string name="dialog_cancel">Скасувати</string>
+
+    <string name="action_confirm">Підтвердити</string>
+    <string name="action_retry">Спробувати знову</string>
+    <string name="action_edit">Редагувати</string>
+
+    <string name="cd_chat">Чат</string>
+    <string name="cd_show_password">Показати пароль</string>
+    <string name="cd_hide_password">Сховати пароль</string>
+    <string name="cd_ai_report">ШІ Звіт</string>
+
+    <string name="ai_report_analysis">Аналіз:</string>
+    <string name="ai_report_recommendations">Рекомендації:</string>
+    <string name="error_generic">Виникла помилка</string>
+    <string name="error_network">Відсутній зв\'язок з інтернетом</string>
+    <string name="error_server_unreachable">Сервер недоступний. Перевірте з\'єднання з бекендом</string>
+    <string name="error_server">Помилка сервера. Спробуйте пізніше</string>
+    <string name="error_session_expired">Сесія закінчилася. Будь ласка, увійдіть знову</string>
+    <string name="error_not_found">Ресурс не знайдено</string>
+    <string name="error_bad_request">Некоректний запит</string>
+    <string name="error_forbidden">Доступ заборонено</string>
+    <string name="error_conflict">Конфлікт даних або значення вже використовується</string>
+    <string name="error_rate_limit">Забагато запитів. Зачекайте хвилину</string>
+</resources>

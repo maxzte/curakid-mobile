@@ -9,19 +9,19 @@ import java.util.UUID
 
 interface ChildApi {
 
-    @GET("api/children")
+    @GET("api/v1/children")
     suspend fun getChildren(): Response<List<ChildResponse>>
 
-    @GET("api/children/{childId}")
+    @GET("api/v1/children/{childId}")
     suspend fun getChild(@Path("childId") childId: UUID): Response<ChildResponse>
 
-    @POST("api/children")
+    @POST("api/v1/children")
     suspend fun createChild(@Body child: CreateChildRequest): Response<ChildResponse>
 
-    @PUT("api/children/{childId}")
+    @PUT("api/v1/children/{childId}")
     suspend fun updateChild(@Path("childId") childId: UUID, @Body child: UpdateChildRequest): Response<ChildResponse>
 
-    @DELETE("api/children/{childId}")
+    @DELETE("api/v1/children/{childId}")
     suspend fun deleteChild(@Path("childId") childId: UUID): Response<Unit>
 
 }

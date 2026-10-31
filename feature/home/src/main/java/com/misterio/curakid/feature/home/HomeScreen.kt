@@ -1,18 +1,29 @@
 package com.misterio.curakid.feature.home
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.core.content.ContextCompat
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.misterio.core.domain.UiState
 import com.misterio.core.domain.model.Event
 import com.misterio.core.domain.model.LifePeriodAiReport
+import com.misterio.core.ui.components.CuraKidPullToRefreshBox
 import com.misterio.core.ui.components.ErrorView
 import com.misterio.core.ui.components.LoadingScreen
 import com.misterio.core.ui.components.ScreenHeader
@@ -32,23 +43,63 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+    val notificationPermissionRequested by viewModel.notificationPermissionRequested.collectAsStateWithLifecycle()
+
+    val context = LocalContext.current
+    var showPermissionDialog by remember(notificationPermissionRequested) {
+        val hasPermission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            ContextCompat.checkSelfPermission(
+                context,
+                Manifest.permission.POST_NOTIFICATIONS
+            ) == PackageManager.PERMISSION_GRANTED
+        } else {
+            true
+        }
+        mutableStateOf(!notificationPermissionRequested && !hasPermission)
+    }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { _ ->
+        viewModel.onNotificationPermissionHandled()
+    }
+
+    if (showPermissionDialog && Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        NotificationPermissionDialog(
+            onEnableClick = {
+                showPermissionDialog = false
+                viewModel.onNotificationPermissionHandled()
+                permissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            },
+            onLaterClick = {
+                showPermissionDialog = false
+                viewModel.onNotificationPermissionHandled()
+            }
+        )
+    }
 
     when (val state = uiState) {
         is UiState.Loading, UiState.Initial -> LoadingScreen()
         is UiState.Success -> {
             val data = state.data
-            HomeContent(
-                childName = data.selectedChild?.name.orEmpty(),
-                nextVaccination = data.vaccineEvent,
-                nextDoctorVisit = data.doctorEvent,
-                upcomingList = data.upcomingItems,
-                aiReports = data.aiReports,
-                onEventClick = onEventClick,
-                onVaccinationClick = onVaccinationClick,
-                onShowAllUpcoming = onShowAllUpcoming,
-                onChatClick = onChatClick,
-                onAiReportClick = onAiReportClick
-            )
+            CuraKidPullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = { viewModel.refresh() }
+            ) {
+                HomeContent(
+                    childName = data.selectedChild?.name.orEmpty(),
+                    nextVaccination = data.vaccineEvent,
+                    nextDoctorVisit = data.doctorEvent,
+                    upcomingList = data.upcomingItems,
+                    aiReports = data.aiReports,
+                    onEventClick = onEventClick,
+                    onVaccinationClick = onVaccinationClick,
+                    onShowAllUpcoming = onShowAllUpcoming,
+                    onChatClick = onChatClick,
+                    onAiReportClick = onAiReportClick
+                )
+            }
         }
         is UiState.Error -> {
             ErrorView(

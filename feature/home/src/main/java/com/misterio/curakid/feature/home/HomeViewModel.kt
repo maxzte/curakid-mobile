@@ -3,36 +3,36 @@
 package com.misterio.curakid.feature.home
 
 import android.util.Log
+import androidx.compose.runtime.Immutable
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.misterio.core.domain.UiState
-import com.misterio.core.domain.asUiState
 import com.misterio.core.domain.model.Child
 import com.misterio.core.domain.model.Event
-import com.misterio.core.domain.model.EventStatus
-import com.misterio.core.domain.model.EventType
 import com.misterio.core.domain.model.LifePeriodAiReport
 import com.misterio.core.domain.usecase.GetChildAiReportsUseCase
 import com.misterio.core.domain.usecase.GetChildUseCase
 import com.misterio.core.domain.usecase.GetEventsUseCase
-import com.misterio.core.domain.usecase.SyncChildAiReportsUseCase
-import com.misterio.core.domain.usecase.SyncChildrenUseCase
-import com.misterio.core.domain.usecase.SyncEventsUseCase
+import com.misterio.core.domain.usecase.GetHomeEventsOverviewUseCase
+import com.misterio.core.domain.usecase.GetNotificationPermissionRequestedUseCase
+import com.misterio.core.domain.usecase.SetNotificationPermissionRequestedUseCase
+import com.misterio.core.domain.usecase.SyncHomeDataUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
-import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.time.LocalDate
 import javax.inject.Inject
 
+@Immutable
 data class HomeUiState(
     val selectedChild: Child? = null,
     val vaccineEvent: Event.Vaccine? = null,
@@ -43,22 +43,33 @@ data class HomeUiState(
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val syncChildrenUseCase: SyncChildrenUseCase,
     getChildUseCase: GetChildUseCase,
     private val getEventsUseCase: GetEventsUseCase,
-    private val syncEventsUseCase: SyncEventsUseCase,
     private val getChildAiReportsUseCase: GetChildAiReportsUseCase,
-    private val syncChildAiReportsUseCase: SyncChildAiReportsUseCase,
+    private val getHomeEventsOverviewUseCase: GetHomeEventsOverviewUseCase,
+    private val syncHomeDataUseCase: SyncHomeDataUseCase,
+    getNotificationPermissionRequestedUseCase: GetNotificationPermissionRequestedUseCase,
+    private val setNotificationPermissionRequestedUseCase: SetNotificationPermissionRequestedUseCase,
 ) : ViewModel() {
+
+    val notificationPermissionRequested: StateFlow<Boolean> = getNotificationPermissionRequestedUseCase()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.Eagerly,
+            initialValue = true
+        )
+
+    fun onNotificationPermissionHandled() {
+        viewModelScope.launch {
+            setNotificationPermissionRequestedUseCase(true)
+        }
+    }
 
     private val selectedChild = getChildUseCase()
         .distinctUntilChanged()
-        .onStart {
-            syncChildrenUseCase(false)
-        }
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Eagerly,
             initialValue = null
         )
 
@@ -80,62 +91,70 @@ class HomeViewModel @Inject constructor(
             }
         }
 
+    private val _isInitialSyncing = MutableStateFlow(true)
+    val isInitialSyncing: StateFlow<Boolean> = _isInitialSyncing.asStateFlow()
+
     val uiState: StateFlow<UiState<HomeUiState>> = combine(
         selectedChild,
         events,
-        aiReports
-    ) { child, eList, reports ->
-        Log.d(TAG, "childId: ${child?.id}, totalEvents: ${eList.size}, reports: ${reports.size}")
+        aiReports,
+        _isInitialSyncing
+    ) { child, eList, reports, syncing ->
+        Log.d(TAG, "childId: ${child?.id}, totalEvents: ${eList.size}, reports: ${reports.size}, syncing: $syncing")
 
-        val activeEvents = eList.sortedBy { it.date }
-        // Select items for Hero Cards
-        val v = activeEvents.filterIsInstance<Event.Vaccine>().firstOrNull { it.status == EventStatus.PLANNED }
-        val e = activeEvents.firstOrNull { it.type == EventType.DOCTOR && it.status == EventStatus.PLANNED }
-            ?: activeEvents.firstOrNull { it !is Event.Vaccine && it.status == EventStatus.PLANNED }
+        if (child == null && syncing) {
+            return@combine null
+        }
 
-        val allUpcoming = activeEvents
-            .filter { it.date.toLocalDate() >= LocalDate.now() }
-
-        // Skip items shown in Hero Cards
-        val upcomingItems = allUpcoming.filter { it.id != v?.id && it.id != e?.id }
+        val overview = getHomeEventsOverviewUseCase(eList)
 
         HomeUiState(
             selectedChild = child,
-            vaccineEvent = v,
-            doctorEvent = e,
-            upcomingItems = upcomingItems,
+            vaccineEvent = overview.vaccineEvent,
+            doctorEvent = overview.doctorEvent,
+            upcomingItems = overview.upcomingItems,
             aiReports = reports
         )
-    }.asUiState()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
-            initialValue = UiState.Initial
-        )
+    }.flatMapLatest { state ->
+        if (state == null) {
+            flowOf(UiState.Loading)
+        } else {
+            flowOf(UiState.Success(state))
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.Lazily,
+        initialValue = UiState.Loading
+    )
 
     init {
         Log.d(TAG, "INIT")
         viewModelScope.launch {
+            try {
+                syncHomeDataUseCase(childId = null, force = false)
+            } finally {
+                _isInitialSyncing.value = false
+            }
+        }
+        viewModelScope.launch {
             selectedChild.collectLatest { child ->
                 if (child != null) {
-                    kotlinx.coroutines.coroutineScope {
-                        launch { syncEventsUseCase(child.id) }
-                        launch { syncChildAiReportsUseCase(child.id) }
-                    }
+                    syncHomeDataUseCase(childId = child.id, force = false)
                 }
             }
         }
     }
 
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
     fun refresh() {
         viewModelScope.launch {
-            syncChildrenUseCase(true)
-            val child = selectedChild.value
-            if (child != null) {
-                kotlinx.coroutines.coroutineScope {
-                    launch { syncEventsUseCase(child.id) }
-                    launch { syncChildAiReportsUseCase(child.id) }
-                }
+            _isRefreshing.value = true
+            try {
+                syncHomeDataUseCase(childId = selectedChild.value?.id, force = true)
+            } finally {
+                _isRefreshing.value = false
             }
         }
     }

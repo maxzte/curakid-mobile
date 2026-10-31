@@ -39,7 +39,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.misterio.core.domain.model.Event
 import com.misterio.core.domain.model.VaccineType
-import com.misterio.core.ui.theme.CuraKidColors
 import com.misterio.core.ui.theme.CurakidTheme
 import com.misterio.core.ui.toFormatted
 import kotlinx.coroutines.launch
@@ -177,7 +176,7 @@ fun DoctorVisitHeroCard(
                 )
             },
             label = stringResource(R.string.home_doctor_visit),
-            badgeBg = CuraKidColors.Teal80.copy(alpha = 0.3f),
+            badgeBg = CurakidTheme.colors.tertiaryContainer,
             badgeText = stringResource(R.string.home_status_planned),
             badgeTextColor = CurakidTheme.colors.onSecondaryContainer
         )

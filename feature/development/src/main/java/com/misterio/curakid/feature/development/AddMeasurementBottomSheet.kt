@@ -45,12 +45,12 @@ fun MeasurementActionSelectionSheet(
             Text(
                 text = stringResource(R.string.what_to_add),
                 style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
-                modifier = Modifier.padding(bottom = 16.dp)
+                modifier = Modifier.padding(bottom = CurakidTheme.paddings.medium)
             )
 
             ListItem(
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                headlineContent = { Text("Вага та зріст") },
+                headlineContent = { Text(stringResource(R.string.measurement_weight_and_height)) },
                 leadingContent = {
                     Icon(
                         Icons.Default.MonitorWeight,
@@ -62,7 +62,7 @@ fun MeasurementActionSelectionSheet(
 
             ListItem(
                 colors = ListItemDefaults.colors(containerColor = Color.Transparent),
-                headlineContent = { Text("Обвід голови") },
+                headlineContent = { Text(stringResource(R.string.measurement_head_circ)) },
                 leadingContent = {
                     Icon(Icons.Default.Face, contentDescription = null)
                 },

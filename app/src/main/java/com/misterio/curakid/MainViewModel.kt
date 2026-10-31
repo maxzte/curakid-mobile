@@ -1,22 +1,17 @@
-@file:OptIn(ExperimentalCoroutinesApi::class)
-
 package com.misterio.curakid
 
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.misterio.core.domain.model.AuthState
 import com.misterio.core.domain.repository.ConnectivityRepository
-import com.misterio.core.domain.repository.NotificationRepository
+import com.misterio.core.domain.sync.SyncController
+import com.misterio.core.domain.usecase.GetAuthStateUseCase
+import com.misterio.core.domain.usecase.GetIsPasscodeEnabledUseCase
 import com.misterio.core.domain.usecase.LogoutUseCase
-import com.misterio.core.domain.util.suspendRunCatching
-import com.misterio.curakid.core.common.AppDataStore
+import com.misterio.core.domain.usecase.RegisterFcmTokenUseCase
 import com.misterio.curakid.core.common.PasscodeMode
-import com.misterio.curakid.core.common.SecurityManager
-import com.misterio.curakid.core.common.TokenManager
-import com.misterio.curakid.core.common.TokenState
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -25,22 +20,21 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.suspendCancellableCoroutine
 import java.util.UUID
 import javax.inject.Inject
-import kotlin.coroutines.resume
 
 @HiltViewModel
 class MainViewModel @Inject constructor(
-    private val appDataStore: AppDataStore,
-    private val tokenManager: TokenManager,
+    getAuthStateUseCase: GetAuthStateUseCase,
+    getIsPasscodeEnabledUseCase: GetIsPasscodeEnabledUseCase,
+    private val registerFcmTokenUseCase: RegisterFcmTokenUseCase,
     connectivityRepository: ConnectivityRepository,
-    private val securityManager: SecurityManager,
-    private val notificationRepository: NotificationRepository,
     private val logoutUseCase: LogoutUseCase,
+    syncController: SyncController,
 ) : ViewModel() {
 
     val isConnected = connectivityRepository.isConnected
+    val isSyncing = syncController.isSyncing
 
     private val passcodeUnlocked = MutableStateFlow(false)
 
@@ -80,25 +74,25 @@ class MainViewModel @Inject constructor(
 
     val startDestination: StateFlow<Route?> =
         combine(
-            tokenManager.tokenState,
-            appDataStore.onboardingCompleted,
-            securityManager.isPasscodeEnabled,
+            getAuthStateUseCase(),
+            getIsPasscodeEnabledUseCase(),
             passcodeUnlocked
-        ) { tokenState, onboardingCompleted, isPasscodeEnabled, unlocked ->
+        ) { authState, isPasscodeEnabled, unlocked ->
             if (isPasscodeEnabled && !unlocked) {
                 return@combine Route.Passcode(PasscodeMode.UNLOCK)
             }
 
-            when (tokenState) {
-                is TokenState.Loading -> null
-                is TokenState.Empty -> Route.Login
-                is TokenState.Available -> if (onboardingCompleted) Route.HomeRoot else Route.RegisterChild
+            when (authState) {
+                AuthState.LOADING -> null
+                AuthState.UNAUTHENTICATED -> Route.Login
+                AuthState.NEEDS_ONBOARDING -> Route.RegisterChild
+                AuthState.AUTHENTICATED -> Route.HomeRoot
             }
         }
             .distinctUntilChanged()
             .stateIn(
                 scope = viewModelScope,
-                started = SharingStarted.WhileSubscribed(5_000),
+                started = SharingStarted.Eagerly,
                 initialValue = null
             )
 
@@ -108,23 +102,6 @@ class MainViewModel @Inject constructor(
 
     fun resetApp() {
         viewModelScope.launch {
-            suspendRunCatching {
-                val fcmToken = suspendCancellableCoroutine<String?> { cont ->
-                    com.google.firebase.messaging.FirebaseMessaging.getInstance().token
-                        .addOnCompleteListener { task ->
-                            if (task.isSuccessful) {
-                                cont.resume(task.result)
-                            } else {
-                                cont.resume(null)
-                            }
-                        }
-                }
-                if (!fcmToken.isNullOrBlank()) {
-                    notificationRepository.removeDeviceToken(fcmToken)
-                }
-            }.onFailure { e ->
-                Log.w(TAG, "Failed to remove FCM token on logout", e)
-            }
             logoutUseCase()
             passcodeUnlocked.value = false
         }
@@ -137,27 +114,7 @@ class MainViewModel @Inject constructor(
 
     private fun syncFcmToken() {
         viewModelScope.launch {
-            tokenManager.tokenState.collect { state ->
-                if (state is TokenState.Available && state.token.isNotEmpty()) {
-                    suspendRunCatching {
-                        val fcmToken = suspendCancellableCoroutine<String?> { cont ->
-                            com.google.firebase.messaging.FirebaseMessaging.getInstance().token
-                                .addOnCompleteListener { task ->
-                                    if (task.isSuccessful) {
-                                        cont.resume(task.result)
-                                    } else {
-                                        cont.resume(null)
-                                    }
-                                }
-                        }
-                        if (!fcmToken.isNullOrBlank()) {
-                            notificationRepository.registerDeviceToken(fcmToken)
-                        }
-                    }.onFailure { e ->
-                        Log.w(TAG, "Failed to retrieve or sync FCM token", e)
-                    }
-                }
-            }
+            registerFcmTokenUseCase()
         }
     }
 

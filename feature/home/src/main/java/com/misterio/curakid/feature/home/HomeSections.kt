@@ -49,7 +49,7 @@ fun UpcomingList(
                 UpcomingListItem(event = item, onClick = { onItemClick(item) })
                 if (index < items.lastIndex && index < 2) {
                     HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 16.dp),
+                        modifier = Modifier.padding(horizontal = CurakidTheme.paddings.medium),
                         thickness = 0.5.dp,
                         color = CurakidTheme.colors.outlineVariant
                     )
@@ -69,7 +69,7 @@ fun UpcomingListItem(
         event = event,
         onClick = onClick,
         dotSize = 8.dp,
-        padding = 16.dp,
+        padding = CurakidTheme.paddings.medium,
         modifier = modifier
     )
 }
@@ -85,7 +85,11 @@ fun AiReportsRow(
         horizontalArrangement = Arrangement.spacedBy(CurakidTheme.paddings.small),
         contentPadding = PaddingValues(horizontal = CurakidTheme.paddings.medium)
     ) {
-        items(reports) { report ->
+        items(
+            items = reports,
+            key = { it.id },
+            contentType = { "ai_report" }
+        ) { report ->
             AiReportCard(report = report, onClick = { onItemClick(report.id) })
         }
     }
@@ -105,12 +109,12 @@ fun AiReportCard(
         border = BorderStroke(0.5.dp, CurakidTheme.colors.outlineVariant),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(CurakidTheme.paddings.medium)) {
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(20.dp))
                     .background(CurakidTheme.colors.primaryContainer)
-                    .padding(horizontal = 10.dp, vertical = 4.dp)
+                    .padding(horizontal = 10.dp, vertical = CurakidTheme.paddings.spaceXs)
             ) {
                 Text(
                     text = stringResource(R.string.home_ai_report_title),
@@ -120,7 +124,7 @@ fun AiReportCard(
                     maxLines = 1
                 )
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(CurakidTheme.paddings.spaceSm))
             Text(
                 text = report.reportText ?: stringResource(R.string.home_ai_report_empty),
                 style = CurakidTheme.typography.bodyMedium,

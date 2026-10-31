@@ -114,9 +114,9 @@ fun CuraKidTimePickerDialog(
             shape = CurakidTheme.Radius.xl
         ) {
             Column(
-                modifier = Modifier.padding(24.dp),
+                modifier = Modifier.padding(CurakidTheme.paddings.large),
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(24.dp)
+                verticalArrangement = Arrangement.spacedBy(CurakidTheme.paddings.large)
             ) {
                 Text(
                     text = stringResource(R.string.time_picker_title),

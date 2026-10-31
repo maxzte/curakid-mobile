@@ -41,8 +41,8 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.misterio.core.domain.UiState
 import com.misterio.core.domain.model.ConsentType
+import com.misterio.core.domain.model.LegalDocument
 import com.misterio.core.ui.components.CuraKidTextField
-import com.misterio.core.ui.theme.CuraKidColors
 import com.misterio.curakid.core.common.util.ValidationUtils
 
 @Composable
@@ -87,15 +87,15 @@ fun SignUpScreen(
 @Composable
 fun SignUpContent(
     uiState: UiState<String>,
-    legalDocs: UiState<List<com.misterio.core.domain.model.LegalDocument>>,
+    legalDocs: UiState<List<LegalDocument>>,
     onSignUp: (String, String, String, Boolean) -> Unit,
     onOAuthLogin: (String) -> Unit,
     onNavigateToLogIn: () -> Unit,
     onShowDocument: (String, String) -> Unit,
+    modifier: Modifier = Modifier,
     nameError: String? = null,
     emailError: String? = null,
     passwordError: String? = null,
-    modifier: Modifier = Modifier,
 ) {
     var name by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
@@ -109,7 +109,7 @@ fun SignUpContent(
     val emailFocus = remember { FocusRequester() }
     val passwordFocus = remember { FocusRequester() }
 
-    val currentEmailError = emailError ?: if (uiState is UiState.Error) (uiState as UiState.Error).errorMessage else null
+    val currentEmailError = emailError ?: if (uiState is UiState.Error) uiState.errorMessage else null
 
     fun submit() {
         if (isFormValid) {
@@ -120,15 +120,21 @@ fun SignUpContent(
     val termsTitle = stringResource(R.string.signup_terms_title)
     val privacyTitle = stringResource(R.string.signup_privacy_title)
 
-    val termsUrl = (legalDocs as? UiState.Success)?.data?.find { it.type == ConsentType.TERMS }?.url
-    val privacyUrl = (legalDocs as? UiState.Success)?.data?.find { it.type == ConsentType.PRIVACY_POLICY }?.url
+    val termsUrl = remember(legalDocs) {
+        (legalDocs as? UiState.Success)?.data?.find { it.type == ConsentType.TERMS }?.url
+    }
+    val privacyUrl = remember(legalDocs) {
+        (legalDocs as? UiState.Success)?.data?.find { it.type == ConsentType.PRIVACY_POLICY }?.url
+    }
+
+    val primaryColor = MaterialTheme.colorScheme.primary
 
     val annotatedString = buildAnnotatedString {
         append(stringResource(R.string.signup_agree_prefix))
 
         val linkStyle = TextLinkStyles(
             style = SpanStyle(
-                color = CuraKidColors.Blue40,
+                color = primaryColor,
                 fontWeight = FontWeight.Bold
             )
         )
@@ -144,7 +150,7 @@ fun SignUpContent(
         ) {
             withStyle(
                 SpanStyle(
-                    color = CuraKidColors.Blue40,
+                    color = primaryColor,
                     fontWeight = FontWeight.Bold
                 )
             ) {
@@ -165,7 +171,7 @@ fun SignUpContent(
         ) {
             withStyle(
                 SpanStyle(
-                    color = CuraKidColors.Blue40,
+                    color = primaryColor,
                     fontWeight = FontWeight.Bold
                 )
             ) {
@@ -174,7 +180,7 @@ fun SignUpContent(
         }
     }
 
-    AuthScaffold {
+    AuthScaffold(modifier = modifier) {
         AuthHeader(
             title = stringResource(R.string.signup_title),
             subtitle = stringResource(R.string.signup_subtitle)

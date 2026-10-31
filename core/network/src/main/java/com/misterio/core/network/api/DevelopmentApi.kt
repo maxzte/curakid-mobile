@@ -7,10 +7,10 @@ import retrofit2.http.Path
 
 interface DevelopmentApi {
 
-    @GET("api/development/life-periods")
+    @GET("api/v1/development/life-periods")
     suspend fun getLifePeriods(): Response<List<LifePeriodResponse>>
 
-    @GET("api/development/life-periods/{code}")
+    @GET("api/v1/development/life-periods/{code}")
     suspend fun getLifePeriod(@Path("code") code: String): Response<LifePeriodResponse>
 
 }

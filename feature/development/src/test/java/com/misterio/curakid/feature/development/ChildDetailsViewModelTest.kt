@@ -1,14 +1,13 @@
 package com.misterio.curakid.feature.development
 
 import com.misterio.core.domain.UiState
-import com.misterio.core.domain.model.ChartNormPoint
-import com.misterio.core.domain.model.ChartType
 import com.misterio.core.domain.model.Child
 import com.misterio.core.domain.model.Gender
 import com.misterio.core.domain.model.Measurement
 import com.misterio.core.domain.usecase.AddMeasurementUseCase
 import com.misterio.core.domain.usecase.GetAiReportByIdUseCase
 import com.misterio.core.domain.usecase.GetChildUseCase
+import com.misterio.core.domain.usecase.GetGrowthChartTypeUseCase
 import com.misterio.core.domain.usecase.GetMeasurementNormsUseCase
 import com.misterio.core.domain.usecase.GetMeasurementsUseCase
 import com.misterio.core.domain.usecase.PollReportStatusUseCase
@@ -48,6 +47,7 @@ class ChildDetailsViewModelTest {
     private val getAiReportByIdUseCase: GetAiReportByIdUseCase = mockk(relaxed = true)
     private val getMeasurementNormsUseCase: GetMeasurementNormsUseCase = mockk(relaxed = true)
     private val syncChildAiReportsUseCase: SyncChildAiReportsUseCase = mockk(relaxed = true)
+    private val getGrowthChartTypeUseCase = GetGrowthChartTypeUseCase()
 
     private val sampleChild = Child(
         id = UUID.randomUUID(),
@@ -82,12 +82,13 @@ class ChildDetailsViewModelTest {
             pollReportStatusUseCase = pollReportStatusUseCase,
             getAiReportByIdUseCase = getAiReportByIdUseCase,
             getMeasurementNormsUseCase = getMeasurementNormsUseCase,
-            syncChildAiReportsUseCase = syncChildAiReportsUseCase
+            syncChildAiReportsUseCase = syncChildAiReportsUseCase,
+            getGrowthChartTypeUseCase = getGrowthChartTypeUseCase,
         )
     }
 
     @Test
-    fun `loads child and measurements successfully`() = runTest(testDispatcher) {
+    fun loadChildAndMeasurements_validChild_loadsDataAndTriggersSync() = runTest(testDispatcher) {
         val testMeasurement = Measurement(
             id = UUID.randomUUID(),
             childId = sampleChild.id,
@@ -131,7 +132,7 @@ class ChildDetailsViewModelTest {
     }
 
     @Test
-    fun `addMeasurement invokes addMeasurementUseCase and syncs`() = runTest(testDispatcher) {
+    fun addMeasurement_validData_invokesUseCaseAndSyncs() = runTest(testDispatcher) {
         every { getChildUseCase() } returns flowOf(sampleChild)
         every { getMeasurementsUseCase(sampleChild.id) } returns flowOf(emptyList())
 
@@ -149,7 +150,7 @@ class ChildDetailsViewModelTest {
     }
 
     @Test
-    fun `onChartTypeChange updates selected chart type`() = runTest(testDispatcher) {
+    fun onChartTypeChange_newType_updatesSelectedChartType() = runTest(testDispatcher) {
         every { getChildUseCase() } returns flowOf(sampleChild)
         every { getMeasurementsUseCase(sampleChild.id) } returns flowOf(emptyList())
 

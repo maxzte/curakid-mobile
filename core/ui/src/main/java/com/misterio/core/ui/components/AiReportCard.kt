@@ -9,11 +9,13 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.halilibo.richtext.commonmark.CommonmarkAstNodeParser
 import com.halilibo.richtext.markdown.BasicMarkdown
 import com.halilibo.richtext.ui.BasicRichText
+import com.misterio.core.ui.R
 import com.misterio.core.ui.theme.CurakidTheme
 
 @Composable
@@ -36,17 +38,17 @@ fun AiReportCard(
         shape = RoundedCornerShape(CurakidTheme.paddings.medium),
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier.padding(CurakidTheme.paddings.medium),
+            verticalArrangement = Arrangement.spacedBy(CurakidTheme.paddings.spaceMd)
         ) {
             // Хедер
             Row(
                 verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(CurakidTheme.paddings.spaceSm)
             ) {
                 Icon(
                     imageVector = Icons.Rounded.AutoAwesome,
-                    contentDescription = "AI Report",
+                    contentDescription = stringResource(R.string.cd_ai_report),
                     tint = if (isLoading) CurakidTheme.colors.outlineVariant else CurakidTheme.colors.primary
                 )
                 if (isLoading) {
@@ -67,14 +69,14 @@ fun AiReportCard(
             HorizontalDivider(color = CurakidTheme.colors.outlineVariant.copy(alpha = 0.5f))
 
             // Тіло: Звіт
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(CurakidTheme.paddings.spaceXs)) {
                 Text(
-                    text = "Аналіз:",
+                    text = stringResource(R.string.ai_report_analysis),
                     fontWeight = FontWeight.Bold,
                     color = if (isLoading) CurakidTheme.colors.outlineVariant else CurakidTheme.colors.primary
                 )
                 if (isLoading) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(CurakidTheme.paddings.spaceSm)) {
                         Box(modifier = Modifier.fillMaxWidth().height(14.dp).shimmerEffect())
                         Box(modifier = Modifier.fillMaxWidth(0.9f).height(14.dp).shimmerEffect())
                         Box(modifier = Modifier.fillMaxWidth(0.95f).height(14.dp).shimmerEffect())
@@ -87,15 +89,15 @@ fun AiReportCard(
             }
 
             // Тіло: Рекомендації
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(CurakidTheme.paddings.spaceXs)) {
                 Text(
-                    text = "Рекомендації:",
+                    text = stringResource(R.string.ai_report_recommendations),
                     style = CurakidTheme.typography.titleSmall,
                     fontWeight = FontWeight.Bold,
                     color = if (isLoading) CurakidTheme.colors.outlineVariant else CurakidTheme.colors.primary
                 )
                 if (isLoading) {
-                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Column(verticalArrangement = Arrangement.spacedBy(CurakidTheme.paddings.spaceSm)) {
                         Box(modifier = Modifier.fillMaxWidth().height(14.dp).shimmerEffect())
                         Box(modifier = Modifier.fillMaxWidth(0.85f).height(14.dp).shimmerEffect())
                     }

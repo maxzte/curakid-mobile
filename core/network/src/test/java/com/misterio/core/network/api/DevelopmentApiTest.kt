@@ -22,7 +22,7 @@ class DevelopmentApiTest : BaseApiTest<DevelopmentApi>() {
         val response = api.getLifePeriods()
         val request = mockWebServer.takeRequest()
 
-        assertEquals("/api/development/life-periods", request.path)
+        assertEquals("/api/v1/development/life-periods", request.path)
         assertEquals("GET", request.method)
         assertTrue(response.isSuccessful)
         assertEquals("MONTH_1", response.body()?.get(0)?.code)

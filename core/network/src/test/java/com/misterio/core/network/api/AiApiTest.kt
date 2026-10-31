@@ -25,7 +25,7 @@ class AiApiTest : BaseApiTest<AiApi>() {
         val response = api.getChildReports(childId)
         val request = mockWebServer.takeRequest()
 
-        assertEquals("/api/children/$childId/reports", request.path)
+        assertEquals("/api/v1/children/$childId/reports", request.path)
         assertEquals("GET", request.method)
         assertTrue(response.isSuccessful)
         assertEquals(2, response.body()?.size)
@@ -39,7 +39,7 @@ class AiApiTest : BaseApiTest<AiApi>() {
         val response = api.getReportStatus(reportId)
         val request = mockWebServer.takeRequest()
 
-        assertEquals("/api/reports/$reportId/status", request.path)
+        assertEquals("/api/v1/reports/$reportId/status", request.path)
         assertEquals("GET", request.method)
         assertEquals(true, response.body())
     }

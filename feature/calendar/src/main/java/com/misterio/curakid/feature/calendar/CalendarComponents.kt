@@ -5,7 +5,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,18 +21,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.EventNote
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Favorite
-import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -53,12 +47,12 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.misterio.core.domain.model.Event
-import com.misterio.core.domain.model.EventStatus
 import com.misterio.core.domain.model.EventType
-import com.misterio.core.ui.theme.CuraKidColors
+import com.misterio.core.ui.components.CuraKidEventCard
+import com.misterio.core.ui.components.toStyle
 import com.misterio.core.ui.theme.CurakidTheme
+import com.misterio.core.ui.toMonthYear
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 @Composable
 fun CalendarHeader(
@@ -75,7 +69,7 @@ fun CalendarHeader(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = currentMonth.format(DateTimeFormatter.ofPattern("MMMM yyyy")),
+            text = currentMonth.toMonthYear(),
             style = CurakidTheme.typography.titleLarge,
             fontWeight = FontWeight.Bold,
         )
@@ -105,13 +99,21 @@ fun CalendarHeader(
                 }
             }
 
-            Spacer(modifier = Modifier.width(4.dp))
+            Spacer(modifier = Modifier.width(CurakidTheme.paddings.spaceXs))
 
             IconButton(onClick = onPreviousMonth) {
-                Icon(Icons.Default.ChevronLeft, contentDescription = "Previous", tint = CuraKidColors.Blue30)
+                Icon(
+                    Icons.Default.ChevronLeft,
+                    contentDescription = stringResource(R.string.cd_previous_month),
+                    tint = CurakidTheme.colors.primary
+                )
             }
             IconButton(onClick = onNextMonth) {
-                Icon(Icons.Default.ChevronRight, contentDescription = "Next", tint = CuraKidColors.Blue30)
+                Icon(
+                    Icons.Default.ChevronRight,
+                    contentDescription = stringResource(R.string.cd_next_month),
+                    tint = CurakidTheme.colors.primary
+                )
             }
         }
     }
@@ -185,11 +187,7 @@ fun DayCell(
         ) {
             if (isCurrentMonth) {
                 eventTypes.take(3).forEach { type ->
-                    val color = when (type) {
-                        EventType.VACCINE -> CuraKidColors.Blue40
-                        EventType.DOCTOR -> CuraKidColors.Purple30
-                        EventType.USER -> CuraKidColors.Teal40
-                    }
+                    val color = type.toStyle().primaryColor
                     Box(
                         modifier = Modifier
                             .size(4.dp)
@@ -283,108 +281,10 @@ fun EventCard(
     onClick: () -> Unit,
     onEditClick: () -> Unit
 ) {
-    val isCompleted = event.status == EventStatus.DONE || event.status == EventStatus.SKIPPED
-    val contentAlpha = if (isCompleted) 0.5f else 1f
-
-    val (icon, iconColor, badgeText, badgeColor, badgeTextColor) = when (event.type) {
-        EventType.VACCINE -> Quintuple(
-            Icons.Default.MedicalServices,
-            CuraKidColors.Blue40,
-            "VACCINE",
-            CuraKidColors.Blue90,
-            CuraKidColors.Blue40
-        )
-        EventType.DOCTOR -> Quintuple(
-            Icons.Default.Favorite,
-            CuraKidColors.Purple30,
-            "DOCTOR",
-            CuraKidColors.Purple90,
-            CuraKidColors.Purple30
-        )
-        EventType.USER -> Quintuple(
-            Icons.Default.CalendarMonth,
-            CuraKidColors.Teal40,
-            "USER",
-            CuraKidColors.Teal90,
-            CuraKidColors.Teal40
-        )
-    }
-
-    OutlinedCard(
-        modifier = Modifier
-            .fillMaxWidth()
-            .alpha(contentAlpha)
-            .clickable { onClick() },
-        shape = CurakidTheme.Radius.lg,
-        border = if (isCompleted) BorderStroke(1.dp, CurakidTheme.colors.outlineVariant.copy(alpha = 0.5f)) 
-                 else BorderStroke(1.dp, CurakidTheme.colors.outlineVariant)
-    ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Surface(
-                modifier = Modifier.size(40.dp),
-                color = badgeColor,
-                shape = CurakidTheme.Radius.md,
-            ) {
-                Icon(
-                    imageVector = icon,
-                    contentDescription = null,
-                    modifier = Modifier.padding(8.dp),
-                    tint = iconColor
-                )
-            }
-            Spacer(modifier = Modifier.width(16.dp))
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = event.title,
-                    style = CurakidTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = CuraKidColors.Blue30
-                )
-                Text(
-                    text = event.date.format(DateTimeFormatter.ofPattern("d MMMM yyyy")),
-                    style = CurakidTheme.typography.bodySmall,
-                    color = CuraKidColors.Neutral40
-                )
-            }
-            Surface(
-                color = badgeColor,
-                shape = CurakidTheme.Radius.full
-            ) {
-                Text(
-                    text = badgeText,
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 4.dp),
-                    style = CurakidTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Bold,
-                    color = badgeTextColor
-                )
-            }
-
-            Spacer(modifier = Modifier.width(8.dp))
-
-            IconButton(
-                onClick = onEditClick,
-                modifier = Modifier.size(32.dp)
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Edit,
-                    contentDescription = "Edit",
-                    tint = CurakidTheme.colors.primary,
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-        }
-    }
+    CuraKidEventCard(
+        event = event,
+        onClick = onClick,
+        onEditClick = onEditClick,
+        isCardStyle = true
+    )
 }
-
-data class Quintuple<A, B, C, D, E>(
-    val first: A,
-    val second: B,
-    val third: C,
-    val fourth: D,
-    val fifth: E
-)

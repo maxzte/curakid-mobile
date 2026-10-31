@@ -1,6 +1,7 @@
 package com.misterio.curakid.feature.chat
 
 import com.misterio.core.domain.model.ChatMessage
+import com.misterio.core.domain.model.ChatStreamEvent
 import com.misterio.core.domain.model.Child
 import com.misterio.core.domain.model.Gender
 import com.misterio.core.domain.repository.ChatRepository
@@ -57,7 +58,7 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun `init loads chat history for selected child`() = runTest(testDispatcher) {
+    fun init_childSelected_loadsMessagesAndSyncsHistory() = runTest(testDispatcher) {
         val historyMsg = ChatMessage(
             id = UUID.randomUUID(),
             childId = testChild.id,
@@ -67,7 +68,8 @@ class ChatViewModelTest {
             createdAt = "2026-10-14T10:00:00Z"
         )
         every { getChildUseCase() } returns flowOf(testChild)
-        coEvery { chatRepository.getChatHistory(testChild.id) } returns Result.success(listOf(historyMsg))
+        coEvery { chatRepository.syncChatHistory(testChild.id) } returns Result.success(Unit)
+        every { chatRepository.getChatMessages(testChild.id) } returns flowOf(listOf(historyMsg))
 
         val viewModel = ChatViewModel(chatRepository, getChildUseCase, testDispatcher)
         advanceUntilIdle()
@@ -79,12 +81,12 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun `sendMessage appends user message and streams ai response`() = runTest(testDispatcher) {
+    fun sendMessage_validPrompt_appendsUserMessageAndStreamsAiChunks() = runTest(testDispatcher) {
         every { getChildUseCase() } returns flowOf(testChild)
-        coEvery { chatRepository.getChatHistory(testChild.id) } returns Result.success(emptyList())
+        every { chatRepository.getChatMessages(testChild.id) } returns flowOf(emptyList())
         every { chatRepository.startChatStream(any(), testChild.id, "Привіт") } returns flow {
-            emit("При")
-            emit("віт!")
+            emit(ChatStreamEvent.Chunk("При"))
+            emit(ChatStreamEvent.Chunk("віт!"))
         }
 
         val viewModel = ChatViewModel(chatRepository, getChildUseCase, testDispatcher)
@@ -99,9 +101,9 @@ class ChatViewModelTest {
     }
 
     @Test
-    fun `sendMessage handles error gracefully`() = runTest(testDispatcher) {
+    fun sendMessage_streamError_emitsErrorInMessage() = runTest(testDispatcher) {
         every { getChildUseCase() } returns flowOf(testChild)
-        coEvery { chatRepository.getChatHistory(testChild.id) } returns Result.success(emptyList())
+        every { chatRepository.getChatMessages(testChild.id) } returns flowOf(emptyList())
         every { chatRepository.startChatStream(any(), testChild.id, "Test") } returns flow {
             throw RuntimeException("Network timeout")
         }

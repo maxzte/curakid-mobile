@@ -18,6 +18,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -32,6 +33,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -40,8 +42,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.misterio.core.domain.model.Child
 import com.misterio.core.ui.theme.CurakidTheme
-import java.time.format.DateTimeFormatter
-import java.util.Locale
+import com.misterio.core.ui.toMediumDate
 
 @Composable
 fun SelectedChildCard(
@@ -60,18 +61,18 @@ fun SelectedChildCard(
     }
     val focusRequester = remember { FocusRequester() }
 
-    val dateFormatter = remember { DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.forLanguageTag("uk")) }
-    val birthDateString = remember(child.birthDate) { child.birthDate.format(dateFormatter) }
+    val birthDateString = remember(child.birthDate) { child.birthDate.toMediumDate() }
+    val bornPrefix = stringResource(R.string.born_prefix)
 
     Card(
         modifier = modifier.fillMaxWidth(),
-        shape = CurakidTheme.Radius.lg,
+        shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = CurakidTheme.colors.primaryContainer),
         border = BorderStroke(0.5.dp, CurakidTheme.colors.outline),
         elevation = CardDefaults.cardElevation(0.dp)
     ) {
         Row(
-            modifier = Modifier.padding(14.dp),
+            modifier = Modifier.padding(CurakidTheme.paddings.medium),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
@@ -119,7 +120,7 @@ fun SelectedChildCard(
                 }
 
                 Text(
-                    "Нар. $birthDateString",
+                    "$bornPrefix $birthDateString",
                     fontSize = 12.sp,
                     color = CurakidTheme.colors.onSurfaceVariant,
                     modifier = Modifier.padding(top = 2.dp)
@@ -145,7 +146,7 @@ fun SelectedChildCard(
             ) {
                 Icon(
                     imageVector = if (isEditing) Icons.Default.Check else Icons.Default.Edit,
-                    contentDescription = if (isEditing) "Зберегти" else "Редагувати",
+                    contentDescription = if (isEditing) stringResource(R.string.save) else stringResource(R.string.edit),
                     tint = CurakidTheme.colors.primary,
                     modifier = Modifier.size(17.dp)
                 )

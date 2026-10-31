@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="measurement_options">Що Ви бажаєте додати?</string>
+    <string name="weight_height"><![CDATA[Вага & Зріст]]></string>
+    <string name="head_circumference">Окружність голови</string>
+    <string name="growth_tracking">Відстеження зростання</string>
+    <string name="height_and_weight_trends">Тренд зрісту та ваги %1$s </string>
+    <string name="measurement_history">Історія замірів</string>
+    <string name="no_data_yet">Даних ще немає</string>
+    <string name="weight">ВАГА</string>
+    <string name="height">ЗРІСТ</string>
+    <string name="child_weight">Яка вага у %1$s?</string>
+    <string name="child_height">Який зріст у %1$s?</string>
+    <string name="add_measurement">Додати заміри</string>
+    <string name="child_head_circ">Яка окружність голови у %1$s?</string>
+    <string name="previous_measurement">Попередній замір: %1$s</string>
+    <string name="done">Завершити</string>
+    <string name="development">Розвиток</string>
+    <string name="observe_development">Стежте за розвитком</string>
+    <string name="measurements_out_of_norm_title">Заміри поза нормою</string>
+    <string name="measurements_out_of_norm_desc">Введені дані (вага або зріст) значно відрізняються від вікових норм. Ви впевнені, що хочете їх зберегти?</string>
+    <string name="head_circ_out_of_norm_title">Замір поза нормою</string>
+    <string name="head_circ_out_of_norm_desc">Введений обхват голови значно відрізняється від вікових норм. Ви впевнені, що хочете його зберегти?</string>
+    <string name="norm_within">В межах норми</string>
+    <string name="norm_out_of_range">Поза нормою</string>
+    <string name="what_to_add">Що ви хочете внести?</string>
+    <string name="not_synced">Не синхронізовано</string>
+    <string name="legend_norm">Норма (p15–p85)</string>
+    <string name="legend_attention">Увага (p3–p15, p85–p97)</string>
+    <string name="legend_critical">Критично (&lt;p3 або &gt;p97)</string>
+    <string name="legend_child">Дитина</string>
+    <string name="back">Назад</string>
+    <string name="empty_measurements_history">Історія замірів порожня</string>
+
+    <string name="quiz_change">Змінити</string>
+    <string name="answer_yes">Так</string>
+    <string name="answer_partially">Частково</string>
+    <string name="answer_no">Ні</string>
+    <string name="measurement_weight_and_height">Вага та зріст</string>
+    <string name="measurement_head_circ">Обвід голови</string>
+    <string name="measurement_details">Деталі заміру</string>
+    <string name="detail_date">Дата</string>
+    <string name="detail_age">Вік</string>
+    <string name="detail_weight">Вага</string>
+    <string name="detail_height">Зріст</string>
+    <string name="detail_bmi">ІМТ</string>
+    <string name="detail_head_circ">Обхват голови</string>
+    <string name="analysis_last_measurement">Аналіз останнього заміру</string>
+    <string name="analysis_period_dev">Аналіз періоду розвитку</string>
+    <string name="transition_new_stage_title">Новий етап!</string>
+    <string name="transition_new_stage_desc">Ваша дитина вже на новому етапі розвитку! Бажаєте завершити поточний період та отримати звіт?</string>
+    <string name="transition_early_stage_desc">Ви ще не досягли необхідного віку або не відповіли на всі питання. Бажаєте продовжити?</string>
+    <string name="transition_overall_progress">Загальний прогрес</string>
+</resources>

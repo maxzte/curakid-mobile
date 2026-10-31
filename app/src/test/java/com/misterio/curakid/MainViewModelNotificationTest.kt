@@ -1,15 +1,16 @@
 package com.misterio.curakid
 
+import com.misterio.core.domain.model.AuthState
 import com.misterio.core.domain.repository.ConnectivityRepository
-import com.misterio.core.domain.repository.NotificationRepository
+import com.misterio.core.domain.sync.SyncController
+import com.misterio.core.domain.usecase.GetAuthStateUseCase
+import com.misterio.core.domain.usecase.GetIsPasscodeEnabledUseCase
 import com.misterio.core.domain.usecase.LogoutUseCase
-import com.misterio.curakid.core.common.AppDataStore
-import com.misterio.curakid.core.common.SecurityManager
-import com.misterio.curakid.core.common.TokenManager
-import com.misterio.curakid.core.common.TokenState
+import com.misterio.core.domain.usecase.RegisterFcmTokenUseCase
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.flowOf
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Before
@@ -18,36 +19,34 @@ import java.util.UUID
 
 class MainViewModelNotificationTest {
 
-    private val appDataStore: AppDataStore = mockk(relaxed = true)
-    private val tokenManager: TokenManager = mockk(relaxed = true)
+    private val getAuthStateUseCase: GetAuthStateUseCase = mockk()
+    private val getIsPasscodeEnabledUseCase: GetIsPasscodeEnabledUseCase = mockk()
+    private val registerFcmTokenUseCase: RegisterFcmTokenUseCase = mockk(relaxed = true)
     private val connectivityRepository: ConnectivityRepository = mockk(relaxed = true)
-    private val securityManager: SecurityManager = mockk(relaxed = true)
-    private val notificationRepository: NotificationRepository = mockk(relaxed = true)
     private val logoutUseCase: LogoutUseCase = mockk(relaxed = true)
-
-    private val tokenStateFlow = MutableStateFlow<TokenState>(TokenState.Empty)
+    private val syncController: SyncController = mockk(relaxed = true)
 
     private lateinit var viewModel: MainViewModel
 
     @Before
     fun setUp() {
-        every { tokenManager.tokenState } returns tokenStateFlow
+        every { getAuthStateUseCase() } returns flowOf(AuthState.AUTHENTICATED)
+        every { getIsPasscodeEnabledUseCase() } returns flowOf(false)
         every { connectivityRepository.isConnected } returns MutableStateFlow(true)
-        every { appDataStore.onboardingCompleted } returns MutableStateFlow(true)
-        every { securityManager.isPasscodeEnabled } returns MutableStateFlow(false)
+        every { syncController.isSyncing } returns MutableStateFlow(false)
 
         viewModel = MainViewModel(
-            appDataStore = appDataStore,
-            tokenManager = tokenManager,
+            getAuthStateUseCase = getAuthStateUseCase,
+            getIsPasscodeEnabledUseCase = getIsPasscodeEnabledUseCase,
+            registerFcmTokenUseCase = registerFcmTokenUseCase,
             connectivityRepository = connectivityRepository,
-            securityManager = securityManager,
-            notificationRepository = notificationRepository,
-            logoutUseCase = logoutUseCase
+            logoutUseCase = logoutUseCase,
+            syncController = syncController,
         )
     }
 
     @Test
-    fun `setPendingEventId parses valid UUID string into pendingEventId StateFlow`() {
+    fun setPendingEventId_validUuidString_updatesPendingEventId() {
         val eventUuid = UUID.randomUUID()
         viewModel.setPendingEventId(eventUuid.toString())
 
@@ -58,7 +57,7 @@ class MainViewModelNotificationTest {
     }
 
     @Test
-    fun `setPendingEventId with null or invalid string does not crash and leaves pendingEventId unchanged`() {
+    fun setPendingEventId_nullOrInvalidString_leavesPendingEventIdUnchanged() {
         assertNull(viewModel.pendingEventId.value)
 
         viewModel.setPendingEventId(null)
@@ -69,7 +68,7 @@ class MainViewModelNotificationTest {
     }
 
     @Test
-    fun `setPendingReportId parses valid UUID string into pendingReportId StateFlow`() {
+    fun setPendingReportId_validUuidString_updatesPendingReportId() {
         val reportUuid = UUID.randomUUID()
         viewModel.setPendingReportId(reportUuid.toString())
 
@@ -80,7 +79,7 @@ class MainViewModelNotificationTest {
     }
 
     @Test
-    fun `setPendingReportId with null or invalid string does not crash and leaves pendingReportId unchanged`() {
+    fun setPendingReportId_nullOrInvalidString_leavesPendingReportIdUnchanged() {
         assertNull(viewModel.pendingReportId.value)
 
         viewModel.setPendingReportId(null)

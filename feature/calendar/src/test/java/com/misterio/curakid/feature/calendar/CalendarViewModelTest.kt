@@ -9,6 +9,7 @@ import com.misterio.core.domain.model.Gender
 import com.misterio.core.domain.usecase.AddEventUseCase
 import com.misterio.core.domain.usecase.DeleteEventUseCase
 import com.misterio.core.domain.usecase.GetChildUseCase
+import com.misterio.core.domain.usecase.GetEventQuickPreviewUseCase
 import com.misterio.core.domain.usecase.GetEventsUseCase
 import com.misterio.core.domain.usecase.SyncEventsUseCase
 import com.misterio.core.domain.usecase.UpdateEventUseCase
@@ -45,6 +46,7 @@ class CalendarViewModelTest {
     private val addEventUseCase: AddEventUseCase = mockk()
     private val updateEventUseCase: UpdateEventUseCase = mockk()
     private val deleteEventUseCase: DeleteEventUseCase = mockk()
+    private val getEventQuickPreviewUseCase = GetEventQuickPreviewUseCase()
 
     private val sampleChild = Child(
         id = UUID.randomUUID(),
@@ -77,12 +79,13 @@ class CalendarViewModelTest {
             getEventsUseCase = getEventsUseCase,
             addEventUseCase = addEventUseCase,
             updateEventUseCase = updateEventUseCase,
-            deleteEventUseCase = deleteEventUseCase
+            deleteEventUseCase = deleteEventUseCase,
+            getEventQuickPreviewUseCase = getEventQuickPreviewUseCase,
         )
     }
 
     @Test
-    fun `when child is null, calendar state is empty`() = runTest(testDispatcher) {
+    fun uiState_nullChild_emitsEmptyState() = runTest(testDispatcher) {
         every { getChildUseCase() } returns flowOf(null)
 
         val viewModel = createViewModel()
@@ -98,7 +101,7 @@ class CalendarViewModelTest {
     }
 
     @Test
-    fun `when child and events present, filtered events match selected date`() = runTest(testDispatcher) {
+    fun uiState_childAndEventsPresent_filtersEventsBySelectedDate() = runTest(testDispatcher) {
         val today = LocalDate.now()
         val todayEvent = Event.General(
             id = UUID.randomUUID(),
@@ -137,7 +140,7 @@ class CalendarViewModelTest {
     }
 
     @Test
-    fun `onOpenEventSheet opens sheet and initializes form`() = runTest(testDispatcher) {
+    fun onOpenEventSheet_invoked_opensSheetAndInitializesForm() = runTest(testDispatcher) {
         every { getChildUseCase() } returns flowOf(sampleChild)
         every { getEventsUseCase(sampleChild.id) } returns flowOf(emptyList())
 
@@ -156,7 +159,7 @@ class CalendarViewModelTest {
     }
 
     @Test
-    fun `onSaveEvent calls addEventUseCase for new event`() = runTest(testDispatcher) {
+    fun onSaveEvent_newEvent_callsAddEventUseCase() = runTest(testDispatcher) {
         every { getChildUseCase() } returns flowOf(sampleChild)
         every { getEventsUseCase(sampleChild.id) } returns flowOf(emptyList())
         coEvery { addEventUseCase(sampleChild.id, any()) } returns Result.success(Unit)
@@ -185,7 +188,7 @@ class CalendarViewModelTest {
     }
 
     @Test
-    fun `onDeleteEvent calls deleteEventUseCase when id present`() = runTest(testDispatcher) {
+    fun onDeleteEvent_existingEvent_callsDeleteEventUseCase() = runTest(testDispatcher) {
         val eventId = UUID.randomUUID()
         every { getChildUseCase() } returns flowOf(sampleChild)
         every { getEventsUseCase(sampleChild.id) } returns flowOf(emptyList())
@@ -207,7 +210,7 @@ class CalendarViewModelTest {
     }
 
     @Test
-    fun `onSaveEvent preserves Vaccine type and metadata when editing existing vaccine`() = runTest(testDispatcher) {
+    fun onSaveEvent_editingVaccine_preservesVaccineMetadata() = runTest(testDispatcher) {
         val vaccineId = UUID.randomUUID()
         val originalVaccine = Event.Vaccine(
             id = vaccineId,
@@ -255,5 +258,35 @@ class CalendarViewModelTest {
         }
 
         job.cancel()
+    }
+
+    @Test
+    fun onSaveEvent_emptyTitle_emitsValidationErrorToast() = runTest(testDispatcher) {
+        every { getChildUseCase() } returns flowOf(sampleChild)
+        every { getEventsUseCase(sampleChild.id) } returns flowOf(emptyList())
+
+        val viewModel = createViewModel()
+        val job = launch { viewModel.uiState.collect {} }
+        advanceUntilIdle()
+
+        var emittedToast: com.misterio.core.ui.util.UiText? = null
+        val toastJob = launch {
+            viewModel.toastMessage.collect {
+                emittedToast = it
+            }
+        }
+
+        viewModel.onEventFormChange(EventFormState(title = ""))
+        viewModel.onSaveEvent()
+        advanceUntilIdle()
+
+        assertTrue(emittedToast is com.misterio.core.ui.util.UiText.StringResource)
+        assertEquals(
+            R.string.event_title_required,
+            (emittedToast as com.misterio.core.ui.util.UiText.StringResource).resId
+        )
+
+        job.cancel()
+        toastJob.cancel()
     }
 }
