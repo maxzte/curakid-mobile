@@ -24,16 +24,6 @@
   <img src="screenshots/profile.jpeg" width="30%" alt="Child Profile" />
 </p>
 
-### Key Screens Breakdown
-
-| Screen | Description |
-| :--- | :--- |
-| **🏠 Home Dashboard** (`home.jpeg`) | Central overview displaying the child's age, rapid biometric indicators, upcoming medical appointments, vaccination alerts, and access to AI-generated health reports. |
-| **📈 Development Tracking** (`development.jpeg`) | Periodic milestone roadmap categorized across cognitive, motor, linguistic, and socio-emotional domains according to clinical standards. |
-| **📝 Milestone Logging** (`development_add.jpeg`) | Interactive modal to record emerging behaviors, notes, dates, and achievements to keep the child's developmental record up to date. |
-| **📅 Smart Calendar** (`calendar.jpeg`) | Integrated timetable for pediatric checkups, national immunization schedules, medication reminders, and past health history. |
-| **👶 Child Profile** (`profile.jpeg`) | Multi-child management, quick metric logs (height, weight, head circumference), personal health records, and family configuration. |
-
 ---
 
 ## ✨ Key Features
@@ -52,12 +42,12 @@ The application is engineered adhering to **Clean Architecture** principles, **M
 
 ```mermaid
 graph TD
-    UI["Jetpack Compose UI (Screens & Components)"] -->|User Action / Event| VM["ViewModel (@HiltViewModel)"]
-    VM -->|Emits StateFlow<UiState>| UI
-    VM -->|Executes| UC["Domain Layer (UseCases)"]
-    UC -->|Interacts with| Repo["Data Layer (Repository Interfaces)"]
-    Repo -->|Local Cache / DataStore| Local["Room DB / DataStore"]
-    Repo -->|Remote API (HTTP / JSON)| Remote["Spring Boot Backend (/api/v1/*)"]
+    UI["Jetpack Compose UI (Screens & Components)"] -->|"User Action / Event"| VM["ViewModel (@HiltViewModel)"]
+    VM -->|"Emits StateFlow UiState"| UI
+    VM -->|"Executes"| UC["Domain Layer (UseCases)"]
+    UC -->|"Interacts with"| Repo["Data Layer (Repository Interfaces)"]
+    Repo -->|"Local Cache / DataStore"| Local["Room DB / DataStore"]
+    Repo -->|"Remote API (HTTP, JSON)"| Remote["Spring Boot Backend"]
 ```
 
 ### Architectural Highlights:
