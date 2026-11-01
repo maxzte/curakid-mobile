@@ -1,5 +1,7 @@
 package com.misterio.core.data.repository
 
+import com.misterio.core.data.mapper.toDomain
+
 import com.misterio.core.data.util.SyncManager
 import com.misterio.core.database.dao.ChildDao
 import com.misterio.core.database.entity.ChildEntity
@@ -145,9 +147,47 @@ class ChildRepositoryImplTest {
     }
 
     @Test
-    fun syncPending_unsyncedChildrenPresent_uploadsToBackend() = runTest {
+    fun updateChild_savesLocallyAsUnsyncedAndSchedulesSync() = runTest {
+        val child = testChildEntity.toDomain().copy(name = "Нове Ім'я")
+
+        val result = repository.updateChild(child)
+
+        assertTrue(result.isSuccess)
+        coVerify { childDao.insertChild(match { it.name == "Нове Ім'я" && !it.isSynced }) }
+        coVerify { syncManager.scheduleSync() }
+    }
+
+    @Test
+    fun syncPending_existingChildOnServer_updatesChildAndMarksSynced() = runTest {
+        val unsyncedChild = testChildEntity.copy(name = "Оновлене Ім'я", isSynced = false)
+        coEvery { childDao.getUnsyncedChildren() } returns listOf(unsyncedChild)
+        val remoteDto = ChildResponse(
+            id = testChildId,
+            name = "Оновлене Ім'я",
+            birthDate = "2023-05-10",
+            gender = "FEMALE",
+            isPremature = false,
+            gestationalWeeks = null,
+            allergies = emptyList(),
+            chronicDiseases = emptyList(),
+            pastDiseases = emptyList(),
+            specialFeatures = emptyList()
+        )
+        coEvery { childApi.updateChild(testChildId, any()) } returns Response.success(remoteDto)
+
+        val syncResult = repository.syncPending()
+
+        assertTrue(syncResult is SyncResult.Success)
+        coVerify { childApi.updateChild(testChildId, match { it.name == "Оновлене Ім'я" }) }
+        coVerify { childDao.insertChild(match { it.name == "Оновлене Ім'я" && it.isSynced }) }
+    }
+
+    @Test
+    fun syncPending_childNotFoundOnServer_fallsBackToCreateChild() = runTest {
         val unsyncedChild = testChildEntity.copy(isSynced = false)
         coEvery { childDao.getUnsyncedChildren() } returns listOf(unsyncedChild)
+        val errorResponseBody = okhttp3.ResponseBody.create(null, "Not found")
+        coEvery { childApi.updateChild(testChildId, any()) } returns Response.error(404, errorResponseBody)
         val remoteDto = ChildResponse(
             id = testChildId,
             name = "Марія",
@@ -165,6 +205,7 @@ class ChildRepositoryImplTest {
         val syncResult = repository.syncPending()
 
         assertTrue(syncResult is SyncResult.Success)
+        coVerify { childApi.updateChild(testChildId, any()) }
         coVerify { childApi.createChild(any()) }
         coVerify { childDao.insertChild(match { it.isSynced }) }
     }

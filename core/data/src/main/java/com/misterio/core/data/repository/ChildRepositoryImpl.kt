@@ -146,28 +146,28 @@ class ChildRepositoryImpl @Inject constructor(
         var permanentFailure: Throwable? = null
 
         for (child in unsynced) {
-            val request = CreateChildRequest(
-                id = child.id,
-                name = child.name,
-                birthDate = child.birthDate.toString(),
-                gender = child.gender,
-                isPremature = child.isPremature,
-                gestationalWeeks = child.gestationalWeeks,
-                allergies = child.allergies,
-                chronicDiseases = child.chronicDiseases,
-                pastDiseases = child.pastDiseases,
-                specialFeatures = child.specialFeatures,
-            )
-            val createResult = safeApiCall { childApi.createChild(request) }
+            val updateResult = safeApiCall { childApi.updateChild(child.id, child.toUpdateRequest()) }
 
-            val result = if (createResult.isFailure && createResult.exceptionOrNull() is DomainError.BadRequestError) {
-                safeApiCall { childApi.updateChild(child.id, child.toUpdateRequest()) }
+            val result = if (updateResult.isFailure && updateResult.exceptionOrNull() is DomainError.NotFoundError) {
+                val request = CreateChildRequest(
+                    id = child.id,
+                    name = child.name,
+                    birthDate = child.birthDate.toString(),
+                    gender = child.gender,
+                    isPremature = child.isPremature,
+                    gestationalWeeks = child.gestationalWeeks,
+                    allergies = child.allergies,
+                    chronicDiseases = child.chronicDiseases,
+                    pastDiseases = child.pastDiseases,
+                    specialFeatures = child.specialFeatures,
+                )
+                safeApiCall { childApi.createChild(request) }
             } else {
-                createResult
+                updateResult
             }
 
-            result.onSuccess { createdChild ->
-                childDao.insertChild(createdChild.toEntity())
+            result.onSuccess { syncedChild ->
+                childDao.insertChild(syncedChild.toEntity())
             }.onFailure { error ->
                 if (error is DomainError.NetworkError || error is DomainError.ServerError) {
                     transientFailure = error

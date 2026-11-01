@@ -161,24 +161,39 @@ fun PeriodDescriptionCard(
 ) {
     if (description == null) return
 
+    val cleanTitle = description.title.takeIf { it.isNotBlank() }
+    val cleanSubtitle = description.subtitle.takeIf { it.isNotBlank() }
+    val hasMilestones = description.milestones.movement.isNotBlank() ||
+            description.milestones.speech.isNotBlank() ||
+            description.milestones.cognition.isNotBlank()
+    val hasTips = description.tips.isNotEmpty()
+
+    if (cleanTitle == null && cleanSubtitle == null && !hasMilestones && !hasTips) {
+        return
+    }
+
     Column(
         modifier = modifier,
         verticalArrangement = Arrangement.spacedBy(CurakidTheme.paddings.small)
     ) {
-        Text(
-            text = description.title,
-            style = CurakidTheme.typography.titleMedium.copy(
-                color = CurakidTheme.colors.primary,
-                fontWeight = FontWeight.Bold
+        if (!cleanTitle.isNullOrBlank()) {
+            Text(
+                text = cleanTitle,
+                style = CurakidTheme.typography.titleMedium.copy(
+                    color = CurakidTheme.colors.primary,
+                    fontWeight = FontWeight.Bold
+                )
             )
-        )
-        Text(
-            text = description.subtitle,
-            style = CurakidTheme.typography.bodyMedium.copy(
-                color = CurakidTheme.colors.onSurfaceVariant,
-                lineHeight = 20.sp
+        }
+        if (!cleanSubtitle.isNullOrBlank()) {
+            Text(
+                text = cleanSubtitle,
+                style = CurakidTheme.typography.bodyMedium.copy(
+                    color = CurakidTheme.colors.onSurfaceVariant,
+                    lineHeight = 20.sp
+                )
             )
-        )
+        }
 
         Spacer(Modifier.height(4.dp))
 
